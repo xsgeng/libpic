@@ -4,9 +4,9 @@ import numpy as np
 
 from time import perf_counter_ns
 
-from maxwell_2d import update_bfield_2d, update_efield_2d
-from fields import Fields2D
-from particles import Particles
+from .maxwell_2d import update_bfield_2d, update_efield_2d
+from .fields import Fields2D
+from .particles import Particles
 
 class Patch2D:
     def __init__(
@@ -26,34 +26,34 @@ class Patch2D:
         self.y0 = y0
 
         # neighbors
-        self.xmin_neighbor_index : int = None
-        self.xmax_neighbor_index : int = None
-        self.ymin_neighbor_index : int = None
-        self.ymax_neighbor_index : int = None
+        self.xmin_neighbor_index : int = -1
+        self.xmax_neighbor_index : int = -1
+        self.ymin_neighbor_index : int = -1
+        self.ymax_neighbor_index : int = -1
         # MPI neighbors
-        self.xmin_neighbor_rank : int = None
-        self.xmax_neighbor_rank : int = None
-        self.ymin_neighbor_rank : int = None
-        self.ymax_neighbor_rank : int = None
+        self.xmin_neighbor_rank : int = -1
+        self.xmax_neighbor_rank : int = -1
+        self.ymin_neighbor_rank : int = -1
+        self.ymax_neighbor_rank : int = -1
     
-    def set_neighbor_index(self, *, xmin : int=None, xmax : int=None, ymin : int=None, ymax : int=None):
-        if xmin is not None:
+    def set_neighbor_index(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
+        if xmin >= 0:
             self.xmin_neighbor_index = xmin
-        if xmax is not None:
+        if xmax >= 0:
             self.xmax_neighbor_index = xmax
-        if ymin is not None:
+        if ymin >= 0:
             self.ymin_neighbor_index = ymin
-        if ymax is not None:
+        if ymax >= 0:
             self.ymax_neighbor_index = ymax
 
-    def set_neighbor_rank(self, *, xmin : int=None, xmax : int=None, ymin : int=None, ymax : int=None):
-        if xmin is not None:
+    def set_neighbor_rank(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
+        if xmin >= 0:
             self.xmin_neighbor_rank = xmin
-        if xmax is not None:
+        if xmax >= 0:
             self.xmax_neighbor_rank = xmax
-        if ymin is not None:
+        if ymin >= 0:
             self.ymin_neighbor_rank = ymin
-        if ymax is not None:
+        if ymax >= 0:
             self.ymax_neighbor_rank = ymax
 
 
@@ -99,39 +99,63 @@ class Patches2D:
     def pop(self, i):
         self.indexs.pop(i)
         self.npatches -= 1
-        return self.patches.pop(i)
+        p = self.patches.pop(i)
+
+        return p
+
+    def update_lists(self):
+        """ this update is expensive. """
+        self.ex_list : typed.List = typed.List([p.fields.ex for p in self.patches])
+        self.ey_list : typed.List = typed.List([p.fields.ey for p in self.patches])
+        self.ez_list : typed.List = typed.List([p.fields.ez for p in self.patches])
+        self.bx_list : typed.List = typed.List([p.fields.bx for p in self.patches])
+        self.by_list : typed.List = typed.List([p.fields.by for p in self.patches])
+        self.bz_list : typed.List = typed.List([p.fields.bz for p in self.patches])
+        self.jx_list : typed.List = typed.List([p.fields.jx for p in self.patches])
+        self.jy_list : typed.List = typed.List([p.fields.jy for p in self.patches])
+        self.jz_list : typed.List = typed.List([p.fields.jz for p in self.patches])
+
+        self.xmin_neighbor_index_list = typed.List([p.xmin_neighbor_index for p in self.patches])
+        self.xmax_neighbor_index_list = typed.List([p.xmax_neighbor_index for p in self.patches])
+        self.ymin_neighbor_index_list = typed.List([p.ymin_neighbor_index for p in self.patches])
+        self.ymax_neighbor_index_list = typed.List([p.ymax_neighbor_index for p in self.patches])
 
 
     def sync_guard_fields(self):
         ng = self[0].fields.n_guard
-        for p in self.patches:
-            if p.xmin_neighbor_index is not None:
-                p.fields[-ng:, :] = self.patches[p.xmin_neighbor_index].fields[-3*ng:-2*ng, :]
-            if p.xmax_neighbor_index is not None:
-                p.fields[-2*ng:-ng, :] = self.patches[p.xmax_neighbor_index].fields[:ng, :]
-            if p.ymin_neighbor_index is not None:
-                p.fields[:, -ng:] = self.patches[p.ymin_neighbor_index].fields[:, -3*ng:-2*ng]
-            if p.ymax_neighbor_index is not None:
-                p.fields[:, -2*ng:-ng] = self.patches[p.ymax_neighbor_index].fields[:, :ng]
-
-    def init_fields(self, nx, ny):
-        self.fields = [Fields2D(nx, ny, 6) for _ in range(self.npatches)]
-
-    def init_particles(self, npart):
-        self.particles = [Particles(npart) for _ in range(self.npatches)]
-
+        sync_guard_fields(
+            self.ex_list,
+            self.ey_list,
+            self.ez_list,
+            self.bx_list,
+            self.by_list,
+            self.bz_list,
+            self.jx_list,
+            self.jy_list,
+            self.jz_list,
+            self.xmin_neighbor_index_list, 
+            self.xmax_neighbor_index_list, 
+            self.ymin_neighbor_index_list, 
+            self.ymax_neighbor_index_list, 
+            self.npatches, ng
+        )
+        
     @property
     def nx(self):
         return self[0].fields.nx
+
     @property
     def ny(self):
         return self[0].fields.ny
+
     @property
     def dx(self):
         return self[0].fields.dx
+
     @property
     def dy(self):
         return self[0].fields.dy
+
 
     @property
     def n_guard(self):
@@ -139,15 +163,15 @@ class Patches2D:
 
     def update_efield(self, dt):
         update_efield_patches(
-            ex_list = typed.List([p.fields.ex for p in self.patches]),
-            ey_list = typed.List([p.fields.ey for p in self.patches]),
-            ez_list = typed.List([p.fields.ez for p in self.patches]),
-            bx_list = typed.List([p.fields.bx for p in self.patches]),
-            by_list = typed.List([p.fields.by for p in self.patches]),
-            bz_list = typed.List([p.fields.bz for p in self.patches]),
-            jx_list = typed.List([p.fields.jx for p in self.patches]),
-            jy_list = typed.List([p.fields.jy for p in self.patches]),
-            jz_list = typed.List([p.fields.jz for p in self.patches]),
+            ex_list = self.ex_list,
+            ey_list = self.ey_list,
+            ez_list = self.ez_list,
+            bx_list = self.bx_list,
+            by_list = self.by_list,
+            bz_list = self.bz_list,
+            jx_list = self.jx_list,
+            jy_list = self.jy_list,
+            jz_list = self.jz_list,
             npatches = self.npatches, 
             dx = self.dx, 
             dy = self.dy, 
@@ -159,12 +183,12 @@ class Patches2D:
 
     def update_bfield(self, dt):
         update_bfield_patches(
-            ex_list = typed.List([p.fields.ex for p in self.patches]),
-            ey_list = typed.List([p.fields.ey for p in self.patches]),
-            ez_list = typed.List([p.fields.ez for p in self.patches]),
-            bx_list = typed.List([p.fields.bx for p in self.patches]),
-            by_list = typed.List([p.fields.by for p in self.patches]),
-            bz_list = typed.List([p.fields.bz for p in self.patches]),
+            ex_list = self.ex_list, 
+            ey_list = self.ey_list, 
+            ez_list = self.ez_list, 
+            bx_list = self.bx_list, 
+            by_list = self.by_list, 
+            bz_list = self.bz_list, 
             npatches = self.npatches, 
             dx = self.dx, 
             dy = self.dy, 
@@ -213,3 +237,33 @@ def update_bfield_patches(
         bz = bz_list[i]
 
         update_bfield_2d(ex, ey, ez, bx, by, bz, dx, dy, dt, nx, ny, n_guard)
+
+@njit(parallel=True)
+def sync_guard_fields(
+    ex_list, ey_list, ez_list, 
+    bx_list, by_list, bz_list, 
+    jx_list, jy_list, jz_list, 
+    xmin_index_list, 
+    xmax_index_list, 
+    ymin_index_list, 
+    ymax_index_list, 
+    npatches, ng
+):
+    for i in prange(npatches):
+        xmin_index = xmin_index_list[i]
+        if xmin_index < 0:
+            continue
+        xmax_index = xmax_index_list[i]
+        if xmax_index < 0:
+            continue
+        ymin_index = ymin_index_list[i]
+        if ymin_index < 0:
+            continue
+        ymax_index = ymax_index_list[i]
+        if ymax_index < 0:
+            continue
+        for field in [ex_list, ey_list, ez_list, bx_list, by_list, bz_list, jx_list, jy_list, jz_list]:
+            field[i][-ng:, :] = field[xmin_index][-3*ng:-2*ng, :]
+            field[i][-2*ng:-ng, :] = field[xmax_index][:ng, :]
+            field[i][:, -ng:] = field[ymin_index][:, -3*ng:-2*ng]
+            field[i][:, -2*ng:-ng] = field[ymax_index][:, :ng]
