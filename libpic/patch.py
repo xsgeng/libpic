@@ -7,23 +7,62 @@ from time import perf_counter_ns
 from .maxwell_2d import update_bfield_2d, update_efield_2d
 from .fields import Fields2D
 from .particles import Particles
+from .species import Species
 
 class Patch2D:
     def __init__(
-            self,
-            rank: int,
-            index: int,
-            ipatch_x: int,
-            ipatch_y: int,
-            x0 : float, 
-            y0 : float,
-        ) -> None:
+        self,
+        rank: int,
+        index: int,
+        ipatch_x: int,
+        ipatch_y: int,
+        x0 : float, 
+        y0 : float,
+        nx : int,
+        ny : int,
+        dx : float, 
+        dy : float,
+    ) -> None:
+        """ 
+        Patch2D is a container for the fields and particles of a single patch.
+        The patch is a rectangular region of the grid.
+
+        Parameters
+        ----------
+        rank : int
+            rank of the process
+        index : int
+            index of the patch
+        ipatch_x : int
+            index of the patch in x direction
+        ipatch_y : int
+            index of the patch in y direction
+        x0 : float
+            start x0 of the patch
+        y0 : float
+            start y0 of the patch
+        nx : int
+            number of grids in x direction of the patch, n_guard not included
+        ny : int
+            number of grids in y direction of the patch, n_guard not included
+        dx : float
+            grid spacing in x direction
+        dy : float
+            grid spacing in y direction
+        """
         self.rank = rank
         self.index = index
         self.ipatch_x = ipatch_x
         self.ipatch_y = ipatch_y
         self.x0 = x0
         self.y0 = y0
+        self.nx = nx
+        self.ny = ny
+        self.dx = dx
+        self.dy = dy
+
+        self.xaxis = np.arange(nx) * dx + x0
+        self.yaxis = np.arange(ny) * dy + y0
 
         # neighbors
         self.xmin_neighbor_index : int = -1
@@ -115,11 +154,20 @@ class Patches2D:
         self.jy_list : typed.List = typed.List([p.fields.jy for p in self.patches])
         self.jz_list : typed.List = typed.List([p.fields.jz for p in self.patches])
 
+        self.xaxis_list : typed.List = typed.List([p.xaxis for p in self.patches])
+        self.yaxis_list : typed.List = typed.List([p.yaxis for p in self.patches])
+
         self.xmin_neighbor_index_list = typed.List([p.xmin_neighbor_index for p in self.patches])
         self.xmax_neighbor_index_list = typed.List([p.xmax_neighbor_index for p in self.patches])
         self.ymin_neighbor_index_list = typed.List([p.ymin_neighbor_index for p in self.patches])
         self.ymax_neighbor_index_list = typed.List([p.ymax_neighbor_index for p in self.patches])
 
+        self.x_list = typed.List([p.particles.x for p in self.patches])
+        self.y_list = typed.List([p.particles.y for p in self.patches])
+        self.w_list = typed.List([p.particles.w for p in self.patches])
+        self.ux_list = typed.List([p.particles.ux for p in self.patches])
+        self.uy_list = typed.List([p.particles.uy for p in self.patches])
+        self.uz_list = typed.List([p.particles.uz for p in self.patches])
 
     def sync_guard_fields(self):
         sync_guard_fields(
@@ -200,6 +248,42 @@ class Patches2D:
             n_guard = self.n_guard,
         )
 
+    def init_particles(self, species : Species):
+
+        self.xaxis_list : typed.List = typed.List([p.xaxis for p in self.patches])
+        self.yaxis_list : typed.List = typed.List([p.yaxis for p in self.patches])
+        self.density_func = njit(species.density)
+
+        num_macro_particles = get_num_macro_particles(
+            self.density_func,
+            self.xaxis_list, 
+            self.yaxis_list, 
+            self.npatches, 
+            species.density_min, 
+            species.ppc,
+        )
+
+        for ipatch in range(self.npatches):
+            particles : Particles = species.create_particles()
+            particles.initialize(num_macro_particles[ipatch])
+            self[ipatch].set_particles(particles)
+
+    def fill_particles(self, species : Species):
+        self.x_list = typed.List([p.particles.x for p in self.patches])
+        self.y_list = typed.List([p.particles.y for p in self.patches])
+        self.w_list = typed.List([p.particles.w for p in self.patches])
+        fill_particles(
+            self.density_func,
+            self.xaxis_list, 
+            self.yaxis_list, 
+            self.npatches, 
+            species.density_min, 
+            species.ppc,
+            self.x_list, self.y_list, self.w_list
+        )
+            
+
+
 @njit(parallel=True)
 def update_efield_patches(
     ex_list, ey_list, ez_list, 
@@ -267,3 +351,38 @@ def sync_guard_fields(
             field[ipatch][nx:nx+ng, :ny] = field[xmax_index][:ng, :ny]
         if ymax_index >= 0:
             field[ipatch][:nx, nx:nx+ng] = field[ymax_index][:nx, :ng]
+
+
+@njit(parallel=True)
+def get_num_macro_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc) -> np.ndarray:
+    num_particles = np.zeros(npatches, dtype=np.int64)
+    for ipatch in prange(npatches):
+        xaxis =  xaxis_list[ipatch]
+        yaxis =  yaxis_list[ipatch]
+        
+        for x_grid in xaxis:
+            for y_grid in yaxis:
+                dens = density_func(x_grid, y_grid)
+                if dens > dens_min:
+                    num_particles[ipatch] += ppc
+    return num_particles
+
+@njit(parallel=True)
+def fill_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc, x_list, y_list, w_list):
+    dx = xaxis_list[0][1] - xaxis_list[0][0]
+    dy = yaxis_list[0][1] - yaxis_list[0][0]
+    for ipatch in prange(npatches):
+        xaxis =  xaxis_list[ipatch]
+        yaxis =  yaxis_list[ipatch]
+        x = x_list[ipatch]
+        y = y_list[ipatch]
+        w = w_list[ipatch]
+        ipart = 0
+        for x_grid in xaxis:
+            for y_grid in yaxis:
+                dens = density_func(x_grid, y_grid)
+                if dens > dens_min:
+                    x[ipart:ipart+ppc] = np.random.uniform(-dx/2, dx/2) + x_grid
+                    y[ipart:ipart+ppc] = np.random.uniform(-dy/2, dy/2) + y_grid
+                    w[ipart:ipart+ppc] = dens / ppc
+                    ipart += ppc
