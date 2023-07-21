@@ -122,7 +122,6 @@ class Patches2D:
 
 
     def sync_guard_fields(self):
-        ng = self[0].fields.n_guard
         sync_guard_fields(
             self.ex_list,
             self.ey_list,
@@ -137,7 +136,10 @@ class Patches2D:
             self.xmax_neighbor_index_list, 
             self.ymin_neighbor_index_list, 
             self.ymax_neighbor_index_list, 
-            self.npatches, ng
+            self.npatches, 
+            self.nx,
+            self.ny,
+            self.n_guard,
         )
         
     @property
@@ -247,23 +249,21 @@ def sync_guard_fields(
     xmax_index_list, 
     ymin_index_list, 
     ymax_index_list, 
-    npatches, ng
+    npatches, nx, ny, ng
 ):
-    for i in prange(npatches):
-        xmin_index = xmin_index_list[i]
-        if xmin_index < 0:
-            continue
-        xmax_index = xmax_index_list[i]
-        if xmax_index < 0:
-            continue
-        ymin_index = ymin_index_list[i]
-        if ymin_index < 0:
-            continue
-        ymax_index = ymax_index_list[i]
-        if ymax_index < 0:
-            continue
-        for field in [ex_list, ey_list, ez_list, bx_list, by_list, bz_list, jx_list, jy_list, jz_list]:
-            field[i][-ng:, :] = field[xmin_index][-3*ng:-2*ng, :]
-            field[i][-2*ng:-ng, :] = field[xmax_index][:ng, :]
-            field[i][:, -ng:] = field[ymin_index][:, -3*ng:-2*ng]
-            field[i][:, -2*ng:-ng] = field[ymax_index][:, :ng]
+    all_fields = [ex_list, ey_list, ez_list, bx_list, by_list, bz_list, jx_list, jy_list, jz_list]
+    for i in prange(npatches*9):
+        field = all_fields[i%9]
+        ipatch = i//9
+        xmin_index = xmin_index_list[ipatch]
+        xmax_index = xmax_index_list[ipatch]
+        ymin_index = ymin_index_list[ipatch]
+        ymax_index = ymax_index_list[ipatch]
+        if xmin_index >= 0:
+            field[ipatch][-ng:, :ny] = field[xmin_index][nx-ng:nx, :ny]
+        if ymin_index >= 0:
+            field[ipatch][:nx, -ng:] = field[ymin_index][:ny, ny-ng:ny]
+        if xmax_index >= 0:
+            field[ipatch][nx:nx+ng, :ny] = field[xmax_index][:ng, :ny]
+        if ymax_index >= 0:
+            field[ipatch][:nx, nx:nx+ng] = field[ymax_index][:nx, :ng]
