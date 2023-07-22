@@ -26,6 +26,7 @@ class Particles:
         self.ux = np.zeros(npart)
         self.uy = np.zeros(npart)
         self.uz = np.zeros(npart)
+        self.inv_gamma = np.ones(npart)
 
         self.ex = np.zeros(npart)
         self.ey = np.zeros(npart)

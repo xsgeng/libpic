@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
+from functools import cached_property
 from typing import Literal, Callable
 from scipy.constants import e, m_e, m_p
 from .particles import Particles
@@ -15,6 +16,16 @@ class Species(BaseModel):
         
     momentum: tuple[Callable, Callable, Callable] = [None, None, None]
     radiation: Literal["none", "LL", "photons"] = "none"
+
+    @computed_field
+    @cached_property
+    def q(self) -> float:
+        return self.charge * e
+
+    @computed_field
+    @cached_property
+    def m(self) -> float:
+        return self.mass * m_e
 
     def create_particles(self) -> Particles:
         """ 
