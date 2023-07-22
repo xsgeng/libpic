@@ -3,7 +3,7 @@ import numpy as np
 from scipy.constants import mu_0, epsilon_0, c, e
 
 @njit
-def current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, pruned, npart, dx, dy, dt, w, q):
+def current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, pruned, npart, dx, dy, x0, y0, dt, w, q):
     """
     Current deposition in 2D for CPU.
 
@@ -38,7 +38,7 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, prune
         if pruned[ip]:
             continue
         vz = uz[ip]*c*inv_gamma[ip]
-        current(rho, jx, jy, jz, x[ip], y[ip], vz, x_old[ip], y_old[ip], dx, dy, dt, w[ip], q)
+        current(rho, jx, jy, jz, x[ip]-x0, y[ip]-y0, vz, x_old[ip]-x0, y_old[ip]-y0, dx, dy, dt, w[ip], q)
 
 @njit(boundscheck=False)
 def current(
@@ -60,7 +60,7 @@ def current(
     jx, jy, jz : 2D arrays of floats
         Current density in x, y, z directions.
     x, y : scalar floats
-        Particle position of the current particle.
+        Particle position of the current particle relative to the current patch.
     vz : scalar float
         Particle velocity.
     x_old, y_old : scalar floats

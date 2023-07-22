@@ -9,6 +9,7 @@ from .fields import Fields2D
 from .particles import Particles
 from .species import Species
 from .pusher import boris_cpu
+from .deposition_2d import current_deposit_2d
 
 class Patch2D:
     def __init__(
@@ -157,59 +158,39 @@ class Patches2D:
 
         this update is expensive. 
         """
-        self.ex_list : typed.List = typed.List([p.fields.ex for p in self.patches])
-        self.ey_list : typed.List = typed.List([p.fields.ey for p in self.patches])
-        self.ez_list : typed.List = typed.List([p.fields.ez for p in self.patches])
-        self.bx_list : typed.List = typed.List([p.fields.bx for p in self.patches])
-        self.by_list : typed.List = typed.List([p.fields.by for p in self.patches])
-        self.bz_list : typed.List = typed.List([p.fields.bz for p in self.patches])
-        self.jx_list : typed.List = typed.List([p.fields.jx for p in self.patches])
-        self.jy_list : typed.List = typed.List([p.fields.jy for p in self.patches])
-        self.jz_list : typed.List = typed.List([p.fields.jz for p in self.patches])
 
-        self.xaxis_list : typed.List = typed.List([p.xaxis for p in self.patches])
-        self.yaxis_list : typed.List = typed.List([p.yaxis for p in self.patches])
+        lists = {}
+        for attr in Fields2D.attrs():
+            lists[attr] = typed.List([getattr(p.fields, attr) for p in self.patches])
 
-        self.xmin_neighbor_index_list = typed.List([p.xmin_neighbor_index for p in self.patches])
-        self.xmax_neighbor_index_list = typed.List([p.xmax_neighbor_index for p in self.patches])
-        self.ymin_neighbor_index_list = typed.List([p.ymin_neighbor_index for p in self.patches])
-        self.ymax_neighbor_index_list = typed.List([p.ymax_neighbor_index for p in self.patches])
+        lists["xaxis"] = typed.List([p.xaxis for p in self.patches])
+        lists["yaxis"] = typed.List([p.yaxis for p in self.patches])
+
+        lists["xmin_neighbor_index"] = typed.List([p.xmin_neighbor_index for p in self.patches])
+        lists["xmax_neighbor_index"] = typed.List([p.xmax_neighbor_index for p in self.patches])
+        lists["ymin_neighbor_index"] = typed.List([p.ymin_neighbor_index for p in self.patches])
+        lists["ymax_neighbor_index"] = typed.List([p.ymax_neighbor_index for p in self.patches])
+
         
-        self.x_list = []
-        self.y_list = []
-        self.w_list = []
-        self.ux_list = []
-        self.uy_list = []
-        self.uz_list = []
-        self.inv_gamma_list = []
-        self.npart_list = []
-        self.pruned_list = []
-        for i, s in enumerate(self.species):
-            self.x_list.append(typed.List([p.particles[i].x for p in self.patches]))
-            self.y_list.append(typed.List([p.particles[i].y for p in self.patches]))
-            self.w_list.append(typed.List([p.particles[i].w for p in self.patches]))
-            self.ux_list.append(typed.List([p.particles[i].ux for p in self.patches]))
-            self.uy_list.append(typed.List([p.particles[i].uy for p in self.patches]))
-            self.uz_list.append(typed.List([p.particles[i].uz for p in self.patches]))
-            self.inv_gamma_list.append(typed.List([p.particles[i].inv_gamma for p in self.patches]))
-            self.npart_list.append(typed.List([p.particles[i].npart for p in self.patches]))
-            self.pruned_list.append(typed.List([p.particles[i].pruned for p in self.patches]))
+        for attr in Particles.attrs():
+            lists[attr] = []
+
+            for ispec, s in enumerate(self.species):
+                lists[attr].append(typed.List([getattr(p.particles[ispec], attr) for p in self.patches]))
+
+        self.numba_lists = lists
+
 
     def sync_guard_fields(self):
+        lists = self.lists
         sync_guard_fields(
-            self.ex_list,
-            self.ey_list,
-            self.ez_list,
-            self.bx_list,
-            self.by_list,
-            self.bz_list,
-            self.jx_list,
-            self.jy_list,
-            self.jz_list,
-            self.xmin_neighbor_index_list, 
-            self.xmax_neighbor_index_list, 
-            self.ymin_neighbor_index_list, 
-            self.ymax_neighbor_index_list, 
+            lists['ex'], lists['ey'], lists['ez'],
+            lists['bx'], lists['by'], lists['bz'],
+            lists['jx'], lists['jy'], lists['jz'],
+            lists['xmin_neighbor_index'], 
+            lists['xmax_neighbor_index'], 
+            lists['ymin_neighbor_index'], 
+            lists['ymax_neighbor_index'], 
             self.npatches, 
             self.nx,
             self.ny,
@@ -238,16 +219,17 @@ class Patches2D:
         return self[0].fields.n_guard
 
     def update_efield(self, dt):
+        lists = self.numba_lists
         update_efield_patches(
-            ex_list = self.ex_list,
-            ey_list = self.ey_list,
-            ez_list = self.ez_list,
-            bx_list = self.bx_list,
-            by_list = self.by_list,
-            bz_list = self.bz_list,
-            jx_list = self.jx_list,
-            jy_list = self.jy_list,
-            jz_list = self.jz_list,
+            ex_list = lists['ex'],
+            ey_list = lists['ey'],
+            ez_list = lists['ez'],
+            bx_list = lists['bx'],
+            by_list = lists['by'],
+            bz_list = lists['bz'],
+            jx_list = lists['jx'],
+            jy_list = lists['jy'],
+            jz_list = lists['jz'],
             npatches = self.npatches, 
             dx = self.dx, 
             dy = self.dy, 
@@ -258,13 +240,14 @@ class Patches2D:
         )
 
     def update_bfield(self, dt):
+        lists = self.numba_lists
         update_bfield_patches(
-            ex_list = self.ex_list, 
-            ey_list = self.ey_list, 
-            ez_list = self.ez_list, 
-            bx_list = self.bx_list, 
-            by_list = self.by_list, 
-            bz_list = self.bz_list, 
+            ex_list = lists['ex'], 
+            ey_list = lists['ey'], 
+            ez_list = lists['ez'], 
+            bx_list = lists['bx'], 
+            by_list = lists['by'], 
+            bz_list = lists['bz'], 
             npatches = self.npatches, 
             dx = self.dx, 
             dy = self.dy, 
@@ -276,14 +259,14 @@ class Patches2D:
 
     def init_particles(self, species : Species):
 
-        self.xaxis_list : typed.List = typed.List([p.xaxis for p in self.patches])
-        self.yaxis_list : typed.List = typed.List([p.yaxis for p in self.patches])
+        xaxis = typed.List([p.xaxis for p in self.patches])
+        yaxis = typed.List([p.yaxis for p in self.patches])
         density_func = njit(species.density)
 
         num_macro_particles = get_num_macro_particles(
             density_func,
-            self.xaxis_list, 
-            self.yaxis_list, 
+            xaxis, 
+            yaxis, 
             self.npatches, 
             species.density_min, 
             species.ppc,
@@ -299,31 +282,52 @@ class Patches2D:
         self.species.append(species)
 
     def fill_particles(self):
-        for i, s in enumerate(self.species):
+        xaxis = typed.List([p.xaxis for p in self.patches])
+        yaxis = typed.List([p.yaxis for p in self.patches])
+        for ispec, s in enumerate(self.species):
             print(f"Creating Species {s.name}.")
-            x_list = typed.List([p.particles[i].x for p in self.patches])
-            y_list = typed.List([p.particles[i].y for p in self.patches])
-            w_list = typed.List([p.particles[i].w for p in self.patches])
+            x_list = typed.List([p.particles[ispec].x for p in self.patches])
+            y_list = typed.List([p.particles[ispec].y for p in self.patches])
+            w_list = typed.List([p.particles[ispec].w for p in self.patches])
             density_func = njit(s.density)
             fill_particles(
                 density_func,
-                self.xaxis_list, 
-                self.yaxis_list, 
+                xaxis, 
+                yaxis, 
                 self.npatches, 
                 s.density_min, 
                 s.ppc,
                 x_list,y_list,w_list
             )
+
+            for p in self:
+                p.particles[ispec].x_old[:] = p.particles[ispec].x[:]
+                p.particles[ispec].y_old[:] = p.particles[ispec].y[:]
     
     def push_particles(self, dt):
-        for i, s in enumerate(self.species):
+        lists = self.numba_lists
+        for ispec, s in enumerate(self.species):
             print(f"Pushing Species {s.name}.")
             boris_push(
-                self.ux_list[i], self.uy_list[i], self.uz_list[i], self.inv_gamma_list[i],
-                self.ex_list[i], self.ey_list[i], self.ez_list[i],
-                self.bx_list[i], self.by_list[i], self.bz_list[i],
-                self.npatches, s.q, self.npart_list[i], self.pruned_list[i], dt
+                lists['ux'][ispec], lists['uy'][ispec], lists['uz'][ispec], lists['inv_gamma'][ispec],
+                lists['ex'][ispec], lists['ey'][ispec], lists['ez'][ispec],
+                lists['bx'][ispec], lists['by'][ispec], lists['bz'][ispec],
+                self.npatches, s.q, lists['npart'][ispec], lists['pruned'][ispec], dt
             )
+    
+    def current_deposition(self, dt):
+        lists = self.numba_lists
+        for ispec, s in enumerate(self.species):
+            print(f"Deposition of current for Species {s.name}.")
+            current_deposition(
+                lists['rho'], lists['jx'], lists['jy'], lists['jz'],
+                lists['xaxis'], lists['yaxis'],
+                lists['x'][ispec], lists['y'][ispec], lists['uz'][ispec],
+                lists['inv_gamma'][ispec], lists['x_old'][ispec], lists['y_old'][ispec],
+                lists['pruned'][ispec], lists['npart'][ispec], 
+                self.npatches, self.dx, self.dy, dt, lists['w'][ispec], s.q,
+            )
+
             
 
 """ Parallel functions for patches """
@@ -461,3 +465,33 @@ def boris_push(
                     bx[ipart], by[ipart], bz[ipart], 
                     q, dt
                 )
+
+@njit(parallel=True)
+def current_deposition(
+    rho_list, 
+    jx_list, jy_list, jz_list,
+    xaxis_list, yaxis_list,
+    x_list, y_list, uz_list, 
+    inv_gamma_list, 
+    x_old_list, y_old_list, 
+    pruned_list, npart_list, 
+    npatches,
+    dx, dy, dt, w_list, q,
+) -> None:
+    for ipatch in prange(npatches):
+        rho = rho_list[ipatch]
+        jx = jx_list[ipatch]
+        jy = jy_list[ipatch]
+        jz = jz_list[ipatch]
+        x0 = xaxis_list[ipatch][0]
+        y0 = yaxis_list[ipatch][0]
+        x = x_list[ipatch]
+        y = y_list[ipatch]
+        uz = uz_list[ipatch]
+        w = w_list[ipatch]
+        inv_gamma = inv_gamma_list[ipatch]
+        x_old = x_old_list[ipatch]
+        y_old = y_old_list[ipatch]
+        pruned = pruned_list[ipatch]
+        npart = npart_list[ipatch]
+        current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, pruned, npart, dx, dy, x0, y0, dt, w, q)

@@ -2,6 +2,10 @@ import numpy as np
 from .maxwell_2d import update_bfield_2d, update_efield_2d
 
 class Fields2D:
+    @classmethod
+    def attrs(self):
+        return ["ex", "ey", "ez", "bx", "by", "bz", "jx", "jy", "jz", "rho"]
+
     def __init__(self, nx, ny, dx, dy, x0, y0, n_guard) -> None:
         self.nx = nx
         self.ny = ny
@@ -19,6 +23,8 @@ class Fields2D:
         self.jx = np.zeros(shape)
         self.jy = np.zeros(shape)
         self.jz = np.zeros(shape)
+        self.rho = np.zeros(shape)
+
 
         xaxis = np.arange(nx+n_guard*2, dtype=float)
         xaxis[-n_guard:] = np.arange(-n_guard, 0)
