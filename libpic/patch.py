@@ -10,6 +10,7 @@ from .particles import Particles
 from .species import Species
 from .pusher import boris_cpu
 from .deposition_2d import current_deposit_2d
+from .interpolation_2d import interpolation_2d
 
 class Patch2D:
     def __init__(
@@ -328,6 +329,21 @@ class Patches2D:
                 self.npatches, self.dx, self.dy, dt, lists['w'][ispec], s.q,
             )
 
+    def interpolation(self):
+        lists = self.numba_lists
+        for ispec, s in enumerate(self.species):
+            print(f"Interpolation of current for Species {s.name}.")
+            interpolation(
+                lists["x"][ispec], lists["y"][ispec], 
+                lists["ex_part"][ispec], lists["ey_part"][ispec], lists["ez_part"][ispec],
+                lists["bx_part"][ispec], lists["by_part"][ispec], lists["bz_part"][ispec],
+                lists["npart"][ispec], 
+                lists["ex"], lists["ey"], lists["ez"],
+                lists["bx"], lists["by"], lists["bz"],
+                lists["xaxis"], lists["yaxis"],
+                self.npatches, self.dx, self.dy, lists["pruned"][ispec],
+            )
+
             
 
 """ Parallel functions for patches """
@@ -495,3 +511,44 @@ def current_deposition(
         pruned = pruned_list[ipatch]
         npart = npart_list[ipatch]
         current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, pruned, npart, dx, dy, x0, y0, dt, w, q)
+
+@njit(parallel=True)
+def interpolation(
+    x_list, y_list, 
+    ex_part_list, ey_part_list, ez_part_list, 
+    bx_part_list, by_part_list, bz_part_list, 
+    npart_list,
+    ex_list, ey_list, ez_list, 
+    bx_list, by_list, bz_list,
+    xaxis_list, yaxis_list,
+    npatches,
+    dx, dy,
+    pruned_list,
+) -> None:
+    for ipatch in prange(npatches):
+        x = x_list[ipatch]
+        y = y_list[ipatch]
+        ex_part = ex_part_list[ipatch]
+        ey_part = ey_part_list[ipatch]
+        ez_part = ez_part_list[ipatch]
+        bx_part = bx_part_list[ipatch]
+        by_part = by_part_list[ipatch]
+        bz_part = bz_part_list[ipatch]
+        npart = npart_list[ipatch]
+        ex = ex_list[ipatch]
+        ey = ey_list[ipatch]
+        ez = ez_list[ipatch]
+        bx = bx_list[ipatch]
+        by = by_list[ipatch]
+        bz = bz_list[ipatch]
+        x0 = xaxis_list[ipatch][0]
+        y0 = yaxis_list[ipatch][0]
+        x = x_list[ipatch]
+        y = y_list[ipatch]
+        pruned = pruned_list[ipatch]
+        interpolation_2d(
+            x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
+            ex, ey, ez, bx, by, bz,
+            dx, dy, x0, y0,
+            pruned,
+        )

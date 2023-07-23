@@ -2,18 +2,18 @@ import numpy as np
 from numba import njit, prange
 
 
-@njit(parallel=True)
+@njit
 def interpolation_2d(
-    x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, N,
+    x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
     ex, ey, ez, bx, by, bz,
-    dx, dy,
+    dx, dy, x0, y0,
     pruned,
 ):
-    for ip in prange(N):
+    for ip in range(npart):
         if pruned[ip]:
             continue
         ex_part[ip], ey_part[ip], ez_part[ip], bx_part[ip], by_part[ip], bz_part[ip] = \
-            em_to_particle(ex, ey, ez, bx, by, bz, x[ip], y[ip], dx, dy)
+            em_to_particle(ex, ey, ez, bx, by, bz, x[ip]-x0, y[ip]-y0, dx, dy)
 
 @njit
 def interp_ex(ex, hx, gy, ix2, iy1):
