@@ -36,25 +36,19 @@ def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, dt ) :
     inv_gamma_new = 1 / sqrt(1 + ux_new**2 + uy_new**2 + uz_new**2)
     return ux_new, uy_new, uz_new, inv_gamma_new
 
-@njit(parallel=True)
-def push_position( x, y, z, ux, uy, uz, x_old, y_old, z_old, inv_gamma, N, pruned, dt, save=False ):
+@njit
+def push_position_2d( x, y, ux, uy, inv_gamma, N, pruned, dt):
     """
     Advance the particles' positions over `dt` using the momenta `ux`, `uy`, `uz`,
     """
     # Timestep, multiplied by c
     cdt = c*dt
 
-    # Particle push (in parallel if threading is installed)
     for ip in prange(N) :
         if pruned[ip]:
             continue
-        if save:
-            x_old[ip] = x[ip]
-            y_old[ip] = y[ip]
-            z_old[ip] = z[ip]
         x[ip] += cdt * inv_gamma[ip] * ux[ip]
         y[ip] += cdt * inv_gamma[ip] * uy[ip]
-        z[ip] += cdt * inv_gamma[ip] * uz[ip]
 
 
 boris_cpu = njit(boris_inline)

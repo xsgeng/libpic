@@ -1,10 +1,8 @@
-import inspect
 import numpy as np
-from numba import jit, njit
 from scipy.constants import e, m_e
 
 class Particles:
-    attrs = ["x", "y", "x_old", "y_old", "w", "ux", "uy", "uz", "inv_gamma",
+    attrs = ["x", "y", "w", "ux", "uy", "uz", "inv_gamma",
              "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"]
 
     def __init__(self, species) -> None:
@@ -41,3 +39,19 @@ class Particles:
         self.bz_part = np.zeros(npart)
 
         self.pruned = np.full(npart, False)
+
+    def extend(self, n):
+        if n < 0:
+            return
+        for attr in self.attrs:
+            arr = getattr(self, attr)
+            arr = np.append(arr, np.full(n, np.nan))
+            setattr(self, attr, arr)
+        self.pruned = np.append(self.pruned, np.full(n, True))
+        self.npart += n
+
+    def __repr__(self) -> str:
+        return f"Particles({self.npart} particles of {self.species.name} species)"
+
+    def __str__(self) -> str:
+        return f"Particles({self.npart} particles of {self.species.name} species)"

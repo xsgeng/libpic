@@ -3,7 +3,7 @@ import numpy as np
 from scipy.constants import mu_0, epsilon_0, c, e
 
 @njit
-def current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, pruned, npart, dx, dy, x0, y0, dt, w, q):
+def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q):
     """
     Current deposition in 2D for CPU.
 
@@ -37,8 +37,14 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, prune
     for ip in range(npart):
         if pruned[ip]:
             continue
+        vx = ux[ip]*c*inv_gamma[ip]
+        vy = uy[ip]*c*inv_gamma[ip]
         vz = uz[ip]*c*inv_gamma[ip]
-        current(rho, jx, jy, jz, x[ip]-x0, y[ip]-y0, vz, x_old[ip]-x0, y_old[ip]-y0, dx, dy, dt, w[ip], q)
+        x_old = x[ip] - vx*0.5*dt
+        y_old = y[ip] - vy*0.5*dt
+        x_adv = x[ip] + vx*0.5*dt
+        y_adv = y[ip] + vy*0.5*dt
+        current(rho, jx, jy, jz, x_adv-x0, y_adv-y0, vz, x_old-x0, y_old-y0, dx, dy, dt, w[ip], q)
 
 @njit(boundscheck=False)
 def current(

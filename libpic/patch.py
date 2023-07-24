@@ -8,7 +8,7 @@ from .maxwell_2d import update_bfield_2d, update_efield_2d
 from .fields import Fields2D
 from .particles import Particles
 from .species import Species
-from .pusher import boris_cpu
+from .pusher import boris_cpu, push_position_2d
 from .deposition_2d import current_deposit_2d
 from .interpolation_2d import interpolation_2d
 
@@ -172,7 +172,6 @@ class Patches2D:
         lists["ymin_neighbor_index"] = typed.List([p.ymin_neighbor_index for p in self.patches])
         lists["ymax_neighbor_index"] = typed.List([p.ymax_neighbor_index for p in self.patches])
 
-        
         lists["npart"] = []
         lists["pruned"] = []
         for ispec, s in enumerate(self.species):
@@ -211,10 +210,30 @@ class Patches2D:
         for ispec, s in enumerate(self.species):
             print(f"Synching Species {s.name}...", end=" ")
             tic = perf_counter_ns()
-            sync_particles(
+            mark_out_of_bound_as_pruned(
+                lists["x"][ispec], lists["y"][ispec],
+                lists["npart"][ispec], lists["pruned"][ispec],
+                lists["xaxis"], lists["yaxis"],
+                self.npatches, self.dx, self.dy,
+            )
+
+            npart_to_extend, npart_new_list = get_npart_to_extend(
+                lists["x"][ispec], lists["y"][ispec],
                 lists["npart"][ispec], lists["pruned"][ispec],
                 lists["xaxis"], lists["yaxis"],
                 lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
+                self.npatches, self.dx, self.dy,
+            )
+            # print(npart_new_list, npart_to_extend)
+            for ipatches in range(self.npatches):
+                self.patches[ipatches].particles[ispec].extend(npart_to_extend[ipatches])
+
+            self.update_lists()
+            fill_particles_from_boundary(
+                lists["npart"][ispec], lists["pruned"][ispec],
+                lists["xaxis"], lists["yaxis"],
+                lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
+                npart_new_list,
                 self.npatches, self.dx, self.dy,
                 *[lists[attr][ispec] for attr in Particles.attrs]
             )
@@ -341,30 +360,43 @@ class Patches2D:
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
 
-    def push_particles(self, dt):
+    def momentum_push(self, dt):
         lists = self.numba_lists
         for ispec, s in enumerate(self.species):
             print(f"Pushing Species {s.name}...", end=" ")
             tic = perf_counter_ns()
             boris_push(
                 lists['ux'][ispec], lists['uy'][ispec], lists['uz'][ispec], lists['inv_gamma'][ispec],
-                lists['ex'][ispec], lists['ey'][ispec], lists['ez'][ispec],
-                lists['bx'][ispec], lists['by'][ispec], lists['bz'][ispec],
+                lists['ex_part'][ispec], lists['ey_part'][ispec], lists['ez_part'][ispec],
+                lists['bx_part'][ispec], lists['by_part'][ispec], lists['bz_part'][ispec],
                 self.npatches, s.q, lists['npart'][ispec], lists['pruned'][ispec], dt
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
     
+    def position_push(self, dt):
+        lists = self.numba_lists
+        for ispec, s in enumerate(self.species):
+            print(f"Pushing Species {s.name}...", end=" ")
+            tic = perf_counter_ns()
+            push_position(
+                lists['x'][ispec], lists['y'][ispec], 
+                lists['ux'][ispec], lists['uy'][ispec], lists['inv_gamma'][ispec],
+                self.npatches, lists['pruned'][ispec], dt
+            )
+            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
+
     def current_deposition(self, dt):
         lists = self.numba_lists
         for ispec, s in enumerate(self.species):
+            print("here")
             print(f"Deposition of current for Species {s.name}...", end=" ")
             tic = perf_counter_ns()
             current_deposition(
                 lists['rho'], lists['jx'], lists['jy'], lists['jz'],
                 lists['xaxis'], lists['yaxis'],
-                lists['x'][ispec], lists['y'][ispec], lists['uz'][ispec],
-                lists['inv_gamma'][ispec], lists['x_old'][ispec], lists['y_old'][ispec],
-                lists['pruned'][ispec], lists['npart'][ispec], 
+                lists['x'][ispec], lists['y'][ispec], 
+                lists['ux'][ispec], lists['uy'][ispec], lists['uz'][ispec], lists['inv_gamma'][ispec], 
+                lists['pruned'][ispec], 
                 self.npatches, self.dx, self.dy, dt, lists['w'][ispec], s.q,
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
@@ -461,7 +493,7 @@ def sync_guard_fields(
 
 @njit
 def count_new_particles(
-    x_list, y_list, npart_list,
+    x_list, y_list,
     xmin_index, xmax_index, ymin_index, ymax_index,
     xaxis_list, yaxis_list,
     dx, dy,
@@ -470,25 +502,29 @@ def count_new_particles(
        
     xmax = xaxis_list[xmin_index][-1] + 0.5*dx
     x = x_list[xmin_index]
-    for i in range(npart_list[xmin_index]):
+    npart = len(x)
+    for i in range(npart):
         if x[i] > xmax:
             npart_out_of_bound += 1
 
     xmin = xaxis_list[xmax_index][0] - 0.5*dx
     x = x_list[xmax_index]
-    for i in range(npart_list[xmax_index]):
+    npart = len(x)
+    for i in range(npart):
         if x[i] < xmin:
             npart_out_of_bound += 1
 
     ymax = yaxis_list[ymin_index][-1] + 0.5*dy
     y = y_list[ymin_index]
-    for i in range(npart_list[ymin_index]):
+    npart = len(y)
+    for i in range(npart):
         if y[i] > ymax:
             npart_out_of_bound += 1
 
     ymin = yaxis_list[ymax_index][0] - 0.5*dy
     y = y_list[ymax_index]
-    for i in range(npart_list[ymax_index]):
+    npart = len(y)
+    for i in range(npart):
         if y[i] < ymin:
             npart_out_of_bound += 1
 
@@ -552,7 +588,29 @@ def fill_boundary_particles_to_buffer(
 
 
 @njit(parallel=True, cache=True)
-def sync_particles(
+def mark_out_of_bound_as_pruned(
+    x_list, y_list,
+    npart_list,
+    pruned_list,
+    xaxis_list,
+    yaxis_list,
+    npatches, dx, dy,
+):
+    for ipatches in prange(npatches):
+        x = x_list[ipatches]
+        y = y_list[ipatches]
+        npart = npart_list[ipatches]
+        pruned = pruned_list[ipatches]
+        xaxis = xaxis_list[ipatches]
+        yaxis = yaxis_list[ipatches]
+        # mark pruned
+        for i in range(npart):
+            if x[i] > xaxis[-1] + 0.5*dx or x[i] < xaxis[0] - 0.5*dx or y[i] > yaxis[-1] + 0.5*dy or y[i] < yaxis[0] - 0.5*dy:
+                pruned[i] = True
+
+@njit(parallel=True, cache=True)
+def get_npart_to_extend(
+    x_list, y_list,
     npart_list,
     pruned_list,
     xaxis_list,
@@ -562,28 +620,57 @@ def sync_particles(
     ymin_index_list, 
     ymax_index_list, 
     npatches, dx, dy,
-    *attrs_list,
 ):
     """ 
-    put particles in neighbor patch into pruned particles.
+    count the number of particles to be extended, and return the number of new particles
     """
-    nattrs = len(attrs_list)
-
+    npart_to_extend = np.zeros(npatches, dtype='i8')
+    npart_new = np.zeros(npatches, dtype='i8')
     for ipatches in prange(npatches):
-        x = attrs_list[0][ipatches]
-        y = attrs_list[1][ipatches]
-        npart = npart_list[ipatches]
         pruned = pruned_list[ipatches]
-        xaxis = xaxis_list[ipatches]
-        yaxis = yaxis_list[ipatches]
-        # mark pruned
-        for i in range(npart):
-            if x[i] > xaxis[-1] + 0.5*dx or x[i] < xaxis[0] - 0.5*dx or y[i] > yaxis[-1] + 0.5*dy or y[i] < yaxis[0] - 0.5*dy:
-                pruned[i] = True
-    
+
+        xmin_index = xmin_index_list[ipatches]
+        xmax_index = xmax_index_list[ipatches]
+        ymin_index = ymin_index_list[ipatches]
+        ymax_index = ymax_index_list[ipatches]
+
+        # 0, 1 for x and y
+        npart_new[ipatches] = count_new_particles(x_list, y_list, 
+                                        xmin_index, xmax_index, ymin_index, ymax_index, xaxis_list, yaxis_list, dx, dy)
+        
+        npruned = 0
+        for pruned_ in pruned:
+            if pruned_: npruned += 1
+
+        npart_to_extend[ipatches] = npart_new[ipatches] - npruned
+        
+        if npart_to_extend[ipatches] > 0:
+            # reserved 25% more space for new particles
+            npart_to_extend[ipatches] += int(len(pruned) * 0.25)
+        else:
+            npart_to_extend[ipatches] = 0
+
+    return npart_to_extend, npart_new
+
+@njit
+def fill_particles_from_boundary(
+    npart_list,
+    pruned_list,
+    xaxis_list,
+    yaxis_list,
+    xmin_index_list, 
+    xmax_index_list, 
+    ymin_index_list, 
+    ymax_index_list, 
+    npart_new_list,
+    npatches, dx, dy, 
+    *attrs_list,
+):
+    nattrs = len(attrs_list)
     for ipatches in prange(npatches):
-        x = attrs_list[0][ipatches]
-        y = attrs_list[1][ipatches]
+        npart_new = npart_new_list[ipatches]
+        if npart_new == 0:
+            return
 
         pruned = pruned_list[ipatches]
 
@@ -592,27 +679,10 @@ def sync_particles(
         ymin_index = ymin_index_list[ipatches]
         ymax_index = ymax_index_list[ipatches]
 
-        xaxis = xaxis_list[ipatches]
-        yaxis = yaxis_list[ipatches]
-        
-        # 0, 1 for x and y
-        npart_new = count_new_particles(attrs_list[0], attrs_list[1], npart_list, 
-                                        xmin_index, xmax_index, ymin_index, ymax_index, xaxis_list, yaxis_list, dx, dy)
-        if npart_new == 0:
-            continue
         buffer = np.zeros((npart_new, nattrs))
         fill_boundary_particles_to_buffer(buffer, npart_list, xaxis_list, yaxis_list,
                                           xmin_index, xmax_index, ymin_index, ymax_index, 
                                           dx, dy, attrs_list)
-        
-        npart_to_extend = npart_new - sum(pruned)
-        if npart_to_extend > 0:
-            # reserved 25% more space for new particles
-            npart_to_extend += int(len(pruned) * 0.25)
-            for i in range(nattrs):
-                attrs_list[i][ipatches] = np.append(attrs_list[i][ipatches], np.zeros(npart_to_extend))
-            pruned = np.append(pruned, np.full(npart_to_extend, True))
-
         # fill the pruned
         ibuff = 0
         for ipart in range(len(pruned)):
@@ -621,7 +691,7 @@ def sync_particles(
             if pruned[ipart]:
                 for iattr in range(nattrs):
                     attrs_list[iattr][ipatches][ipart] = buffer[ibuff, iattr]
-            pruned[ipart] = False
+                pruned[ipart] = False
             ibuff += 1
         
 
@@ -680,7 +750,7 @@ def boris_push(
         bz = bz_list[ipatch]
 
         pruned = pruned_list[ipatch]
-        npart = npart_list[ipatch]
+        npart = len(pruned)
         for ipart in range(npart):
             if not pruned[ipart]:
                 ux[ipart], uy[ipart], uz[ipart], inv_gamma[ipart] = boris_cpu(
@@ -691,14 +761,34 @@ def boris_push(
                 )
 
 @njit(parallel=True)
+def push_position(
+    x_list, y_list,
+    ux_list, uy_list, inv_gamma_list,
+    npatches, pruned_list,
+    dt,
+) -> None:
+    for ipatch in prange(npatches):
+        x = x_list[ipatch]
+        y = y_list[ipatch]
+        
+        ux = ux_list[ipatch]
+        uy = uy_list[ipatch]
+        inv_gamma = inv_gamma_list[ipatch]
+        
+        pruned = pruned_list[ipatch]
+        npart = len(pruned)
+        push_position_2d( x, y, ux, uy, inv_gamma, npart, pruned, dt )
+
+
+
+@njit(parallel=True)
 def current_deposition(
     rho_list, 
     jx_list, jy_list, jz_list,
     xaxis_list, yaxis_list,
-    x_list, y_list, uz_list, 
+    x_list, y_list, ux_list, uy_list, uz_list, 
     inv_gamma_list, 
-    x_old_list, y_old_list, 
-    pruned_list, npart_list, 
+    pruned_list, 
     npatches,
     dx, dy, dt, w_list, q,
 ) -> None:
@@ -711,14 +801,19 @@ def current_deposition(
         y0 = yaxis_list[ipatch][0]
         x = x_list[ipatch]
         y = y_list[ipatch]
+        ux = ux_list[ipatch]
+        uy = uy_list[ipatch]
         uz = uz_list[ipatch]
         w = w_list[ipatch]
         inv_gamma = inv_gamma_list[ipatch]
-        x_old = x_old_list[ipatch]
-        y_old = y_old_list[ipatch]
         pruned = pruned_list[ipatch]
         npart = len(pruned)
-        current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, pruned, npart, dx, dy, x0, y0, dt, w, q)
+
+        jx[:] = 0
+        jy[:] = 0
+        jz[:] = 0
+        rho[:] = 0
+        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
 
 @njit(parallel=True)
 def interpolation(
