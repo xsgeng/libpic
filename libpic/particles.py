@@ -4,10 +4,8 @@ from numba import jit, njit
 from scipy.constants import e, m_e
 
 class Particles:
-    @classmethod
-    def attrs(self):
-        return ["npart", "x", "y", "x_old", "y_old", "w", "ux", "uy", "uz", "inv_gamma", "pruned", 
-                "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"]
+    attrs = ["x", "y", "x_old", "y_old", "w", "ux", "uy", "uz", "inv_gamma",
+             "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"]
 
     def __init__(self, species) -> None:
         self.species = species

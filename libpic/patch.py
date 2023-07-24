@@ -173,17 +173,24 @@ class Patches2D:
         lists["ymax_neighbor_index"] = typed.List([p.ymax_neighbor_index for p in self.patches])
 
         
-        for attr in Particles.attrs():
-            lists[attr] = []
+        lists["npart"] = []
+        lists["pruned"] = []
+        for ispec, s in enumerate(self.species):
+            lists["npart"].append(typed.List([p.particles[ispec].npart for p in self.patches]))
+            lists["pruned"].append(typed.List([p.particles[ispec].pruned for p in self.patches]))
 
+        for attr in Particles.attrs:
+            lists[attr] = []
             for ispec, s in enumerate(self.species):
                 lists[attr].append(typed.List([getattr(p.particles[ispec], attr) for p in self.patches]))
-
+                lists["npart"].append(typed.List([getattr(p.particles[ispec], attr) for p in self.patches]))
         self.numba_lists = lists
 
 
     def sync_guard_fields(self):
         lists = self.lists
+        print(f"Synching guard fields...", end=" ")
+        tic = perf_counter_ns()
         sync_guard_fields(
             lists['ex'], lists['ey'], lists['ez'],
             lists['bx'], lists['by'], lists['bz'],
@@ -197,6 +204,22 @@ class Patches2D:
             self.ny,
             self.n_guard,
         )
+        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
+
+    def sync_particles(self):
+        lists = self.numba_lists
+        for ispec, s in enumerate(self.species):
+            print(f"Synching Species {s.name}...", end=" ")
+            tic = perf_counter_ns()
+            sync_particles(
+                lists["npart"][ispec], lists["pruned"][ispec],
+                lists["xaxis"], lists["yaxis"],
+                lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
+                self.npatches, self.dx, self.dy,
+                *[lists[attr][ispec] for attr in Particles.attrs]
+            )
+            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
+
         
     @property
     def nx(self):
@@ -221,6 +244,8 @@ class Patches2D:
 
     def update_efield(self, dt):
         lists = self.numba_lists
+        print(f"Updating B field...", end=" ")
+        tic = perf_counter_ns()
         update_efield_patches(
             ex_list = lists['ex'],
             ey_list = lists['ey'],
@@ -239,9 +264,12 @@ class Patches2D:
             ny = self.ny, 
             n_guard = self.n_guard,
         )
+        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def update_bfield(self, dt):
         lists = self.numba_lists
+        print(f"Updating B field...", end=" ")
+        tic = perf_counter_ns()
         update_bfield_patches(
             ex_list = lists['ex'], 
             ey_list = lists['ey'], 
@@ -257,9 +285,12 @@ class Patches2D:
             ny = self.ny, 
             n_guard = self.n_guard,
         )
+        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def init_particles(self, species : Species):
 
+        print(f"Initializing Species {species.name}...", end=" ")
+        tic = perf_counter_ns()
         xaxis = typed.List([p.xaxis for p in self.patches])
         yaxis = typed.List([p.yaxis for p in self.patches])
         density_func = njit(species.density)
@@ -273,7 +304,6 @@ class Patches2D:
             species.ppc,
         )
 
-        print(f"Species {species.name} initialized with {sum(num_macro_particles)} macro particles.")
 
         for ipatch in range(self.npatches):
             particles : Particles = species.create_particles()
@@ -281,12 +311,15 @@ class Patches2D:
             self[ipatch].add_particles(particles)
 
         self.species.append(species)
+        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
+        print(f"Species {species.name} initialized with {sum(num_macro_particles)} macro particles.")
 
     def fill_particles(self):
         xaxis = typed.List([p.xaxis for p in self.patches])
         yaxis = typed.List([p.yaxis for p in self.patches])
         for ispec, s in enumerate(self.species):
-            print(f"Creating Species {s.name}.")
+            print(f"Creating Species {s.name}...", end=" ")
+            tic = perf_counter_ns()
             x_list = typed.List([p.particles[ispec].x for p in self.patches])
             y_list = typed.List([p.particles[ispec].y for p in self.patches])
             w_list = typed.List([p.particles[ispec].w for p in self.patches])
@@ -305,21 +338,27 @@ class Patches2D:
                 p.particles[ispec].x_old[:] = p.particles[ispec].x[:]
                 p.particles[ispec].y_old[:] = p.particles[ispec].y[:]
     
+            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
+
+
     def push_particles(self, dt):
         lists = self.numba_lists
         for ispec, s in enumerate(self.species):
-            print(f"Pushing Species {s.name}.")
+            print(f"Pushing Species {s.name}...", end=" ")
+            tic = perf_counter_ns()
             boris_push(
                 lists['ux'][ispec], lists['uy'][ispec], lists['uz'][ispec], lists['inv_gamma'][ispec],
                 lists['ex'][ispec], lists['ey'][ispec], lists['ez'][ispec],
                 lists['bx'][ispec], lists['by'][ispec], lists['bz'][ispec],
                 self.npatches, s.q, lists['npart'][ispec], lists['pruned'][ispec], dt
             )
+            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
     
     def current_deposition(self, dt):
         lists = self.numba_lists
         for ispec, s in enumerate(self.species):
-            print(f"Deposition of current for Species {s.name}.")
+            print(f"Deposition of current for Species {s.name}...", end=" ")
+            tic = perf_counter_ns()
             current_deposition(
                 lists['rho'], lists['jx'], lists['jy'], lists['jz'],
                 lists['xaxis'], lists['yaxis'],
@@ -328,11 +367,13 @@ class Patches2D:
                 lists['pruned'][ispec], lists['npart'][ispec], 
                 self.npatches, self.dx, self.dy, dt, lists['w'][ispec], s.q,
             )
+            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def interpolation(self):
         lists = self.numba_lists
         for ispec, s in enumerate(self.species):
-            print(f"Interpolation of current for Species {s.name}.")
+            print(f"Interpolation of current for Species {s.name}...", end=" ")
+            tic = perf_counter_ns()
             interpolation(
                 lists["x"][ispec], lists["y"][ispec], 
                 lists["ex_part"][ispec], lists["ey_part"][ispec], lists["ez_part"][ispec],
@@ -343,6 +384,7 @@ class Patches2D:
                 lists["xaxis"], lists["yaxis"],
                 self.npatches, self.dx, self.dy, lists["pruned"][ispec],
             )
+            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
             
 
@@ -416,6 +458,172 @@ def sync_guard_fields(
         if ymax_index >= 0:
             field[ipatch][:nx, nx:nx+ng] = field[ymax_index][:nx, :ng]
 
+
+@njit
+def count_new_particles(
+    x_list, y_list, npart_list,
+    xmin_index, xmax_index, ymin_index, ymax_index,
+    xaxis_list, yaxis_list,
+    dx, dy,
+):
+    npart_out_of_bound = 0
+       
+    xmax = xaxis_list[xmin_index][-1] + 0.5*dx
+    x = x_list[xmin_index]
+    for i in range(npart_list[xmin_index]):
+        if x[i] > xmax:
+            npart_out_of_bound += 1
+
+    xmin = xaxis_list[xmax_index][0] - 0.5*dx
+    x = x_list[xmax_index]
+    for i in range(npart_list[xmax_index]):
+        if x[i] < xmin:
+            npart_out_of_bound += 1
+
+    ymax = yaxis_list[ymin_index][-1] + 0.5*dy
+    y = y_list[ymin_index]
+    for i in range(npart_list[ymin_index]):
+        if y[i] > ymax:
+            npart_out_of_bound += 1
+
+    ymin = yaxis_list[ymax_index][0] - 0.5*dy
+    y = y_list[ymax_index]
+    for i in range(npart_list[ymax_index]):
+        if y[i] < ymin:
+            npart_out_of_bound += 1
+
+    return npart_out_of_bound
+
+@njit(inline="always")
+def fill_boundary_particles_to_buffer(
+    buffer,
+    npart_list, xaxis_list, yaxis_list,
+    xmin_index, xmax_index, ymin_index, ymax_index,
+    dx, dy,
+    attrs_list,
+):
+    npart_new = buffer.shape[0]
+    ibuff = 0
+    # on xmin boundary
+    x_on_xmin = attrs_list[0][xmin_index]
+    xmax = xaxis_list[xmin_index][-1] + 0.5*dx
+    for ipart in range(npart_list[xmin_index]):
+        if ibuff >= npart_new:
+            break
+        if x_on_xmin[ipart] > xmax:
+            for iattr, attr in enumerate(attrs_list):
+                buffer[ibuff, iattr] = attr[xmin_index][ipart]
+            ibuff += 1
+
+    # on xmax boundary
+    x_on_xmax = attrs_list[0][xmax_index]
+    xmin = xaxis_list[xmax_index][-1] - 0.5*dx
+    for ipart in range(npart_list[xmax_index]):
+        if ibuff >= npart_new:
+            break
+        if x_on_xmax[ipart] < xmin:
+            for iattr, attr in enumerate(attrs_list):
+                buffer[ibuff, iattr] = attr[xmax_index][ipart]
+            ibuff += 1
+    
+    # on ymin boundary
+    y_on_ymin = attrs_list[1][ymin_index]
+    ymax = yaxis_list[ymin_index][-1] + 0.5*dy
+    for ipart in range(npart_list[ymin_index]):
+        if ibuff >= npart_new:
+            break
+        if y_on_ymin[ipart] > ymax:
+            for iattr, attr in enumerate(attrs_list):
+                buffer[ibuff, iattr] = attr[ymin_index][ipart]
+            ibuff += 1
+
+    # on ymax boundary
+    y_on_ymax = attrs_list[1][ymax_index]
+    ymin = yaxis_list[ymax_index][ 0] - 0.5*dy
+    for ipart in range(npart_list[ymax_index]):
+        if ibuff >= npart_new:
+            break
+        if y_on_ymax[ipart] < ymin:
+            for iattr, attr in enumerate(attrs_list):
+                buffer[ibuff, iattr] = attr[ymax_index][ipart]
+            ibuff += 1
+    
+    assert ibuff == npart_new
+
+
+@njit(parallel=True, cache=True)
+def sync_particles(
+    npart_list,
+    pruned_list,
+    xaxis_list,
+    yaxis_list,
+    xmin_index_list, 
+    xmax_index_list, 
+    ymin_index_list, 
+    ymax_index_list, 
+    npatches, dx, dy,
+    *attrs_list,
+):
+    """ 
+    put particles in neighbor patch into pruned particles.
+    """
+    nattrs = len(attrs_list)
+
+    for ipatches in prange(npatches):
+        x = attrs_list[0][ipatches]
+        y = attrs_list[1][ipatches]
+        npart = npart_list[ipatches]
+        pruned = pruned_list[ipatches]
+        xaxis = xaxis_list[ipatches]
+        yaxis = yaxis_list[ipatches]
+        # mark pruned
+        for i in range(npart):
+            if x[i] > xaxis[-1] + 0.5*dx or x[i] < xaxis[0] - 0.5*dx or y[i] > yaxis[-1] + 0.5*dy or y[i] < yaxis[0] - 0.5*dy:
+                pruned[i] = True
+    
+    for ipatches in prange(npatches):
+        x = attrs_list[0][ipatches]
+        y = attrs_list[1][ipatches]
+
+        pruned = pruned_list[ipatches]
+
+        xmin_index = xmin_index_list[ipatches]
+        xmax_index = xmax_index_list[ipatches]
+        ymin_index = ymin_index_list[ipatches]
+        ymax_index = ymax_index_list[ipatches]
+
+        xaxis = xaxis_list[ipatches]
+        yaxis = yaxis_list[ipatches]
+        
+        # 0, 1 for x and y
+        npart_new = count_new_particles(attrs_list[0], attrs_list[1], npart_list, 
+                                        xmin_index, xmax_index, ymin_index, ymax_index, xaxis_list, yaxis_list, dx, dy)
+        if npart_new == 0:
+            continue
+        buffer = np.zeros((npart_new, nattrs))
+        fill_boundary_particles_to_buffer(buffer, npart_list, xaxis_list, yaxis_list,
+                                          xmin_index, xmax_index, ymin_index, ymax_index, 
+                                          dx, dy, attrs_list)
+        
+        npart_to_extend = npart_new - sum(pruned)
+        if npart_to_extend > 0:
+            # reserved 25% more space for new particles
+            npart_to_extend += int(len(pruned) * 0.25)
+            for i in range(nattrs):
+                attrs_list[i][ipatches] = np.append(attrs_list[i][ipatches], np.zeros(npart_to_extend))
+            pruned = np.append(pruned, np.full(npart_to_extend, True))
+
+        # fill the pruned
+        ibuff = 0
+        for ipart in range(len(pruned)):
+            if ibuff >= npart_new:
+                break
+            if pruned[ipart]:
+                for iattr in range(nattrs):
+                    attrs_list[iattr][ipatches][ipart] = buffer[ibuff, iattr]
+            pruned[ipart] = False
+            ibuff += 1
+        
 
 @njit(parallel=True)
 def get_num_macro_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc) -> np.ndarray:
@@ -509,7 +717,7 @@ def current_deposition(
         x_old = x_old_list[ipatch]
         y_old = y_old_list[ipatch]
         pruned = pruned_list[ipatch]
-        npart = npart_list[ipatch]
+        npart = len(pruned)
         current_deposit_2d(rho, jx, jy, jz, x, y, uz, inv_gamma, x_old, y_old, pruned, npart, dx, dy, x0, y0, dt, w, q)
 
 @njit(parallel=True)
@@ -534,7 +742,6 @@ def interpolation(
         bx_part = bx_part_list[ipatch]
         by_part = by_part_list[ipatch]
         bz_part = bz_part_list[ipatch]
-        npart = npart_list[ipatch]
         ex = ex_list[ipatch]
         ey = ey_list[ipatch]
         ez = ez_list[ipatch]
@@ -546,6 +753,7 @@ def interpolation(
         x = x_list[ipatch]
         y = y_list[ipatch]
         pruned = pruned_list[ipatch]
+        npart = len(pruned)
         interpolation_2d(
             x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
             ex, ey, ez, bx, by, bz,
