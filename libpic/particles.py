@@ -41,7 +41,7 @@ class Particles:
         self.pruned = np.full(npart, False)
 
     def extend(self, n):
-        if n < 0:
+        if n <= 0:
             return
         for attr in self.attrs:
             arr = getattr(self, attr)
