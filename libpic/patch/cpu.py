@@ -182,6 +182,32 @@ def push_position(
 
 
 @njit(parallel=True)
+def sync_currents(
+    jx_list, jy_list, jz_list,
+    xmin_index_list,
+    xmax_index_list,
+    ymin_index_list,
+    ymax_index_list,
+    npatches, nx, ny, ng
+):
+    all_fields = [jx_list, jy_list, jz_list]
+    for i in prange(npatches*3):
+        field = all_fields[i%3]
+        ipatch = i//3
+        xmin_index = xmin_index_list[ipatch]
+        xmax_index = xmax_index_list[ipatch]
+        ymin_index = ymin_index_list[ipatch]
+        ymax_index = ymax_index_list[ipatch]
+        if xmin_index >= 0:
+            field[ipatch][:ng, :ny] += field[xmin_index][nx:nx+ng, :ny]
+        if ymin_index >= 0:
+            field[ipatch][:nx, :ng] = field[ymin_index][:nx, ny:ny+ng]
+        if xmax_index >= 0:
+            field[ipatch][nx-ng:nx, :ny] += field[xmax_index][-ng:, :ny]
+        if ymax_index >= 0:
+            field[ipatch][:nx, ny-ng:ny] = field[ymax_index][:nx, -ng:]
+
+@njit(parallel=True)
 def sync_guard_fields(
     ex_list, ey_list, ez_list,
     bx_list, by_list, bz_list,
@@ -203,11 +229,11 @@ def sync_guard_fields(
         if xmin_index >= 0:
             field[ipatch][-ng:, :ny] = field[xmin_index][nx-ng:nx, :ny]
         if ymin_index >= 0:
-            field[ipatch][:nx, -ng:] = field[ymin_index][:ny, ny-ng:ny]
+            field[ipatch][:nx, -ng:] = field[ymin_index][:nx, ny-ng:ny]
         if xmax_index >= 0:
             field[ipatch][nx:nx+ng, :ny] = field[xmax_index][:ng, :ny]
         if ymax_index >= 0:
-            field[ipatch][:nx, nx:nx+ng] = field[ymax_index][:nx, :ng]
+            field[ipatch][:nx, ny:ny+ng] = field[ymax_index][:nx, :ng]
 
 
 @njit(parallel=True, cache=True)
