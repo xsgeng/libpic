@@ -1,4 +1,4 @@
-from numba import njit, prange
+from numba import njit, prange, get_num_threads, get_thread_id
 import numpy as np
 from scipy.constants import mu_0, epsilon_0, c, e
 
@@ -34,6 +34,13 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npa
     q : float
         Charge of the particles.
     """
+    # nthread = get_num_threads()
+    S0x = np.zeros(5)
+    S1x = np.zeros(5)
+    S0y = np.zeros(5)
+    S1y = np.zeros(5)
+    jy_buff = np.zeros(5)
+    
     for ip in range(npart):
         if pruned[ip]:
             continue
@@ -44,15 +51,17 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npa
         y_old = y[ip] - vy*0.5*dt
         x_adv = x[ip] + vx*0.5*dt
         y_adv = y[ip] + vy*0.5*dt
-        current(rho, jx, jy, jz, x_adv-x0, y_adv-y0, vz, x_old-x0, y_old-y0, dx, dy, dt, w[ip], q)
+        current(rho, jx, jy, jz, x_adv-x0, y_adv-y0, vz, x_old-x0, y_old-y0, dx, dy, dt, w[ip], q,
+                S0x, S0y, S1x, S1y, jy_buff)
 
-@njit(boundscheck=False)
+@njit(inline="always")
 def current(
     rho, jx, jy, jz, 
     x, y, vz,
     x_old, y_old,
     dx, dy, dt,
     w, q,
+    S0x, S0y, S1x, S1y, jy_buff
 ):
     """ 
     Compute the current through the charge distribution.
@@ -89,8 +98,8 @@ def current(
     y_over_dy = y_old / dy
     iy0 = int(np.floor(y_over_dy+0.5))
 
-    S0x = S(x_over_dx, 0)
-    S0y = S(y_over_dy, 0)
+    S0x[:] = S(x_over_dx - ix0, 0)
+    S0y[:] = S(y_over_dy - iy0, 0)
 
     # positions at t + 3/2*dt, after pusher
     x_over_dx = x / dx
@@ -101,8 +110,8 @@ def current(
     iy1 = int(np.floor(y_over_dy+0.5))
     dcell_y = iy1 - iy0
 
-    S1x = S(x_over_dx, dcell_x)
-    S1y = S(y_over_dy, dcell_y)
+    S1x[:] = S(x_over_dx - ix1, dcell_x)
+    S1y[:] = S(y_over_dy - iy1, dcell_y)
 
     DSx = S1x - S0x
     DSy = S1y - S0y
@@ -110,9 +119,7 @@ def current(
     one_third = 1.0 / 3.0
     charge_density = q * w / (dx*dy)
     factor = charge_density / dt
-    jx_ = 0.0
-    jy_ = np.zeros(5)
-    jz_ = 0.0
+    jy_buff[:] = 0
 
     # i and j are the relative shift, 0-based index
     # [0,   1, 2, 3, 4]
@@ -120,7 +127,7 @@ def current(
     #     [-1, 0, 1] for dcell_ = 0
     # [-2, -1, 0, 1] for dcell = -1
     for j in range(min(1, 1+dcell_y), max(4, 4+dcell_y)):
-        jx_ = 0.0
+        jx_buff = 0.0
         iy = iy0 + (j - 2)
         for i in range(min(1, 1+dcell_x), max(4, 4+dcell_x)):
             ix = ix0 + (i - 2)
@@ -129,24 +136,78 @@ def current(
             wz = S0x[i] * S0y[j] + 0.5 * DSx[i] * S0y[j] \
                 + 0.5 * S0x[i] * DSy[j] + one_third * DSx[i] * DSy[j]
             
-            jx_ -= factor * dx * wx
-            jy_[i] -= factor * dy * wy
-            jz_ = factor * wz * vz
+            jx_buff -= factor * dx * wx
+            jy_buff[i] -= factor * dy * wy
 
-            jx[ix, iy] += jx_
-            jy[ix, iy] += jy_[i]
-            jz[ix, iy] += jz_
-            rho[ix, iy] += charge_density * S1x[i] * S1y[j]
+            jx[ix, iy] += jx_buff
+            jy[ix, iy] += jy_buff[i]
+            jz[ix, iy] += factor * wz * vz
+            # rho[ix, iy] += charge_density * S1x[i] * S1y[j]
 
-@njit
-def S(x_over_dx, shift):
-    ix = np.floor(x_over_dx)
-    # Xi - x
-    delta = ix - x_over_dx
+@njit(inline="always")
+def S(delta, shift):
     delta2 = delta**2
 
-    S = np.zeros(5)
-    S[shift+1] = 0.5 * ( delta2+delta+0.25 )
-    S[shift+2] = 0.75 - delta2
-    S[shift+3] = 0.5 * ( delta2-delta+0.25 )
-    return S
+    if shift == 0:
+        return (
+            0.0,
+            0.5 * ( delta2+delta+0.25 ),
+            0.75 - delta2,
+            0.5 * ( delta2-delta+0.25 ),
+            0.0,
+        )
+    if shift == 1:
+        return (
+            0.0,
+            0.0,
+            0.5 * ( delta2+delta+0.25 ),
+            0.75 - delta2,
+            0.5 * ( delta2-delta+0.25 ),
+        )
+    if shift == -1:
+        return (
+            0.5 * ( delta2+delta+0.25 ),
+            0.75 - delta2,
+            0.5 * ( delta2-delta+0.25 ),
+            0.0,
+            0.0,
+        )
+
+
+def test_current():
+    from time import perf_counter_ns
+
+    npart = 100000
+    nx = 100
+    ny = 100
+    x0 = 0.0
+    y0 = 0.0
+    dx = 1.0e-6
+    dy = 1.0e-6
+    lx = nx * dx
+    ly = ny * dy
+    dt = dx / c / 2
+    q = e
+    w = np.ones(npart)
+    x = np.random.uniform(low=3*dx, high=lx-3*dx, size=npart)
+    y = np.random.uniform(low=3*dy, high=ly-3*dy, size=npart)
+    ux = np.random.uniform(low=-1.0, high=1.0, size=npart)
+    uy = np.random.uniform(low=-1.0, high=1.0, size=npart)
+    uz = np.random.uniform(low=-1.0, high=1.0, size=npart)
+    inv_gamma = 1 / np.sqrt(1 + ux**2 + uy**2 + uz**2)
+
+    rho = np.zeros((nx, ny))
+    jx = np.zeros((nx, ny))
+    jy = np.zeros((nx, ny))
+    jz = np.zeros((nx, ny))
+
+    pruned = np.full(npart, False)
+
+    current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
+    tic = perf_counter_ns()
+    current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
+    toc = perf_counter_ns()
+    print(f"current_deposit_2d {(toc - tic)/1e6} ms")
+
+if __name__ ==  "__main__":
+    test_current()
