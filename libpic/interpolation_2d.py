@@ -3,62 +3,58 @@ from numba import njit, prange
 
 from scipy.constants import mu_0, epsilon_0, c, e
 
-@njit(inline="always")
+subsize = 32
+@njit(cache=True)
 def interpolation_2d(
     x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
     ex, ey, ez, bx, by, bz,
     dx, dy, x0, y0,
     pruned,
 ):
-    gx = np.zeros(3)
-    gy = np.zeros(3)
-    hx = np.zeros(3)
-    hy = np.zeros(3)
-    for ip in range(npart):
-        if pruned[ip]:
-            continue
-        ex_part[ip], ey_part[ip], ez_part[ip], bx_part[ip], by_part[ip], bz_part[ip] = \
-            em_to_particle(ex, ey, ez, bx, by, bz, x[ip]-x0, y[ip]-y0, dx, dy,
-                           gx, gy, hx, hy)
+    gx = np.zeros((3, subsize))
+    gy = np.zeros((3, subsize))
+    hx = np.zeros((3, subsize))
+    hy = np.zeros((3, subsize))
 
-@njit(inline="always")
-def em_to_particle(ex, ey, ez, bx, by, bz, x, y, dx, dy, gx, gy, hx, hy):
-    x_over_dx = x / dx
-    y_over_dy = y / dy
+    for ivect in range(0, npart, subsize):
+        npart_vec = min(subsize, npart - ivect)
+        for ip in range(npart_vec):
+            ipart_global = ivect + ip
+            x_over_dx = (x[ipart_global] - x0) / dx
+            y_over_dy = (y[ipart_global] - y0) / dy
 
-    ix1 = int(np.floor(x_over_dx+0.5))
-    gx[:] = get_gx(ix1 - x_over_dx)
+            ix1 = int(np.floor(x_over_dx+0.5))
+            get_gx(ix1 - x_over_dx, gx[:, ip])
 
-    ix2 = int(np.floor(x_over_dx))
-    hx[:] = get_gx(ix2 - x_over_dx + 0.5)
+            ix2 = int(np.floor(x_over_dx))
+            get_gx(ix2 - x_over_dx + 0.5, hx[:, ip])
+
+            iy1 = int(np.floor(y_over_dy+0.5))
+            get_gx(iy1 - y_over_dy, gy[:, ip])
+
+            iy2 = int(np.floor(y_over_dy))
+            get_gx(iy2 - y_over_dy + 0.5, hy[:, ip])
+
+        for ip in range(npart_vec):
+            ipart_global = ivect + ip
+            if not pruned[ipart_global]:
+                ex_part[ipart_global] = interp_ex(ex, hx[:, ip], gy[:, ip], ix2, iy1)
+                ey_part[ipart_global] = interp_ey(ey, gx[:, ip], hy[:, ip], ix1, iy2)
+                ez_part[ipart_global] = interp_ez(ez, gx[:, ip], gy[:, ip], ix1, iy1)
+
+                bx_part[ipart_global] = interp_bx(bx, gx[:, ip], hy[:, ip], ix1, iy2)
+                by_part[ipart_global] = interp_by(by, hx[:, ip], gy[:, ip], ix2, iy1)
+                bz_part[ipart_global] = interp_bz(bz, hx[:, ip], hy[:, ip], ix2, iy2)
 
 
-    iy1 = int(np.floor(y_over_dy+0.5))
-    gy[:] = get_gx(iy1 - y_over_dy)
-
-    iy2 = int(np.floor(y_over_dy))
-    hy[:] = get_gx(iy2 - y_over_dy + 0.5)
-
-    ex_part = interp_ex(ex, hx, gy, ix2, iy1)
-    ey_part = interp_ey(ey, gx, hy, ix1, iy2)
-    ez_part = interp_ez(ez, gx, gy, ix1, iy1)
-
-    bx_part = interp_bx(bx, gx, hy, ix1, iy2)
-    by_part = interp_by(by, hx, gy, ix2, iy1)
-    bz_part = interp_bz(bz, hx, hy, ix2, iy2)
-
-    return ex_part, ey_part, ez_part, bx_part, by_part, bz_part
-
-@njit
-def get_gx(delta):
+@njit(cache=True, inline="always")
+def get_gx(delta, gx):
     delta2 = delta*delta
-    return (
-        0.5*(0.25 + delta2 + delta),
-        0.75 - delta2,
-        0.5*(0.25 + delta2 - delta),
-    )
+    gx[0] = 0.5*(0.25 + delta2 + delta)
+    gx[1] = 0.75 - delta2
+    gx[2] = 0.5*(0.25 + delta2 - delta)
 
-@njit
+@njit(cache=True)
 def interp_ex(ex, hx, gy, ix2, iy1):
     ex_part = \
           gy[ 0] * (hx[ 0] * ex[ix2-1,iy1-1] \
@@ -72,7 +68,7 @@ def interp_ex(ex, hx, gy, ix2, iy1):
         +           hx[ 2] * ex[ix2+1,iy1+1])
     return ex_part
 
-@njit
+@njit(cache=True)
 def interp_ey(ey, gx, hy, ix1, iy2):
     ey_part = \
           hy[ 0] * (gx[ 0] * ey[ix1-1,iy2-1] \
@@ -86,7 +82,7 @@ def interp_ey(ey, gx, hy, ix1, iy2):
         +           gx[ 2] * ey[ix1+1,iy2+1])
     return ey_part
 
-@njit
+@njit(cache=True)
 def interp_ez(ez, gx, gy, ix1, iy1):
     ez_part = \
           gy[ 0] * (gx[ 0] * ez[ix1-1,iy1-1] \
@@ -101,7 +97,7 @@ def interp_ez(ez, gx, gy, ix1, iy1):
     return ez_part
 
 
-@njit
+@njit(cache=True)
 def interp_bx(bx, gx, hy, ix1, iy2):
     bx_part = \
           hy[ 0] * (gx[ 0] * bx[ix1-1,iy2-1] \
@@ -115,7 +111,7 @@ def interp_bx(bx, gx, hy, ix1, iy2):
         +           gx[ 2] * bx[ix1+1,iy2+1])
     return bx_part
 
-@njit
+@njit(cache=True)
 def interp_by(by, hx, gy, ix2, iy1):
     bx_part = \
           gy[ 0] * (hx[ 0] * by[ix2-1,iy1-1] \
@@ -129,7 +125,7 @@ def interp_by(by, hx, gy, ix2, iy1):
         +           hx[ 2] * by[ix2+1,iy1+1])
     return bx_part
 
-@njit
+@njit(cache=True)
 def interp_bz(bz, hx, hy, ix2, iy2):
     bx_part = \
           hy[ 0] * (hx[ 0] * bz[ix2-1,iy2-1] \

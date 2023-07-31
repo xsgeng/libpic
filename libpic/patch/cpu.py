@@ -3,10 +3,10 @@ from libpic.deposition_2d import current_deposit_2d
 from libpic.interpolation_2d import interpolation_2d
 
 
-from numba import njit, prange
+from numba import njit, prange, get_num_threads, get_thread_id, typed
 
 from libpic.maxwell_2d import update_bfield_2d, update_efield_2d
-from libpic.pusher import boris_cpu, push_position_2d
+from libpic.pusher import boris, boris_cpu, push_position_2d
 
 
 """ Parallel functions for patches """
@@ -87,7 +87,7 @@ def current_deposition(
         current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def update_efield_patches(
     ex_list, ey_list, ez_list,
     bx_list, by_list, bz_list,
@@ -110,7 +110,7 @@ def update_efield_patches(
         update_efield_2d(ex, ey, ez, bx, by, bz, jx, jy, jz, dx, dy, dt, nx, ny, n_guard)
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def update_bfield_patches(
     ex_list, ey_list, ez_list,
     bx_list, by_list, bz_list,
@@ -129,7 +129,7 @@ def update_bfield_patches(
         update_bfield_2d(ex, ey, ez, bx, by, bz, dx, dy, dt, nx, ny, n_guard)
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def boris_push(
     ux_list, uy_list, uz_list, inv_gamma_list,
     ex_list, ey_list, ez_list,
@@ -151,17 +151,10 @@ def boris_push(
 
         pruned = pruned_list[ipatch]
         npart = len(pruned)
-        for ipart in range(npart):
-            if not pruned[ipart]:
-                ux[ipart], uy[ipart], uz[ipart], inv_gamma[ipart] = boris_cpu(
-                    ux[ipart], uy[ipart], uz[ipart],
-                    ex[ipart], ey[ipart], ez[ipart],
-                    bx[ipart], by[ipart], bz[ipart],
-                    q, dt
-                )
+        boris( ux, uy, uz, inv_gamma, ex, ey, ez, bx, by, bz, q, npart, pruned, dt )
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def push_position(
     x_list, y_list,
     ux_list, uy_list, inv_gamma_list,
@@ -181,7 +174,7 @@ def push_position(
         push_position_2d( x, y, ux, uy, inv_gamma, npart, pruned, dt )
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def sync_currents(
     jx_list, jy_list, jz_list,
     xmin_index_list,
@@ -207,7 +200,7 @@ def sync_currents(
         if ymax_index >= 0:
             field[ipatch][:nx, ny-ng:ny] = field[ymax_index][:nx, -ng:]
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def sync_guard_fields(
     ex_list, ey_list, ez_list,
     bx_list, by_list, bz_list,
@@ -264,15 +257,23 @@ def mark_out_of_bound_as_pruned(
                 continue
             if x[i] < xmin:
                 pruned[i] = True
+                x[i] = np.nan
+                y[i] = np.nan
                 continue
             if x[i] > xmax:
                 pruned[i] = True
+                x[i] = np.nan
+                y[i] = np.nan
                 continue
             if y[i] < ymin:
                 pruned[i] = True
+                x[i] = np.nan
+                y[i] = np.nan
                 continue
             if y[i] > ymax:
                 pruned[i] = True
+                x[i] = np.nan
+                y[i] = np.nan
                 continue
 
 
@@ -355,9 +356,9 @@ def get_npart_to_extend(
         for pruned_ in pruned:
             if pruned_: npruned += 1
 
-        if npart_new_ - npruned > 0:
+        if (npart_new_ - npruned) > 0:
             # reserved more space for new particles in the following loops
-            npart_to_extend[ipatches] = npart_new_ - npruned + len(pruned)*0.25
+            npart_to_extend[ipatches] = npart_new_ - npruned + int(len(pruned)*0.25)
         # else:
         #     npart_to_extend[ipatches] = 0
 
@@ -365,10 +366,10 @@ def get_npart_to_extend(
     return npart_to_extend, npart_new
 
 
-@njit(inline="always")
+@njit(cache=True, inline="always")
 def fill_boundary_particles_to_buffer(
     buffer,
-    npart_list, xaxis_list, yaxis_list,
+    xaxis_list, yaxis_list,
     xmin_index, xmax_index, ymin_index, ymax_index,
     dx, dy,
     attrs_list,
@@ -379,7 +380,8 @@ def fill_boundary_particles_to_buffer(
     if xmin_index >= 0:
         x_on_xmin = attrs_list[0][xmin_index]
         xmax = xaxis_list[xmin_index][-1] + 0.5*dx
-        for ipart in range(npart_list[xmin_index]):
+        npart = len(x_on_xmin)
+        for ipart in range(npart):
             if ibuff >= npart_new:
                 break
             if x_on_xmin[ipart] > xmax:
@@ -391,7 +393,8 @@ def fill_boundary_particles_to_buffer(
     if xmax_index >= 0:
         x_on_xmax = attrs_list[0][xmax_index]
         xmin = xaxis_list[xmax_index][ 0] - 0.5*dx
-        for ipart in range(npart_list[xmax_index]):
+        npart = len(x_on_xmax)
+        for ipart in range(npart):
             if ibuff >= npart_new:
                 break
             if x_on_xmax[ipart] < xmin:
@@ -403,7 +406,8 @@ def fill_boundary_particles_to_buffer(
     if ymin_index >= 0:
         y_on_ymin = attrs_list[1][ymin_index]
         ymax = yaxis_list[ymin_index][-1] + 0.5*dy
-        for ipart in range(npart_list[ymin_index]):
+        npart = len(y_on_ymin)
+        for ipart in range(npart):
             if ibuff >= npart_new:
                 break
             if y_on_ymin[ipart] > ymax:
@@ -415,7 +419,8 @@ def fill_boundary_particles_to_buffer(
     if ymax_index >= 0:
         y_on_ymax = attrs_list[1][ymax_index]
         ymin = yaxis_list[ymax_index][ 0] - 0.5*dy
-        for ipart in range(npart_list[ymax_index]):
+        npart = len(y_on_ymax)
+        for ipart in range(npart):
             if ibuff >= npart_new:
                 break
             if y_on_ymax[ipart] < ymin:
@@ -426,9 +431,8 @@ def fill_boundary_particles_to_buffer(
     assert ibuff == npart_new
 
 
-@njit
+@njit(cache=True, parallel=True)
 def fill_particles_from_boundary(
-    npart_list,
     pruned_list,
     xaxis_list,
     yaxis_list,
@@ -454,12 +458,10 @@ def fill_particles_from_boundary(
         ymax_index = ymax_index_list[ipatches]
 
         buffer = np.zeros((npart_new, nattrs))
-        fill_boundary_particles_to_buffer(buffer, npart_list, xaxis_list, yaxis_list,
+        fill_boundary_particles_to_buffer(buffer, xaxis_list, yaxis_list,
                                           xmin_index, xmax_index, ymin_index, ymax_index,
                                           dx, dy, attrs_list)
-        # if ipatches == 0:
-        #     print(buffer[:, 0], len(pruned), npart_new)
-        # fill the pruned
+
         ibuff = 0
         for ipart in range(len(pruned)):
             if ibuff >= npart_new:
@@ -467,13 +469,11 @@ def fill_particles_from_boundary(
             if pruned[ipart]:
                 for iattr in range(nattrs):
                     attrs_list[iattr][ipatches][ipart] = buffer[ibuff, iattr]
-                    # if iattr == 0 and ipatches == 0:
-                    #     print(attrs_list[iattr][ipatches][ipart], buffer[ibuff, iattr])
                 pruned[ipart] = False
                 ibuff += 1
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def get_num_macro_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc) -> np.ndarray:
     num_particles = np.zeros(npatches, dtype=np.int64)
     for ipatch in prange(npatches):
@@ -488,7 +488,7 @@ def get_num_macro_particles(density_func, xaxis_list, yaxis_list, npatches, dens
     return num_particles
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def fill_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc, x_list, y_list, w_list):
     dx = xaxis_list[0][1] - xaxis_list[0][0]
     dy = yaxis_list[0][1] - yaxis_list[0][0]

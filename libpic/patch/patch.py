@@ -1,5 +1,4 @@
-from numba import float64, typed, types, njit, set_num_threads
-from numba.extending import as_numba_type
+from numba import typed, njit
 import numpy as np
 
 from time import perf_counter_ns
@@ -10,7 +9,7 @@ from libpic.patch.cpu import (
     boris_push, current_deposition, fill_particles, 
     fill_particles_from_boundary, get_npart_to_extend, 
     get_num_macro_particles, mark_out_of_bound_as_pruned, 
-    push_position, sync_guard_fields, update_bfield_patches, 
+    push_position, sync_currents, sync_guard_fields, update_bfield_patches, 
     update_efield_patches, interpolation
 )
 from libpic.species import Species
@@ -200,7 +199,7 @@ class Patches2D:
 
 
     def sync_guard_fields(self):
-        lists = self.lists
+        lists = self.numba_lists
         print(f"Synching guard fields...", end=" ")
         tic = perf_counter_ns()
         sync_guard_fields(
@@ -218,37 +217,62 @@ class Patches2D:
         )
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
+
+    def sync_currents(self):
+        lists = self.numba_lists
+        print(f"Synching currents...", end=" ")
+        tic = perf_counter_ns()
+        sync_currents(
+            lists['jx'], lists['jy'], lists['jz'],
+            lists['xmin_neighbor_index'], 
+            lists['xmax_neighbor_index'], 
+            lists['ymin_neighbor_index'], 
+            lists['ymax_neighbor_index'], 
+            self.npatches, 
+            self.nx,
+            self.ny,
+            self.n_guard,
+        )
+        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
+
     def sync_particles(self):
         lists = self.numba_lists
         for ispec, s in enumerate(self.species):
             print(f"Synching Species {s.name}...", end=" ")
             tic = perf_counter_ns()
-            mark_out_of_bound_as_pruned(
-                lists["x"][ispec], lists["y"][ispec],
-                lists["npart"][ispec], lists["pruned"][ispec],
-                lists["xaxis"], lists["yaxis"],
-                self.npatches, self.dx, self.dy,
-            )
 
             npart_to_extend, npart_new_list = get_npart_to_extend(
                 lists["x"][ispec], lists["y"][ispec],
                 lists["npart"][ispec], lists["pruned"][ispec],
                 lists["xaxis"], lists["yaxis"],
-                lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
+                lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], 
+                lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
                 self.npatches, self.dx, self.dy,
             )
 
+            # extend the particles in each patch in python mode
+            # TODO: extend the particles in each patch in numba mode in parallel
+            # typed.List cannot modify the attr of the particle object since
+            # the address is modified after being extended.
             for ipatches in range(self.npatches):
                 if npart_to_extend[ipatches] > 0:
                     self.patches[ipatches].particles[ispec].extend(npart_to_extend[ipatches])
                     self.update_particle_lists(ipatches)
+
             fill_particles_from_boundary(
-                lists["npart"][ispec], lists["pruned"][ispec],
+                lists["pruned"][ispec],
                 lists["xaxis"], lists["yaxis"],
                 lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
                 npart_new_list,
                 self.npatches, self.dx, self.dy,
                 *[lists[attr][ispec] for attr in Particles.attrs]
+            )
+
+            mark_out_of_bound_as_pruned(
+                lists["x"][ispec], lists["y"][ispec],
+                lists["npart"][ispec], lists["pruned"][ispec],
+                lists["xaxis"], lists["yaxis"],
+                self.npatches, self.dx, self.dy,
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
@@ -276,7 +300,7 @@ class Patches2D:
 
     def update_efield(self, dt):
         lists = self.numba_lists
-        print(f"Updating B field...", end=" ")
+        print(f"Updating E field...", end=" ")
         tic = perf_counter_ns()
         update_efield_patches(
             ex_list = lists['ex'],
