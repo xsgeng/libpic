@@ -1,5 +1,6 @@
-from numba import typed, njit
 import numpy as np
+from numba import typed, njit
+from scipy.constants import e
 
 from time import perf_counter_ns
 
@@ -106,8 +107,6 @@ class Patch2D:
     def set_fields(self, fields: Fields2D):
         self.fields = fields
 
-    def add_particles(self, particles: Particles):
-        self.particles.append(particles)
 
 class Patches2D:
     """ 
@@ -173,33 +172,33 @@ class Patches2D:
         lists["xmax_neighbor_index"] = typed.List([p.xmax_neighbor_index for p in self.patches])
         lists["ymin_neighbor_index"] = typed.List([p.ymin_neighbor_index for p in self.patches])
         lists["ymax_neighbor_index"] = typed.List([p.ymax_neighbor_index for p in self.patches])
+        self.grid_lists = lists
 
-        lists["npart"] = []
-        lists["pruned"] = []
+        particle_lists = []
         for ispec, s in enumerate(self.species):
-            lists["npart"].append(typed.List([p.particles[ispec].npart for p in self.patches]))
-            lists["pruned"].append(typed.List([p.particles[ispec].pruned for p in self.patches]))
+            particle_lists.append({})
+            lists = particle_lists[ispec]
+            lists["npart"] = typed.List([p.particles[ispec].npart for p in self.patches])
+            lists["pruned"] = typed.List([p.particles[ispec].pruned for p in self.patches])
 
-        for attr in Particles.attrs:
-            lists[attr] = []
-            for ispec, s in enumerate(self.species):
-                lists[attr].append(typed.List([getattr(p.particles[ispec], attr) for p in self.patches]))
+            for attr in self[0].particles[ispec].attrs:
+                lists[attr] = typed.List([getattr(p.particles[ispec], attr) for p in self.patches])
 
-        self.numba_lists = lists
+        self.particle_lists = particle_lists
+
 
     def update_particle_lists(self, ipatch):
-        lists = self.numba_lists
+        plists = self.particle_lists
         patch = self[ipatch]
         for ispec, s in enumerate(self.species):
-            lists["npart"][ispec][ipatch] = patch.particles[ispec].npart
-            lists["pruned"][ispec][ipatch] = patch.particles[ispec].pruned
+            plists[ispec]["npart"][ipatch] = patch.particles[ispec].npart
+            plists[ispec]["pruned"][ipatch] = patch.particles[ispec].pruned
 
-            for attr in Particles.attrs:
-                lists[attr][ispec][ipatch] = getattr(patch.particles[ispec], attr)
-
+            for attr in patch.particles[ispec].attrs:
+                plists[ispec][attr][ipatch] = getattr(patch.particles[ispec], attr)
 
     def sync_guard_fields(self):
-        lists = self.numba_lists
+        lists = self.grid_lists
         print(f"Synching guard fields...", end=" ")
         tic = perf_counter_ns()
         sync_guard_fields(
@@ -219,7 +218,7 @@ class Patches2D:
 
 
     def sync_currents(self):
-        lists = self.numba_lists
+        lists = self.grid_lists
         print(f"Synching currents...", end=" ")
         tic = perf_counter_ns()
         sync_currents(
@@ -236,14 +235,15 @@ class Patches2D:
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def sync_particles(self):
-        lists = self.numba_lists
+        lists = self.grid_lists
+        plists = self.particle_lists
         for ispec, s in enumerate(self.species):
             print(f"Synching Species {s.name}...", end=" ")
             tic = perf_counter_ns()
 
-            npart_to_extend, npart_new_list = get_npart_to_extend(
-                lists["x"][ispec], lists["y"][ispec],
-                lists["npart"][ispec], lists["pruned"][ispec],
+            npart_to_extend, npart_incoming, npart_outgoing = get_npart_to_extend(
+                plists[ispec]["x"], plists[ispec]["y"],
+                plists[ispec]["npart"], plists[ispec]["pruned"],
                 lists["xaxis"], lists["yaxis"],
                 lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], 
                 lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
@@ -256,21 +256,21 @@ class Patches2D:
             # the address is modified after being extended.
             for ipatches in range(self.npatches):
                 if npart_to_extend[ipatches] > 0:
-                    self.patches[ipatches].particles[ispec].extend(npart_to_extend[ipatches])
+                    self[ipatches].particles[ispec].extend(npart_to_extend[ipatches])
                     self.update_particle_lists(ipatches)
 
             fill_particles_from_boundary(
-                lists["pruned"][ispec],
+                plists[ispec]["pruned"],
                 lists["xaxis"], lists["yaxis"],
                 lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
-                npart_new_list,
+                npart_incoming, npart_outgoing,
                 self.npatches, self.dx, self.dy,
-                *[lists[attr][ispec] for attr in Particles.attrs]
+                *[plists[ispec][attr] for attr in self[ipatches].particles[ispec].attrs],
             )
 
             mark_out_of_bound_as_pruned(
-                lists["x"][ispec], lists["y"][ispec],
-                lists["npart"][ispec], lists["pruned"][ispec],
+                plists[ispec]["x"], plists[ispec]["y"],
+                plists[ispec]["npart"], plists[ispec]["pruned"],
                 lists["xaxis"], lists["yaxis"],
                 self.npatches, self.dx, self.dy,
             )
@@ -299,7 +299,7 @@ class Patches2D:
         return self[0].fields.n_guard
 
     def update_efield(self, dt):
-        lists = self.numba_lists
+        lists = self.grid_lists
         print(f"Updating E field...", end=" ")
         tic = perf_counter_ns()
         update_efield_patches(
@@ -323,7 +323,7 @@ class Patches2D:
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def update_bfield(self, dt):
-        lists = self.numba_lists
+        lists = self.grid_lists
         print(f"Updating B field...", end=" ")
         tic = perf_counter_ns()
         update_bfield_patches(
@@ -343,7 +343,7 @@ class Patches2D:
         )
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
-    def init_particles(self, species : Species):
+    def add_species(self, species : Species):
 
         print(f"Initializing Species {species.name}...", end=" ")
         tic = perf_counter_ns()
@@ -364,7 +364,7 @@ class Patches2D:
         for ipatch in range(self.npatches):
             particles : Particles = species.create_particles()
             particles.initialize(num_macro_particles[ipatch])
-            self[ipatch].add_particles(particles)
+            self[ipatch].particles.append(particles)
 
         self.species.append(species)
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
@@ -389,68 +389,71 @@ class Patches2D:
                 s.ppc,
                 x_list,y_list,w_list
             )
-
-            for p in self:
-                p.particles[ispec].x_old[:] = p.particles[ispec].x[:]
-                p.particles[ispec].y_old[:] = p.particles[ispec].y[:]
     
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
 
     def momentum_push(self, dt):
-        lists = self.numba_lists
+        plists = self.particle_lists
         for ispec, s in enumerate(self.species):
             print(f"Pushing Species {s.name}...", end=" ")
             tic = perf_counter_ns()
             boris_push(
-                lists['ux'][ispec], lists['uy'][ispec], lists['uz'][ispec], lists['inv_gamma'][ispec],
-                lists['ex_part'][ispec], lists['ey_part'][ispec], lists['ez_part'][ispec],
-                lists['bx_part'][ispec], lists['by_part'][ispec], lists['bz_part'][ispec],
-                self.npatches, s.q, lists['npart'][ispec], lists['pruned'][ispec], dt
+                plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['uz'], plists[ispec]['inv_gamma'],
+                plists[ispec]['ex_part'], plists[ispec]['ey_part'], plists[ispec]['ez_part'],
+                plists[ispec]['bx_part'], plists[ispec]['by_part'], plists[ispec]['bz_part'],
+                self.npatches, s.q, plists[ispec]['npart'], plists[ispec]['pruned'], dt
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
     
     def position_push(self, dt):
-        lists = self.numba_lists
+        plists = self.particle_lists
         for ispec, s in enumerate(self.species):
             print(f"Pushing Species {s.name}...", end=" ")
             tic = perf_counter_ns()
             push_position(
-                lists['x'][ispec], lists['y'][ispec], 
-                lists['ux'][ispec], lists['uy'][ispec], lists['inv_gamma'][ispec],
-                self.npatches, lists['pruned'][ispec], dt
+                plists[ispec]['x'], plists[ispec]['y'], 
+                plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['inv_gamma'],
+                self.npatches, plists[ispec]['pruned'], dt
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def current_deposition(self, dt):
-        lists = self.numba_lists
+        lists = self.grid_lists
+        plists = self.particle_lists
+        for p in self:
+            p.fields.jx[:] = 0
+            p.fields.jy[:] = 0
+            p.fields.jz[:] = 0
+            p.fields.rho[:] = 0
         for ispec, s in enumerate(self.species):
             print(f"Deposition of current for Species {s.name}...", end=" ")
             tic = perf_counter_ns()
             current_deposition(
                 lists['rho'], lists['jx'], lists['jy'], lists['jz'],
                 lists['xaxis'], lists['yaxis'],
-                lists['x'][ispec], lists['y'][ispec], 
-                lists['ux'][ispec], lists['uy'][ispec], lists['uz'][ispec], lists['inv_gamma'][ispec], 
-                lists['pruned'][ispec], 
-                self.npatches, self.dx, self.dy, dt, lists['w'][ispec], s.q,
+                plists[ispec]['x'], plists[ispec]['y'], 
+                plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['uz'], plists[ispec]['inv_gamma'], 
+                plists[ispec]['pruned'], 
+                self.npatches, self.dx, self.dy, dt, plists[ispec]['w'], e*s.q,
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def interpolation(self):
-        lists = self.numba_lists
+        lists = self.grid_lists
+        plists = self.particle_lists
         for ispec, s in enumerate(self.species):
             print(f"Interpolation of current for Species {s.name}...", end=" ")
             tic = perf_counter_ns()
             interpolation(
-                lists["x"][ispec], lists["y"][ispec], 
-                lists["ex_part"][ispec], lists["ey_part"][ispec], lists["ez_part"][ispec],
-                lists["bx_part"][ispec], lists["by_part"][ispec], lists["bz_part"][ispec],
-                lists["npart"][ispec], 
+                plists[ispec]["x"], plists[ispec]["y"], 
+                plists[ispec]["ex_part"], plists[ispec]["ey_part"], plists[ispec]["ez_part"],
+                plists[ispec]["bx_part"], plists[ispec]["by_part"], plists[ispec]["bz_part"],
+                plists[ispec]["npart"], 
                 lists["ex"], lists["ey"], lists["ez"],
                 lists["bx"], lists["by"], lists["bz"],
                 lists["xaxis"], lists["yaxis"],
-                self.npatches, self.dx, self.dy, lists["pruned"][ispec],
+                self.npatches, self.dx, self.dy, plists[ispec]["pruned"],
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 

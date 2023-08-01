@@ -80,10 +80,6 @@ def current_deposition(
         pruned = pruned_list[ipatch]
         npart = len(pruned)
 
-        jx[:] = 0
-        jy[:] = 0
-        jz[:] = 0
-        rho[:] = 0
         current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
 
 
@@ -194,11 +190,11 @@ def sync_currents(
         if xmin_index >= 0:
             field[ipatch][:ng, :ny] += field[xmin_index][nx:nx+ng, :ny]
         if ymin_index >= 0:
-            field[ipatch][:nx, :ng] = field[ymin_index][:nx, ny:ny+ng]
+            field[ipatch][:nx, :ng] += field[ymin_index][:nx, ny:ny+ng]
         if xmax_index >= 0:
             field[ipatch][nx-ng:nx, :ny] += field[xmax_index][-ng:, :ny]
         if ymax_index >= 0:
-            field[ipatch][:nx, ny-ng:ny] = field[ymax_index][:nx, -ng:]
+            field[ipatch][:nx, ny-ng:ny] += field[ymax_index][:nx, -ng:]
 
 @njit(cache=True, parallel=True)
 def sync_guard_fields(
@@ -278,7 +274,7 @@ def mark_out_of_bound_as_pruned(
 
 
 @njit
-def count_new_particles(
+def count_coming_particles(
     x_list, y_list,
     xmin_index, xmax_index, ymin_index, ymax_index,
     xaxis_list, yaxis_list,
@@ -320,6 +316,29 @@ def count_new_particles(
 
     return npart_out_of_bound
 
+@njit
+def count_outgoing_particles(x, y, xmin, xmax, ymin, ymax):
+    npart_xmin = 0
+    npart_xmax = 0
+    npart_ymin = 0
+    npart_ymax = 0
+    for ip in range(len(x)):
+        if x[ip] < xmin:
+            npart_xmin += 1
+            continue
+        if x[ip] > xmax:
+            npart_xmax += 1
+            continue
+        if y[ip] < ymin:
+            npart_ymin += 1
+            continue
+        if y[ip] > ymax:
+            npart_ymax += 1
+            continue
+
+
+    return npart_xmin, npart_xmax, npart_ymin, npart_ymax
+
 
 @njit(parallel=True, cache=True)
 def get_npart_to_extend(
@@ -338,7 +357,21 @@ def get_npart_to_extend(
     count the number of particles to be extended, and return the number of new particles
     """
     npart_to_extend = np.zeros(npatches, dtype='i8')
-    npart_new = np.zeros(npatches, dtype='i8')
+    npart_incoming = np.zeros(npatches, dtype='i8')
+    npart_outgoing = np.zeros((4, npatches), dtype='i8')
+    for ipatches in prange(npatches):
+        x = x_list[ipatches]
+        y = y_list[ipatches]
+        xmin = xaxis_list[ipatches][ 0] - 0.5*dx
+        xmax = xaxis_list[ipatches][-1] + 0.5*dx
+        ymin = yaxis_list[ipatches][ 0] - 0.5*dy
+        ymax = yaxis_list[ipatches][-1] + 0.5*dy
+        npart_xmin, npart_xmax, npart_ymin, npart_ymax = count_outgoing_particles(x, y, xmin, xmax, ymin, ymax)
+        npart_outgoing[0, ipatches] = npart_xmin
+        npart_outgoing[1, ipatches] = npart_xmax
+        npart_outgoing[2, ipatches] = npart_ymin
+        npart_outgoing[3, ipatches] = npart_ymax
+
     for ipatches in prange(npatches):
         pruned = pruned_list[ipatches]
 
@@ -347,88 +380,135 @@ def get_npart_to_extend(
         ymin_index = ymin_index_list[ipatches]
         ymax_index = ymax_index_list[ipatches]
 
-        # 0, 1 for x and y
-        npart_new_ = count_new_particles(x_list, y_list,
-                                        xmin_index, xmax_index, ymin_index, ymax_index, xaxis_list, yaxis_list, dx, dy)
+        npart_new = 0
+        if xmax_index >= 0:
+            npart_new += npart_outgoing[0, xmax_index]
+        if xmin_index >= 0:
+            npart_new += npart_outgoing[1, xmin_index]
+        if ymax_index >= 0:
+            npart_new += npart_outgoing[2, ymax_index]
+        if ymin_index >= 0:
+            npart_new += npart_outgoing[3, ymin_index]
 
         # count vacants
         npruned = 0
         for pruned_ in pruned:
             if pruned_: npruned += 1
 
-        if (npart_new_ - npruned) > 0:
+        if (npart_new - npruned) > 0:
             # reserved more space for new particles in the following loops
-            npart_to_extend[ipatches] = npart_new_ - npruned + int(len(pruned)*0.25)
-        # else:
-        #     npart_to_extend[ipatches] = 0
+            npart_to_extend[ipatches] = npart_new - npruned + int(len(pruned)*0.25)
 
-        npart_new[ipatches] = npart_new_
-    return npart_to_extend, npart_new
+        npart_incoming[ipatches] = npart_new
+    return npart_to_extend, npart_incoming, npart_outgoing
 
-
-@njit(cache=True, inline="always")
-def fill_boundary_particles_to_buffer(
-    buffer,
-    xaxis_list, yaxis_list,
+@njit
+def get_incoming_index(
+    x_list, y_list, 
     xmin_index, xmax_index, ymin_index, ymax_index,
+    xaxis_list, yaxis_list,
     dx, dy,
-    attrs_list,
+    xmin_indices, xmax_indices, ymin_indices, ymax_indices,
 ):
-    npart_new = buffer.shape[0]
-    ibuff = 0
     # on xmin boundary
     if xmin_index >= 0:
-        x_on_xmin = attrs_list[0][xmin_index]
+        x_on_xmin = x_list[xmin_index]
         xmax = xaxis_list[xmin_index][-1] + 0.5*dx
         npart = len(x_on_xmin)
-        for ipart in range(npart):
-            if ibuff >= npart_new:
-                break
-            if x_on_xmin[ipart] > xmax:
-                for iattr, attr in enumerate(attrs_list):
-                    buffer[ibuff, iattr] = attr[xmin_index][ipart]
-                ibuff += 1
 
+        i = 0
+        for ipart in range(npart):
+            if x_on_xmin[ipart] > xmax:
+                xmax_indices[i] = ipart
+                i += 1
+                if i >= len(xmax_indices):
+                    break
     # on xmax boundary
     if xmax_index >= 0:
-        x_on_xmax = attrs_list[0][xmax_index]
+        x_on_xmax = x_list[xmax_index]
         xmin = xaxis_list[xmax_index][ 0] - 0.5*dx
         npart = len(x_on_xmax)
-        for ipart in range(npart):
-            if ibuff >= npart_new:
-                break
-            if x_on_xmax[ipart] < xmin:
-                for iattr, attr in enumerate(attrs_list):
-                    buffer[ibuff, iattr] = attr[xmax_index][ipart]
-                ibuff += 1
 
+        i = 0
+        for ipart in range(npart):
+            if x_on_xmax[ipart] < xmin:
+                xmin_indices[i] = ipart
+                i += 1
+                if i >= len(xmin_indices):
+                    break
     # on ymin boundary
     if ymin_index >= 0:
-        y_on_ymin = attrs_list[1][ymin_index]
+        y_on_ymin = y_list[ymin_index]
         ymax = yaxis_list[ymin_index][-1] + 0.5*dy
         npart = len(y_on_ymin)
-        for ipart in range(npart):
-            if ibuff >= npart_new:
-                break
-            if y_on_ymin[ipart] > ymax:
-                for iattr, attr in enumerate(attrs_list):
-                    buffer[ibuff, iattr] = attr[ymin_index][ipart]
-                ibuff += 1
 
+        i = 0
+        for ipart in range(npart):
+            if y_on_ymin[ipart] > ymax:
+                ymax_indices[i] = ipart
+                i += 1
+                if i >= len(ymax_indices):
+                    break
     # on ymax boundary
     if ymax_index >= 0:
-        y_on_ymax = attrs_list[1][ymax_index]
+        y_on_ymax = y_list[ymax_index]
         ymin = yaxis_list[ymax_index][ 0] - 0.5*dy
         npart = len(y_on_ymax)
-        for ipart in range(npart):
-            if ibuff >= npart_new:
-                break
-            if y_on_ymax[ipart] < ymin:
-                for iattr, attr in enumerate(attrs_list):
-                    buffer[ibuff, iattr] = attr[ymax_index][ipart]
-                ibuff += 1
 
-    assert ibuff == npart_new
+        i = 0
+        for ipart in range(npart):
+            if y_on_ymax[ipart] < ymin:
+                ymin_indices[i] = ipart
+                i += 1
+                if i >= len(ymin_indices):
+                    break
+
+
+@njit
+def fill_boundary_particles_to_buffer(
+    attrs_list,
+    xmin_indices, xmax_indices, ymin_indices, ymax_indices,
+    xmin_index, xmax_index, ymin_index, ymax_index,
+    buffer,
+):
+    """
+    fill the buffer with boundary particles
+
+    Parameters
+    ----------
+    buffer: size of (npart_new, nattrs)
+        buffer to be filled
+    *_indices:
+        indices of incoming particles from xmin, xmax, ymin, ymax
+    *_index:
+        index of the patch on xmin, xmax, ymin, ymax
+    attrs_list: [iattr][ipatch][ipart]
+        list of particle attributes
+    """
+    nattrs = len(attrs_list)
+    for iattr in range(nattrs):
+        attr_list = attrs_list[iattr]
+        ibuff = 0
+
+        attr = attr_list[xmax_index]
+        for idx in xmin_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
+
+        attr = attr_list[xmin_index]
+        for idx in xmax_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
+
+        attr = attr_list[ymax_index]
+        for idx in ymin_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
+
+        attr = attr_list[ymin_index]
+        for idx in ymax_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
 
 
 @njit(cache=True, parallel=True)
@@ -440,13 +520,14 @@ def fill_particles_from_boundary(
     xmax_index_list,
     ymin_index_list,
     ymax_index_list,
-    npart_new_list,
+    npart_incoming,
+    npart_outgoing,
     npatches, dx, dy,
     *attrs_list,
 ):
     nattrs = len(attrs_list)
     for ipatches in prange(npatches):
-        npart_new = npart_new_list[ipatches]
+        npart_new = npart_incoming[ipatches]
         if npart_new <= 0:
             continue
 
@@ -457,18 +538,46 @@ def fill_particles_from_boundary(
         ymin_index = ymin_index_list[ipatches]
         ymax_index = ymax_index_list[ipatches]
 
+        x_list = attrs_list[0]
+        y_list = attrs_list[1]
+         
+        npart_incoming_xmin = npart_outgoing[0, xmax_index] if  xmax_index >= 0 else 0
+        npart_incoming_xmax = npart_outgoing[1, xmin_index] if  xmin_index >= 0 else 0
+        npart_incoming_ymin = npart_outgoing[2, ymax_index] if  ymax_index >= 0 else 0
+        npart_incoming_ymax = npart_outgoing[3, ymin_index] if  ymin_index >= 0 else 0
+
+        xmin_incoming_indices = np.zeros(npart_incoming_xmin, dtype='i8')
+        xmax_incoming_indices = np.zeros(npart_incoming_xmax, dtype='i8')
+        ymin_incoming_indices = np.zeros(npart_incoming_ymin, dtype='i8')
+        ymax_incoming_indices = np.zeros(npart_incoming_ymax, dtype='i8')
+
+        # assert npart_incoming_xmin + npart_incoming_xmax + npart_incoming_ymin + npart_incoming_ymax == npart_new
+
+        get_incoming_index(
+            x_list, y_list, 
+            xmin_index, xmax_index, ymin_index, ymax_index,
+            xaxis_list, yaxis_list,
+            dx, dy,
+            xmin_incoming_indices, xmax_incoming_indices, ymin_incoming_indices, ymax_incoming_indices,
+        )
+
         buffer = np.zeros((npart_new, nattrs))
-        fill_boundary_particles_to_buffer(buffer, xaxis_list, yaxis_list,
-                                          xmin_index, xmax_index, ymin_index, ymax_index,
-                                          dx, dy, attrs_list)
+        fill_boundary_particles_to_buffer(
+            attrs_list,
+            xmin_incoming_indices, xmax_incoming_indices, ymin_incoming_indices, ymax_incoming_indices,
+            xmin_index, xmax_index, ymin_index, ymax_index,
+            buffer,
+        )
+
 
         ibuff = 0
+        attrs = typed.List([attrs_list[iattr][ipatches] for iattr in range(nattrs)])
         for ipart in range(len(pruned)):
             if ibuff >= npart_new:
                 break
             if pruned[ipart]:
                 for iattr in range(nattrs):
-                    attrs_list[iattr][ipatches][ipart] = buffer[ibuff, iattr]
+                    attrs[iattr][ipart] = buffer[ibuff, iattr]
                 pruned[ipart] = False
                 ibuff += 1
 
@@ -505,5 +614,5 @@ def fill_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc
                 if dens > dens_min:
                     x[ipart:ipart+ppc] = np.random.uniform(-dx/2, dx/2) + x_grid
                     y[ipart:ipart+ppc] = np.random.uniform(-dy/2, dy/2) + y_grid
-                    w[ipart:ipart+ppc] = dens / ppc
+                    w[ipart:ipart+ppc] = dens*dx*dy / ppc
                     ipart += ppc
