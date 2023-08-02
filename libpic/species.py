@@ -8,7 +8,7 @@ from .particles import Particles
 class Species(BaseModel):
     name: str
     charge: int = 1
-    mass: int = 1
+    mass: float = 1
         
     density: Callable = None
     density_min: float = 0
@@ -54,7 +54,7 @@ class Positron(Species):
 class Proton(Species):
     def __init__(self, name='proton', **kwargs) -> None:
         """ shortcut for proton with charge 1 and mass 1836 """
-        super().__init__(name=name, charge=1, mass=int(m_p/m_e), **kwargs)  
+        super().__init__(name=name, charge=1, mass=m_p/m_e, **kwargs)  
         
 class Photon(Species):
     def __init__(self, name='photon', **kwargs) -> None:

@@ -130,7 +130,7 @@ def boris_push(
     ux_list, uy_list, uz_list, inv_gamma_list,
     ex_list, ey_list, ez_list,
     bx_list, by_list, bz_list,
-    npatches, q, npart_list, pruned_list, dt
+    npatches, q, m, npart_list, pruned_list, dt
 ) -> None:
     for ipatch in prange(npatches):
         ux = ux_list[ipatch]
@@ -147,7 +147,7 @@ def boris_push(
 
         pruned = pruned_list[ipatch]
         npart = len(pruned)
-        boris( ux, uy, uz, inv_gamma, ex, ey, ez, bx, by, bz, q, npart, pruned, dt )
+        boris( ux, uy, uz, inv_gamma, ex, ey, ez, bx, by, bz, q, m, npart, pruned, dt )
 
 
 @njit(cache=True, parallel=True)

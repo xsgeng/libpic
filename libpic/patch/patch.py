@@ -1,6 +1,5 @@
 import numpy as np
 from numba import typed, njit
-from scipy.constants import e
 
 from time import perf_counter_ns
 
@@ -402,7 +401,7 @@ class Patches2D:
                 plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['uz'], plists[ispec]['inv_gamma'],
                 plists[ispec]['ex_part'], plists[ispec]['ey_part'], plists[ispec]['ez_part'],
                 plists[ispec]['bx_part'], plists[ispec]['by_part'], plists[ispec]['bz_part'],
-                self.npatches, s.q, plists[ispec]['npart'], plists[ispec]['pruned'], dt
+                self.npatches, s.q, s.m, plists[ispec]['npart'], plists[ispec]['pruned'], dt
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
     
@@ -435,7 +434,7 @@ class Patches2D:
                 plists[ispec]['x'], plists[ispec]['y'], 
                 plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['uz'], plists[ispec]['inv_gamma'], 
                 plists[ispec]['pruned'], 
-                self.npatches, self.dx, self.dy, dt, plists[ispec]['w'], e*s.q,
+                self.npatches, self.dx, self.dy, dt, plists[ispec]['w'], s.q,
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 

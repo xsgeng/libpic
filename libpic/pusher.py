@@ -2,10 +2,10 @@ from scipy.constants import m_e, c, pi, epsilon_0, hbar, e
 from math import sqrt
 from numba import njit, prange
 
-def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, dt ) :
+def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt ) :
 
-    efactor = q*dt/(2*m_e*c)
-    bfactor = q*dt/(2*m_e)
+    efactor = q*dt/(2*m*c)
+    bfactor = q*dt/(2*m)
 
     # E field
     ux_minus = ux + efactor * Ex
@@ -55,10 +55,10 @@ boris_cpu = njit(boris_inline, inline="always")
 
 subsize = 32
 @njit(cache=True)
-def boris( ux, uy, uz, inv_gamma, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, q, npart, pruned, dt ) :
+def boris( ux, uy, uz, inv_gamma, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, q, m, npart, pruned, dt ) :
     for ip in range(npart):
         if pruned[ip]:
             continue
 
         ux[ip], uy[ip], uz[ip], inv_gamma[ip] = boris_cpu(
-            ux[ip], uy[ip], uz[ip], ex_part[ip], ey_part[ip], ez_part[ip], bx_part[ip], by_part[ip], bz_part[ip], q, dt)
+            ux[ip], uy[ip], uz[ip], ex_part[ip], ey_part[ip], ez_part[ip], bx_part[ip], by_part[ip], bz_part[ip], q, m, dt)
