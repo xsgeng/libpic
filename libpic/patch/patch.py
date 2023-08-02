@@ -1,18 +1,19 @@
-import numpy as np
-from numba import typed, njit
-
 from time import perf_counter_ns
 
+import numpy as np
+from numba import njit, typed
+
+from libpic.boundary.particles import (fill_particles_from_boundary,
+                                       get_npart_to_extend,
+                                       mark_out_of_bound_as_pruned)
 from libpic.fields import Fields2D
 from libpic.particles import Particles
-from libpic.patch.cpu import (
-    boris_push, current_deposition, fill_particles, 
-    fill_particles_from_boundary, get_npart_to_extend, 
-    get_num_macro_particles, mark_out_of_bound_as_pruned, 
-    push_position, sync_currents, sync_guard_fields, update_bfield_patches, 
-    update_efield_patches, interpolation
-)
+from libpic.patch.cpu import (boris_push, current_deposition, fill_particles,
+                              get_num_macro_particles, interpolation,
+                              push_position, sync_currents, sync_guard_fields,
+                              update_bfield_patches, update_efield_patches)
 from libpic.species import Species
+
 
 class Patch2D:
     def __init__(
