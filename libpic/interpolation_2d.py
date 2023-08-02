@@ -35,8 +35,8 @@ def interpolation_2d(
             iy2 = int(np.floor(y_over_dy))
             get_gx(iy2 - y_over_dy + 0.5, hy[:, ip])
 
-        for ip in range(npart_vec):
-            ipart_global = ivect + ip
+        # for ip in range(npart_vec):
+        #     ipart_global = ivect + ip
             if not pruned[ipart_global]:
                 ex_part[ipart_global] = interp_ex(ex, hx[:, ip], gy[:, ip], ix2, iy1)
                 ey_part[ipart_global] = interp_ey(ey, gx[:, ip], hy[:, ip], ix1, iy2)
