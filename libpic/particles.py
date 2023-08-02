@@ -23,8 +23,6 @@ class Particles:
 
         self.x = np.zeros(npart)
         self.y = np.zeros(npart)
-        self.x_old = np.zeros(npart)
-        self.y_old = np.zeros(npart)
         self.w = np.zeros(npart)
         self.ux = np.zeros(npart)
         self.uy = np.zeros(npart)
@@ -40,18 +38,25 @@ class Particles:
 
         self.pruned = np.full(npart, False)
 
-    def extend(self, n):
+    def extend(self, n : int):
         if n <= 0:
             return
         for attr in self.attrs:
             arr = getattr(self, attr)
             arr = np.append(arr, np.full(n, np.nan))
             setattr(self, attr, arr)
+        self.w[-n:] = 0
         self.pruned = np.append(self.pruned, np.full(n, True))
         self.npart += n
 
+    def prune(self):
+        for attr in self.attrs:
+            setattr(self, attr, getattr(self, attr)[~self.pruned])
+        self.pruned = self.pruned[~self.pruned]
+        self.npart = len(self.pruned)
+
     def __repr__(self) -> str:
-        return f"Particles({self.npart} particles of {self.species.name} species)"
+        return f"Particles({self.npart} particles of {self.name} species)"
 
     def __str__(self) -> str:
-        return f"Particles({self.npart} particles of {self.species.name} species)"
+        return f"Particles({self.npart} particles of {self.name} species)"
