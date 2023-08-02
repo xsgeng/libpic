@@ -10,7 +10,7 @@ from libpic.pusher import boris, boris_cpu, push_position_2d
 
 
 """ Parallel functions for patches """
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def interpolation(
     x_list, y_list,
     ex_part_list, ey_part_list, ez_part_list,
@@ -52,7 +52,7 @@ def interpolation(
         )
 
 
-@njit(parallel=True)
+@njit(cache=True, parallel=True)
 def current_deposition(
     rho_list,
     jx_list, jy_list, jz_list,
@@ -196,6 +196,23 @@ def sync_currents(
         if ymax_index >= 0:
             field[ipatch][:nx, ny-ng:ny] += field[ymax_index][:nx, -ng:]
 
+        # corners
+        if ymin_index >= 0:
+            xminymin_index = xmin_index_list[ymin_index]
+            if xminymin_index >= 0:
+                field[ipatch][:ng, :ng] += field[xminymin_index][nx:nx+ng, ny:ny+ng]
+            xmaxymin_index = xmax_index_list[ymin_index]
+            if xmaxymin_index >= 0:
+                field[ipatch][nx-ng:nx, :ng] += field[xmaxymin_index][-ng:, ny:ny+ng]
+        if ymax_index >= 0:
+            xminymax_index = xmin_index_list[ymax_index]
+            if xminymax_index >= 0:
+                field[ipatch][:ng, ny-ng:ny] += field[xminymax_index][nx:nx+ng, -ng:]
+            xmaxymax_index = xmax_index_list[ymax_index]
+            if xmaxymax_index >= 0:
+                field[ipatch][nx-ng:nx, ny-ng:ny] += field[xmaxymax_index][-ng:, -ng:]
+
+
 @njit(cache=True, parallel=True)
 def sync_guard_fields(
     ex_list, ey_list, ez_list,
@@ -207,10 +224,10 @@ def sync_guard_fields(
     ymax_index_list,
     npatches, nx, ny, ng
 ):
-    all_fields = [ex_list, ey_list, ez_list, bx_list, by_list, bz_list, jx_list, jy_list, jz_list]
-    for i in prange(npatches*9):
-        field = all_fields[i%9]
-        ipatch = i//9
+    all_fields = [ex_list, ey_list, ez_list, bx_list, by_list, bz_list]
+    for i in prange(npatches*6):
+        field = all_fields[i%6]
+        ipatch = i//6
         xmin_index = xmin_index_list[ipatch]
         xmax_index = xmax_index_list[ipatch]
         ymin_index = ymin_index_list[ipatch]
@@ -223,6 +240,22 @@ def sync_guard_fields(
             field[ipatch][nx:nx+ng, :ny] = field[xmax_index][:ng, :ny]
         if ymax_index >= 0:
             field[ipatch][:nx, ny:ny+ng] = field[ymax_index][:nx, :ng]
+
+        # corners
+        if ymin_index >= 0:
+            xminymin_index = xmin_index_list[ymin_index]
+            if xminymin_index >= 0:
+                field[ipatch][-ng:, -ng:] = field[xminymin_index][nx-ng:nx, ny-ng:ny]
+            xmaxymin_index = xmax_index_list[ymin_index]
+            if xmaxymin_index >= 0:
+                field[ipatch][nx:nx+ng, -ng:] = field[xmaxymin_index][:ng, ny-ng:ny]
+        if ymax_index >= 0:
+            xminymax_index = xmin_index_list[ymax_index]
+            if xminymax_index >= 0:
+                field[ipatch][-ng:, ny:ny+ng] = field[xminymax_index][nx-ng:nx, :ng]
+            xmaxymax_index = xmax_index_list[ymax_index]
+            if xmaxymax_index >= 0:
+                field[ipatch][nx:nx+ng, ny:ny+ng] = field[xmaxymax_index][:ng, :ng]
 
 
 @njit(parallel=True, cache=True)
@@ -272,72 +305,46 @@ def mark_out_of_bound_as_pruned(
                 y[i] = np.nan
                 continue
 
-
-@njit
-def count_coming_particles(
-    x_list, y_list,
-    xmin_index, xmax_index, ymin_index, ymax_index,
-    xaxis_list, yaxis_list,
-    dx, dy,
-):
-    npart_out_of_bound = 0
-
-    if xmin_index >= 0:
-        xmax = xaxis_list[xmin_index][-1] + 0.5*dx
-        x = x_list[xmin_index]
-        npart = len(x)
-        for i in range(npart):
-            if x[i] > xmax:
-                npart_out_of_bound += 1
-
-    if xmax_index >= 0:
-        xmin = xaxis_list[xmax_index][0] - 0.5*dx
-        x = x_list[xmax_index]
-        npart = len(x)
-        for i in range(npart):
-            if x[i] < xmin:
-                npart_out_of_bound += 1
-
-    if ymin_index >= 0:
-        ymax = yaxis_list[ymin_index][-1] + 0.5*dy
-        y = y_list[ymin_index]
-        npart = len(y)
-        for i in range(npart):
-            if y[i] > ymax:
-                npart_out_of_bound += 1
-
-    if ymax_index >= 0:
-        ymin = yaxis_list[ymax_index][0] - 0.5*dy
-        y = y_list[ymax_index]
-        npart = len(y)
-        for i in range(npart):
-            if y[i] < ymin:
-                npart_out_of_bound += 1
-
-    return npart_out_of_bound
-
 @njit
 def count_outgoing_particles(x, y, xmin, xmax, ymin, ymax):
     npart_xmin = 0
     npart_xmax = 0
     npart_ymin = 0
     npart_ymax = 0
+    npart_xminymin = 0
+    npart_xmaxymin = 0
+    npart_xminymax = 0
+    npart_xmaxymax = 0
     for ip in range(len(x)):
-        if x[ip] < xmin:
-            npart_xmin += 1
-            continue
-        if x[ip] > xmax:
-            npart_xmax += 1
-            continue
         if y[ip] < ymin:
-            npart_ymin += 1
-            continue
-        if y[ip] > ymax:
-            npart_ymax += 1
-            continue
-
-
-    return npart_xmin, npart_xmax, npart_ymin, npart_ymax
+            if x[ip] < xmin:
+                npart_xminymin += 1
+                continue
+            elif x[ip] > xmax:
+                npart_xmaxymin += 1
+                continue
+            else:
+                npart_ymin += 1
+                continue
+        elif y[ip] > ymax:
+            if x[ip] < xmin:
+                npart_xminymax += 1
+                continue
+            elif x[ip] > xmax:
+                npart_xmaxymax += 1
+                continue
+            else:
+                npart_ymax += 1
+                continue
+        else:
+            if x[ip] < xmin:
+                npart_xmin += 1
+                continue
+            elif x[ip] > xmax:
+                npart_xmax += 1
+                continue
+    return (npart_xmin, npart_xmax, npart_ymin, npart_ymax,
+            npart_xminymin, npart_xmaxymin, npart_xminymax, npart_xmaxymax)
 
 
 @njit(parallel=True, cache=True)
@@ -358,7 +365,7 @@ def get_npart_to_extend(
     """
     npart_to_extend = np.zeros(npatches, dtype='i8')
     npart_incoming = np.zeros(npatches, dtype='i8')
-    npart_outgoing = np.zeros((4, npatches), dtype='i8')
+    npart_outgoing = np.zeros((8, npatches), dtype='i8')
     for ipatches in prange(npatches):
         x = x_list[ipatches]
         y = y_list[ipatches]
@@ -366,11 +373,16 @@ def get_npart_to_extend(
         xmax = xaxis_list[ipatches][-1] + 0.5*dx
         ymin = yaxis_list[ipatches][ 0] - 0.5*dy
         ymax = yaxis_list[ipatches][-1] + 0.5*dy
-        npart_xmin, npart_xmax, npart_ymin, npart_ymax = count_outgoing_particles(x, y, xmin, xmax, ymin, ymax)
+        npart_xmin, npart_xmax, npart_ymin, npart_ymax,\
+        npart_xminymin, npart_xmaxymin, npart_xminymax, npart_xmaxymax = count_outgoing_particles(x, y, xmin, xmax, ymin, ymax)
         npart_outgoing[0, ipatches] = npart_xmin
         npart_outgoing[1, ipatches] = npart_xmax
         npart_outgoing[2, ipatches] = npart_ymin
         npart_outgoing[3, ipatches] = npart_ymax
+        npart_outgoing[4, ipatches] = npart_xminymin
+        npart_outgoing[5, ipatches] = npart_xmaxymin
+        npart_outgoing[6, ipatches] = npart_xminymax
+        npart_outgoing[7, ipatches] = npart_xmaxymax
 
     for ipatches in prange(npatches):
         pruned = pruned_list[ipatches]
@@ -379,6 +391,11 @@ def get_npart_to_extend(
         xmax_index = xmax_index_list[ipatches]
         ymin_index = ymin_index_list[ipatches]
         ymax_index = ymax_index_list[ipatches]
+        # corners
+        xminymin_index = xmin_index_list[ymin_index] if ymin_index >= 0 else -1
+        xmaxymin_index = xmax_index_list[ymin_index] if ymin_index >= 0 else -1
+        xminymax_index = xmin_index_list[ymax_index] if ymax_index >= 0 else -1
+        xmaxymax_index = xmax_index_list[ymax_index] if ymax_index >= 0 else -1
 
         npart_new = 0
         if xmax_index >= 0:
@@ -389,6 +406,15 @@ def get_npart_to_extend(
             npart_new += npart_outgoing[2, ymax_index]
         if ymin_index >= 0:
             npart_new += npart_outgoing[3, ymin_index]
+        # corners
+        if xmaxymax_index >= 0:
+            npart_new += npart_outgoing[4, xmaxymax_index]
+        if xminymax_index >= 0:
+            npart_new += npart_outgoing[5, xminymax_index]
+        if xmaxymin_index >= 0:
+            npart_new += npart_outgoing[6, xmaxymin_index]
+        if xminymin_index >= 0:
+            npart_new += npart_outgoing[7, xminymin_index]
 
         # count vacants
         npruned = 0
@@ -406,69 +432,161 @@ def get_npart_to_extend(
 def get_incoming_index(
     x_list, y_list, 
     xmin_index, xmax_index, ymin_index, ymax_index,
+    xminymin_index, xmaxymin_index, xminymax_index, xmaxymax_index,
     xaxis_list, yaxis_list,
     dx, dy,
     xmin_indices, xmax_indices, ymin_indices, ymax_indices,
+    xminymin_indices, xmaxymin_indices, xminymax_indices, xmaxymax_indices,
 ):
+    """
+    fill the buffer with boundary particles
+
+    Parameters
+    ----------
+    x_list, y_list:
+        list of xy coordinates of patches
+    *_index:
+        indices of patches on the boundaries
+    xaxis_list, yaxis_list:
+        list of x and y axis of patches
+    dx, dy:
+        cell sizes
+    *_indices:
+        indices of incoming particles from xmin, xmax, ymin, ymax, xminymin, xmaxymin, xminymax, xmaxymax
+    
+    """
     # on xmin boundary
     if xmin_index >= 0:
         x_on_xmin = x_list[xmin_index]
+        y_on_xmin = y_list[xmin_index]
         xmax = xaxis_list[xmin_index][-1] + 0.5*dx
+        ymin = yaxis_list[xmin_index][ 0] - 0.5*dy
+        ymax = yaxis_list[xmin_index][-1] + 0.5*dy
         npart = len(x_on_xmin)
 
         i = 0
         for ipart in range(npart):
-            if x_on_xmin[ipart] > xmax:
-                xmax_indices[i] = ipart
-                i += 1
-                if i >= len(xmax_indices):
-                    break
-    # on xmax boundary
-    if xmax_index >= 0:
-        x_on_xmax = x_list[xmax_index]
-        xmin = xaxis_list[xmax_index][ 0] - 0.5*dx
-        npart = len(x_on_xmax)
-
-        i = 0
-        for ipart in range(npart):
-            if x_on_xmax[ipart] < xmin:
+            if (x_on_xmin[ipart] > xmax) and (y_on_xmin[ipart] >= ymin) and (y_on_xmin[ipart] <= ymax):
                 xmin_indices[i] = ipart
                 i += 1
                 if i >= len(xmin_indices):
                     break
+    # on xmax boundary
+    if xmax_index >= 0:
+        x_on_xmax = x_list[xmax_index]
+        y_on_xmax = y_list[xmax_index]
+        xmin = xaxis_list[xmax_index][ 0] - 0.5*dx
+        ymin = yaxis_list[xmax_index][ 0] - 0.5*dy
+        ymax = yaxis_list[xmax_index][-1] + 0.5*dy
+        npart = len(x_on_xmax)
+
+        i = 0
+        for ipart in range(npart):
+            if (x_on_xmax[ipart] < xmin) and (y_on_xmax[ipart] >= ymin) and (y_on_xmax[ipart] <= ymax):
+                xmax_indices[i] = ipart
+                i += 1
+                if i >= len(xmax_indices):
+                    break
     # on ymin boundary
     if ymin_index >= 0:
+        x_on_ymin = x_list[ymin_index]
         y_on_ymin = y_list[ymin_index]
+        xmin = xaxis_list[ymin_index][ 0] - 0.5*dx
+        xmax = xaxis_list[ymin_index][-1] + 0.5*dx
         ymax = yaxis_list[ymin_index][-1] + 0.5*dy
         npart = len(y_on_ymin)
 
         i = 0
         for ipart in range(npart):
-            if y_on_ymin[ipart] > ymax:
-                ymax_indices[i] = ipart
+            if (x_on_ymin[ipart] >= xmin) and (x_on_ymin[ipart] <= xmax) and (y_on_ymin[ipart] > ymax):
+                ymin_indices[i] = ipart
                 i += 1
-                if i >= len(ymax_indices):
+                if i >= len(ymin_indices):
                     break
     # on ymax boundary
     if ymax_index >= 0:
+        x_on_ymax = x_list[ymax_index]
         y_on_ymax = y_list[ymax_index]
+        xmin = xaxis_list[ymax_index][ 0] - 0.5*dx
+        xmax = xaxis_list[ymax_index][-1] + 0.5*dx
         ymin = yaxis_list[ymax_index][ 0] - 0.5*dy
         npart = len(y_on_ymax)
 
         i = 0
         for ipart in range(npart):
-            if y_on_ymax[ipart] < ymin:
-                ymin_indices[i] = ipart
+            if (x_on_ymax[ipart] >= xmin) and (x_on_ymax[ipart] <= xmax) and (y_on_ymax[ipart] < ymin):
+                ymax_indices[i] = ipart
                 i += 1
-                if i >= len(ymin_indices):
+                if i >= len(ymax_indices):
                     break
+    # on xminymin boundary
+    if xminymin_index >= 0:
+        x_on_xminymin = x_list[xminymin_index]
+        y_on_xminymin = y_list[xminymin_index]
+        xmax = xaxis_list[xminymin_index][-1] + 0.5*dx
+        ymax = yaxis_list[xminymin_index][-1] + 0.5*dy
+        npart = len(x_on_xminymin)
 
+        i = 0
+        for ipart in range(npart):
+            if (x_on_xminymin[ipart] > xmax) and (y_on_xminymin[ipart] > ymax):
+                xminymin_indices[i] = ipart
+                i += 1
+                if i >= len(xminymin_indices):
+                    break
+    # on xmaxymin boundary
+    if xmaxymin_index >= 0:
+        x_on_xmaxymin = x_list[xmaxymin_index]
+        y_on_xmaxymin = y_list[xmaxymin_index]
+        xmin = xaxis_list[xmaxymin_index][ 0] - 0.5*dx
+        ymax = yaxis_list[xmaxymin_index][-1] + 0.5*dy
+        npart = len(x_on_xmaxymin)
+
+        i = 0
+        for ipart in range(npart):
+            if (x_on_xmaxymin[ipart] < xmin) and (y_on_xmaxymin[ipart] > ymax):
+                xmaxymin_indices[i] = ipart
+                i += 1
+                if i >= len(xmaxymin_indices):
+                   break
+    # on xminymax boundary
+    if xminymax_index >= 0:
+        x_on_xminymax = x_list[xminymax_index]
+        y_on_xminymax = y_list[xminymax_index]
+        xmax = xaxis_list[xminymax_index][-1] + 0.5*dx
+        ymin = yaxis_list[xminymax_index][ 0] - 0.5*dy
+        npart = len(x_on_xminymax)
+
+        i = 0
+        for ipart in range(npart):
+            if (x_on_xminymax[ipart] > xmax) and (y_on_xminymax[ipart] < ymin):
+                xminymax_indices[i] = ipart
+                i += 1
+                if i >= len(xminymax_indices):
+                   break
+    # on xmaxymax boundary
+    if xmaxymax_index >= 0:
+        x_on_xmaxymax = x_list[xmaxymax_index]
+        y_on_xmaxymax = y_list[xmaxymax_index]
+        xmin = xaxis_list[xmaxymax_index][ 0] - 0.5*dx
+        ymin = yaxis_list[xmaxymax_index][ 0] - 0.5*dy
+        npart = len(x_on_xmaxymax)
+
+        i = 0
+        for ipart in range(npart):
+           if (x_on_xmaxymax[ipart] < xmin) and (y_on_xmaxymax[ipart] < ymin):
+                xmaxymax_indices[i] = ipart
+                i += 1
+                if i >= len(xmaxymax_indices):
+                   break
 
 @njit
 def fill_boundary_particles_to_buffer(
     attrs_list,
     xmin_indices, xmax_indices, ymin_indices, ymax_indices,
+    xminymin_indices, xmaxymin_indices, xminymax_indices, xmaxymax_indices,
     xmin_index, xmax_index, ymin_index, ymax_index,
+    xminymin_index, xmaxymin_index, xminymax_index, xmaxymax_index,
     buffer,
 ):
     """
@@ -490,23 +608,44 @@ def fill_boundary_particles_to_buffer(
         attr_list = attrs_list[iattr]
         ibuff = 0
 
-        attr = attr_list[xmax_index]
+        attr = attr_list[xmin_index]
         for idx in xmin_indices:
             buffer[ibuff, iattr] = attr[idx]
             ibuff += 1
 
-        attr = attr_list[xmin_index]
+        attr = attr_list[xmax_index]
         for idx in xmax_indices:
             buffer[ibuff, iattr] = attr[idx]
             ibuff += 1
 
-        attr = attr_list[ymax_index]
+        attr = attr_list[ymin_index]
         for idx in ymin_indices:
             buffer[ibuff, iattr] = attr[idx]
             ibuff += 1
 
-        attr = attr_list[ymin_index]
+        attr = attr_list[ymax_index]
         for idx in ymax_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
+
+        # corners
+        attr = attr_list[xminymin_index]
+        for idx in xminymin_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
+
+        attr = attr_list[xmaxymin_index]
+        for idx in xmaxymin_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
+
+        attr = attr_list[xminymax_index]
+        for idx in xminymax_indices:
+            buffer[ibuff, iattr] = attr[idx]
+            ibuff += 1
+
+        attr = attr_list[xmaxymax_index]
+        for idx in xmaxymax_indices:
             buffer[ibuff, iattr] = attr[idx]
             ibuff += 1
 
@@ -537,35 +676,56 @@ def fill_particles_from_boundary(
         xmax_index = xmax_index_list[ipatches]
         ymin_index = ymin_index_list[ipatches]
         ymax_index = ymax_index_list[ipatches]
+        xminymin_index = ymin_index_list[xmin_index] if xmin_index >= 0 else -1
+        xmaxymin_index = ymin_index_list[xmax_index] if xmax_index >= 0 else -1
+        xminymax_index = ymax_index_list[xmin_index] if xmin_index >= 0 else -1
+        xmaxymax_index = ymax_index_list[xmax_index] if xmax_index >= 0 else -1
 
         x_list = attrs_list[0]
         y_list = attrs_list[1]
          
-        npart_incoming_xmin = npart_outgoing[0, xmax_index] if  xmax_index >= 0 else 0
-        npart_incoming_xmax = npart_outgoing[1, xmin_index] if  xmin_index >= 0 else 0
-        npart_incoming_ymin = npart_outgoing[2, ymax_index] if  ymax_index >= 0 else 0
-        npart_incoming_ymax = npart_outgoing[3, ymin_index] if  ymin_index >= 0 else 0
+        # number of particles coming from xmax boundary is
+        # the number of particles going through xmin boundary 
+        # in the xmax_index patch. 
+        npart_incoming_xmax = npart_outgoing[0, xmax_index] if  xmax_index >= 0 else 0
+        npart_incoming_xmin = npart_outgoing[1, xmin_index] if  xmin_index >= 0 else 0
+        npart_incoming_ymax = npart_outgoing[2, ymax_index] if  ymax_index >= 0 else 0
+        npart_incoming_ymin = npart_outgoing[3, ymin_index] if  ymin_index >= 0 else 0
+        # corners
+        npart_incoming_xmaxymax = npart_outgoing[4, xmaxymax_index] if xminymin_index >= 0 else 0
+        npart_incoming_xminymax = npart_outgoing[5, xminymax_index] if xmaxymin_index >= 0 else 0
+        npart_incoming_xmaxymin = npart_outgoing[6, xmaxymin_index] if xminymax_index >= 0 else 0
+        npart_incoming_xminymin = npart_outgoing[7, xminymin_index] if xmaxymax_index >= 0 else 0
 
+        # indices of particles coming from boundary
         xmin_incoming_indices = np.zeros(npart_incoming_xmin, dtype='i8')
         xmax_incoming_indices = np.zeros(npart_incoming_xmax, dtype='i8')
         ymin_incoming_indices = np.zeros(npart_incoming_ymin, dtype='i8')
         ymax_incoming_indices = np.zeros(npart_incoming_ymax, dtype='i8')
+        xminymin_incoming_indices = np.zeros(npart_incoming_xminymin, dtype='i8')
+        xmaxymin_incoming_indices = np.zeros(npart_incoming_xmaxymin, dtype='i8')
+        xminymax_incoming_indices = np.zeros(npart_incoming_xminymax, dtype='i8')
+        xmaxymax_incoming_indices = np.zeros(npart_incoming_xmaxymax, dtype='i8')
 
         # assert npart_incoming_xmin + npart_incoming_xmax + npart_incoming_ymin + npart_incoming_ymax == npart_new
 
         get_incoming_index(
             x_list, y_list, 
             xmin_index, xmax_index, ymin_index, ymax_index,
+            xminymin_index, xmaxymin_index, xminymax_index, xmaxymax_index,
             xaxis_list, yaxis_list,
             dx, dy,
             xmin_incoming_indices, xmax_incoming_indices, ymin_incoming_indices, ymax_incoming_indices,
+            xminymin_incoming_indices, xmaxymin_incoming_indices, xminymax_incoming_indices, xmaxymax_incoming_indices,
         )
 
         buffer = np.zeros((npart_new, nattrs))
         fill_boundary_particles_to_buffer(
             attrs_list,
             xmin_incoming_indices, xmax_incoming_indices, ymin_incoming_indices, ymax_incoming_indices,
+            xminymin_incoming_indices, xmaxymin_incoming_indices, xminymax_incoming_indices, xmaxymax_incoming_indices,
             xmin_index, xmax_index, ymin_index, ymax_index,
+            xminymin_index, xmaxymin_index, xminymax_index, xmaxymax_index,
             buffer,
         )
 
