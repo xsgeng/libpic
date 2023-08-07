@@ -1,10 +1,244 @@
-from numba import njit, prange, get_num_threads, get_thread_id
 import numpy as np
-from scipy.constants import mu_0, epsilon_0, c, e
+from numba import njit, prange, typed, types
+from scipy.constants import c, e, epsilon_0, mu_0
+
+from .patch import Patches2D
+
+
+class CurrentDeposition:
+    """
+    Current deposition class.
+
+    Holds J, Rho fields and some particle attributes of all patches.
+
+    """
+    def __init__(self, patches: Patches2D) -> None:
+        """
+        Construct from patches.
+
+        Parameters
+        ----------
+        
+        """
+        self.patches = patches
+        self.npatches: int = patches.npatches
+        self.dx: float = patches.dx
+
+        self.x_list = []
+        self.y_list = []
+        self.z_list = []
+        self.w_list = []
+        self.ux_list = []
+        self.uy_list = []
+        self.uz_list = []
+        self.inv_gamma_list = []
+        self.pruned_list = []
+
+        self.q = []
+
+    def generate_particle_lists(self) -> None:
+        """
+        Add species to the current deposition class.
+
+        Parameters
+        ----------
+        particle_list : list of Particles
+            List of particles of all patches. 
+        """
+
+        for ispec, s in enumerate(self.patches.species):
+            self.x_list.append(typed.List([p.particles[ispec].x for p in self.patches]))
+            self.w_list.append(typed.List([p.particles[ispec].w for p in self.patches]))
+            self.ux_list.append(typed.List([p.particles[ispec].ux for p in self.patches]))
+            self.uy_list.append(typed.List([p.particles[ispec].uy for p in self.patches]))
+            self.uz_list.append(typed.List([p.particles[ispec].uz for p in self.patches]))
+            self.inv_gamma_list.append(typed.List([p.particles[ispec].inv_gamma for p in self.patches]))
+            self.pruned_list.append(typed.List([p.particles[ispec].pruned for p in self.patches]))
+
+            self.q.append(s.q)
+
+    def update_particle_lists(self, ipatch: int, ispec: int) -> None:
+        """
+        Update particle lists of a species in a patch.
+
+        Parameters
+        ----------
+        ipatch : int
+            Patch index.
+        ispec : int
+            Species index.
+        particle : Particles
+            Particle object in the patch.
+        """
+        self.x_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].x
+        self.w_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].w
+        self.ux_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ux
+        self.uy_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uy
+        self.uz_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uz
+        self.inv_gamma_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].inv_gamma
+        self.pruned_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].pruned
+
+    
+    def generate_field_lists(self) -> None:
+        """
+        Update field lists of all patches.
+
+        Parameters
+        ----------
+        fields : list of Fields2D
+            List of fields of all patches.
+        """
+        self.jx_list = typed.List([p.fields.jx for p in self.patches])
+        self.jy_list = typed.List([p.fields.jy for p in self.patches])
+        self.jz_list = typed.List([p.fields.jz for p in self.patches])
+        self.rho_list = typed.List([p.fields.rho for p in self.patches])
+
+        self.x0s = np.array([p.x0 for p in self.patches])
+
+    def update_patches(self) -> None:
+        """
+        Called when the arangement of patches changes.
+        """
+        # self.generate_field_lists()
+        # self.generate_particle_lists()
+        # self.npatches = self.patches.npatches
+        raise NotImplementedError
+
+    def reset(self) -> None:
+        """
+        Reset J and Rho to zero.
+        """
+        for ipatch in range(self.npatches):
+            self.jx_list[ipatch].fill(0)
+            self.jy_list[ipatch].fill(0)
+            self.jz_list[ipatch].fill(0)
+            self.rho_list[ipatch].fill(0)
+        
+
+    def __call__(self, ispec: int, dt: float) -> None:
+        """
+        Current deposition.
+
+        Parameters
+        ----------
+        ispec : int
+            Species index.
+        dt : float
+            Time step.
+        """
+        raise NotImplementedError
+
+
+class CurrentDeposition2D(CurrentDeposition):
+    def __init__(self, patches: Patches2D) -> None:
+        super().__init__(patches)
+        self.dy: float = patches.dy
+
+
+    def generate_particle_lists(self) -> None:
+        super().generate_particle_lists()
+        for ispec, s in enumerate(self.patches.species):
+            self.y_list.append(typed.List([p.particles[ispec].y for p in self.patches]))
+
+
+    def update_particle_lists(self, ipatch: int, ispec: int):
+        super().update_particle_lists(ipatch, ispec)
+        self.y_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].y
+
+
+    def generate_field_lists(self) -> None:
+        super().generate_field_lists()
+        self.y0s = np.array([p.y0 for p in self.patches])
+
+
+    def update_patches(self) -> None:
+        self.generate_field_lists()
+        self.generate_particle_lists()
+        self.npatches = self.patches.npatches
+
+
+    def __call__(self, ispec:int, dt: float) -> None:
+        current_deposition_cpu(
+            self.rho_list,
+            self.jx_list, self.jy_list, self.jz_list,
+            self.x0s, self.y0s,
+            self.x_list[ispec], self.y_list[ispec], self.ux_list[ispec], self.uy_list[ispec], self.uz_list[ispec],
+            self.inv_gamma_list[ispec],
+            self.pruned_list[ispec],
+            self.npatches,
+            self.dx, self.dy, dt, self.w_list[ispec], self.q[ispec],
+        )
+
+
+@njit(cache=True, parallel=True)
+def current_deposition_cpu(
+    rho_list,
+    jx_list, jy_list, jz_list,
+    x0_list, y0_list,
+    x_list, y_list, ux_list, uy_list, uz_list,
+    inv_gamma_list,
+    pruned_list,
+    npatches,
+    dx, dy, dt, w_list, q,
+) -> None:
+    """
+    Current deposition on all patches in 2D for CPU.
+
+    *_list are the data in all patches.
+
+    Parameters
+    ----------
+    rho : 2D array
+        Charge density.
+    jx, jy, jz : 2D arrays
+        Current density in x, y, z directions.
+    x0, y0 : floats
+        Start position of the patche.
+    x, y : 1D arrays
+        Particle positions.
+    uz : 1D array
+        Momentum z.
+    inv_gamma : 1D array
+        Particle inverse gamma factor.
+    pruned : 1D array of booleans
+        Boolean array indicating if the particle has been pruned.
+    npatches : int
+        Number of patches.
+    dx, dy : floats
+        Cell sizes in x and y directions.
+    dt : float
+        Time step.
+    w : 1D array of floats
+        Particle weights.
+    q : float
+        Charge of the particles.
+    """
+    for ipatch in prange(npatches):
+        rho = rho_list[ipatch]
+        jx = jx_list[ipatch]
+        jy = jy_list[ipatch]
+        jz = jz_list[ipatch]
+        x0 = x0_list[ipatch]
+        y0 = y0_list[ipatch]
+        x = x_list[ipatch]
+        y = y_list[ipatch]
+        ux = ux_list[ipatch]
+        uy = uy_list[ipatch]
+        uz = uz_list[ipatch]
+        w = w_list[ipatch]
+        inv_gamma = inv_gamma_list[ipatch]
+        pruned = pruned_list[ipatch]
+        npart = len(pruned)
+
+        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
+
+class CurrentDeposition3D(CurrentDeposition):
+    ...
+
 
 nbuff = 64
 
-@njit
+@njit(boundscheck=True)
 def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q):
     """
     Current deposition in 2D for CPU.
@@ -21,8 +255,6 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npa
         Particle velocities.
     inv_gamma : 1D array of floats
         Particle inverse gamma.
-    x_old, y_old : 1D arrays of floats
-        Particle positions at t + dt/2.
     pruned : 1D array of booleans
         Boolean array indicating if the particle has been pruned.
     npart : int
@@ -148,42 +380,3 @@ def calculate_S(delta, shift, ip, S):
     S[3, ip] =                          mid * delta_positive + positive * delta_mid
     S[4, ip] =                                                 positive * delta_positive
 
-
-def test_current():
-    from time import perf_counter_ns
-
-    nx = 64
-    ny = 64
-    npart = 1000000
-    x0 = 0.0
-    y0 = 0.0
-    dx = 1.0e-6
-    dy = 1.0e-6
-    lx = nx * dx
-    ly = ny * dy
-    dt = dx / c / 2
-    q = e
-    w = np.ones(npart)
-    x = np.random.uniform(low=3*dx, high=lx-3*dx, size=npart)
-    y = np.random.uniform(low=3*dy, high=ly-3*dy, size=npart)
-    ux = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    uy = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    uz = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    inv_gamma = 1 / np.sqrt(1 + ux**2 + uy**2 + uz**2)
-
-    rho = np.zeros((nx, ny))
-    jx = np.zeros((nx, ny))
-    jy = np.zeros((nx, ny))
-    jz = np.zeros((nx, ny))
-
-    pruned = np.full(npart, False)
-
-    current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
-    tic = perf_counter_ns()
-    current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
-    toc = perf_counter_ns()
-    print(f"current_deposit_2d {(toc - tic)/1e6} ms")
-    print(f"current_deposit_2d {(toc - tic)/npart} ns per particle")
-
-if __name__ ==  "__main__":
-    test_current()
