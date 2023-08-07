@@ -15,7 +15,10 @@ from libpic.patch.cpu import (boris_push, current_deposition, fill_particles,
 from libpic.species import Species
 
 
-class Patch2D:
+class Patch:
+    ...
+
+class Patch2D(Patch):
     def __init__(
         self,
         rank: int,
@@ -24,10 +27,7 @@ class Patch2D:
         ipatch_y: int,
         x0 : float, 
         y0 : float,
-        nx : int,
-        ny : int,
-        dx : float, 
-        dy : float,
+        fields: Fields2D,
     ) -> None:
         """ 
         Patch2D is a container for the fields and particles of a single patch.
@@ -62,13 +62,15 @@ class Patch2D:
         self.ipatch_y = ipatch_y
         self.x0 = x0
         self.y0 = y0
-        self.nx = nx
-        self.ny = ny
-        self.dx = dx
-        self.dy = dy
 
-        self.xaxis = np.arange(nx) * dx + x0
-        self.yaxis = np.arange(ny) * dy + y0
+        self.fields = fields
+        self.nx = fields.nx
+        self.ny = fields.ny
+        self.dx = fields.dx
+        self.dy = fields.dy
+
+        self.xaxis = np.arange(self.nx) * self.dx + x0
+        self.yaxis = np.arange(self.ny) * self.dy + y0
 
         # neighbors
         self.xmin_neighbor_index : int = -1
@@ -103,9 +105,6 @@ class Patch2D:
         if ymax >= 0:
             self.ymax_neighbor_rank = ymax
 
-
-    def set_fields(self, fields: Fields2D):
-        self.fields = fields
 
 
 class Patches2D:
@@ -162,7 +161,7 @@ class Patches2D:
         """
 
         lists = {}
-        for attr in Fields2D.attrs():
+        for attr in Fields2D.attrs:
             lists[attr] = typed.List([getattr(p.fields, attr) for p in self.patches])
 
         lists["xaxis"] = typed.List([p.xaxis for p in self.patches])
