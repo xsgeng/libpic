@@ -1,7 +1,6 @@
 import numpy as np
 from numba import njit, prange
 
-from libpic.deposition_2d import current_deposit_2d
 from libpic.interpolation_2d import interpolation_2d
 from libpic.maxwell_2d import update_bfield_2d, update_efield_2d
 from libpic.pusher import boris, push_position_2d
@@ -48,36 +47,6 @@ def interpolation(
             pruned,
         )
 
-
-@njit(cache=True, parallel=True)
-def current_deposition(
-    rho_list,
-    jx_list, jy_list, jz_list,
-    xaxis_list, yaxis_list,
-    x_list, y_list, ux_list, uy_list, uz_list,
-    inv_gamma_list,
-    pruned_list,
-    npatches,
-    dx, dy, dt, w_list, q,
-) -> None:
-    for ipatch in prange(npatches):
-        rho = rho_list[ipatch]
-        jx = jx_list[ipatch]
-        jy = jy_list[ipatch]
-        jz = jz_list[ipatch]
-        x0 = xaxis_list[ipatch][0]
-        y0 = yaxis_list[ipatch][0]
-        x = x_list[ipatch]
-        y = y_list[ipatch]
-        ux = ux_list[ipatch]
-        uy = uy_list[ipatch]
-        uz = uz_list[ipatch]
-        w = w_list[ipatch]
-        inv_gamma = inv_gamma_list[ipatch]
-        pruned = pruned_list[ipatch]
-        npart = len(pruned)
-
-        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
 
 
 @njit(cache=True, parallel=True)

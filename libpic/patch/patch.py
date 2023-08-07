@@ -8,7 +8,7 @@ from libpic.boundary.particles import (fill_particles_from_boundary,
                                        mark_out_of_bound_as_pruned)
 from libpic.fields import Fields2D
 from libpic.particles import Particles
-from libpic.patch.cpu import (boris_push, current_deposition, fill_particles,
+from libpic.patch.cpu import (boris_push, fill_particles,
                               get_num_macro_particles, interpolation,
                               push_position, sync_currents, sync_guard_fields,
                               update_bfield_patches, update_efield_patches)
@@ -277,19 +277,19 @@ class Patches2D:
 
         
     @property
-    def nx(self):
+    def nx(self) -> int:
         return self[0].fields.nx
 
     @property
-    def ny(self):
+    def ny(self) -> int:
         return self[0].fields.ny
 
     @property
-    def dx(self):
+    def dx(self) -> float:
         return self[0].fields.dx
 
     @property
-    def dy(self):
+    def dy(self) -> float:
         return self[0].fields.dy
 
 
@@ -348,7 +348,11 @@ class Patches2D:
         tic = perf_counter_ns()
         xaxis = typed.List([p.xaxis for p in self.patches])
         yaxis = typed.List([p.yaxis for p in self.patches])
-        density_func = njit(species.density)
+
+        if species.density:
+            density_func = njit(species.density)
+        else:
+            density_func = njit(lambda x, y : 0.0)
 
         num_macro_particles = get_num_macro_particles(
             density_func,
@@ -414,27 +418,6 @@ class Patches2D:
                 plists[ispec]['x'], plists[ispec]['y'], 
                 plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['inv_gamma'],
                 self.npatches, plists[ispec]['pruned'], dt
-            )
-            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
-
-    def current_deposition(self, dt):
-        lists = self.grid_lists
-        plists = self.particle_lists
-        for p in self:
-            p.fields.jx[:] = 0
-            p.fields.jy[:] = 0
-            p.fields.jz[:] = 0
-            p.fields.rho[:] = 0
-        for ispec, s in enumerate(self.species):
-            print(f"Deposition of current for Species {s.name}...", end=" ")
-            tic = perf_counter_ns()
-            current_deposition(
-                lists['rho'], lists['jx'], lists['jy'], lists['jz'],
-                lists['xaxis'], lists['yaxis'],
-                plists[ispec]['x'], plists[ispec]['y'], 
-                plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['uz'], plists[ispec]['inv_gamma'], 
-                plists[ispec]['pruned'], 
-                self.npatches, self.dx, self.dy, dt, plists[ispec]['w'], s.q,
             )
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 

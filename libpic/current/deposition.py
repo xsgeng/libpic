@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit, prange, typed, types
 from scipy.constants import c, e, epsilon_0, mu_0
 
-from .patch import Patches2D
+from ..patch import Patches2D
 
 
 class CurrentDeposition:
