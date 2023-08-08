@@ -10,8 +10,7 @@ from libpic.fields import Fields2D
 from libpic.particles import Particles
 from libpic.patch.cpu import (boris_push, fill_particles,
                               get_num_macro_particles, interpolation,
-                              push_position, sync_currents, sync_guard_fields,
-                              update_bfield_patches, update_efield_patches)
+                              push_position, sync_currents, sync_guard_fields)
 from libpic.species import Species
 
 
@@ -297,50 +296,6 @@ class Patches2D:
     def n_guard(self):
         return self[0].fields.n_guard
 
-    def update_efield(self, dt):
-        lists = self.grid_lists
-        print(f"Updating E field...", end=" ")
-        tic = perf_counter_ns()
-        update_efield_patches(
-            ex_list = lists['ex'],
-            ey_list = lists['ey'],
-            ez_list = lists['ez'],
-            bx_list = lists['bx'],
-            by_list = lists['by'],
-            bz_list = lists['bz'],
-            jx_list = lists['jx'],
-            jy_list = lists['jy'],
-            jz_list = lists['jz'],
-            npatches = self.npatches, 
-            dx = self.dx, 
-            dy = self.dy, 
-            dt = dt, 
-            nx = self.nx,
-            ny = self.ny, 
-            n_guard = self.n_guard,
-        )
-        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
-
-    def update_bfield(self, dt):
-        lists = self.grid_lists
-        print(f"Updating B field...", end=" ")
-        tic = perf_counter_ns()
-        update_bfield_patches(
-            ex_list = lists['ex'], 
-            ey_list = lists['ey'], 
-            ez_list = lists['ez'], 
-            bx_list = lists['bx'], 
-            by_list = lists['by'], 
-            bz_list = lists['bz'], 
-            npatches = self.npatches, 
-            dx = self.dx, 
-            dy = self.dy, 
-            dt = dt, 
-            nx = self.nx,
-            ny = self.ny, 
-            n_guard = self.n_guard,
-        )
-        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def add_species(self, species : Species):
 

@@ -2,7 +2,6 @@ import numpy as np
 from numba import njit, prange
 
 from libpic.interpolation_2d import interpolation_2d
-from libpic.maxwell_2d import update_bfield_2d, update_efield_2d
 from libpic.pusher import boris, push_position_2d
 
 """ Parallel functions for patches """
@@ -46,49 +45,6 @@ def interpolation(
             dx, dy, x0, y0,
             pruned,
         )
-
-
-
-@njit(cache=True, parallel=True)
-def update_efield_patches(
-    ex_list, ey_list, ez_list,
-    bx_list, by_list, bz_list,
-    jx_list, jy_list, jz_list,
-    npatches,
-    dx, dy, dt,
-    nx, ny, n_guard
-):
-    for ipatch in prange(npatches):
-        ex = ex_list[ipatch]
-        ey = ey_list[ipatch]
-        ez = ez_list[ipatch]
-        bx = bx_list[ipatch]
-        by = by_list[ipatch]
-        bz = bz_list[ipatch]
-        jx = jx_list[ipatch]
-        jy = jy_list[ipatch]
-        jz = jz_list[ipatch]
-
-        update_efield_2d(ex, ey, ez, bx, by, bz, jx, jy, jz, dx, dy, dt, nx, ny, n_guard)
-
-
-@njit(cache=True, parallel=True)
-def update_bfield_patches(
-    ex_list, ey_list, ez_list,
-    bx_list, by_list, bz_list,
-    npatches,
-    dx, dy, dt,
-    nx, ny, n_guard
-):
-    for ipatch in prange(npatches):
-        ex = ex_list[ipatch]
-        ey = ey_list[ipatch]
-        ez = ez_list[ipatch]
-        bx = bx_list[ipatch]
-        by = by_list[ipatch]
-        bz = bz_list[ipatch]
-
-        update_bfield_2d(ex, ey, ez, bx, by, bz, dx, dy, dt, nx, ny, n_guard)
 
 
 @njit(cache=True, parallel=True)
