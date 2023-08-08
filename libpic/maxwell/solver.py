@@ -1,13 +1,12 @@
 
-from typing import Any
 import numpy as np
-from numba import njit, prange, typed, types
+from numba import typed
 from scipy.constants import c, e, epsilon_0, mu_0
 
 from libpic.patch import Patches2D
 
-from ..patch import Patches2D
-from .cpu import update_efield_patches_2d, update_bfield_patches_2d
+from .cpu import (update_bfield_patches_2d, update_bfield_patches_3d,
+                  update_efield_patches_2d, update_efield_patches_3d)
 
 
 class MaxwellSolver:
@@ -19,6 +18,8 @@ class MaxwellSolver:
         self.nx: int = patches.nx
 
         self.n_guard: int = patches.n_guard
+
+        self.generate_field_lists()
 
     def generate_field_lists(self) -> None:
         """
@@ -40,10 +41,10 @@ class MaxwellSolver:
         self.jz_list = typed.List([p.fields.jz for p in self.patches])
 
 
-    def update_efield(self, dt: float) -> Any:
+    def update_efield(self, dt: float) -> None:
         raise NotImplementedError
 
-    def update_bfield(self, dt: float) -> Any:
+    def update_bfield(self, dt: float) -> None:
         raise NotImplementedError
 
 class MaxwellSolver2d(MaxwellSolver):
@@ -52,7 +53,7 @@ class MaxwellSolver2d(MaxwellSolver):
         self.dy: float = patches.dy
         self.ny: int = patches.ny
 
-    def update_efield(self, dt: float) -> Any:
+    def update_efield(self, dt: float) -> None:
         update_efield_patches_2d(
             self.ex_list, self.ey_list, self.ez_list,
             self.bx_list, self.by_list, self.bz_list,
@@ -63,7 +64,7 @@ class MaxwellSolver2d(MaxwellSolver):
         )
 
         
-    def update_bfield(self, dt: float) -> Any:
+    def update_bfield(self, dt: float) -> None:
         update_bfield_patches_2d(
             self.ex_list, self.ey_list, self.ez_list,
             self.bx_list, self.by_list, self.bz_list,
@@ -74,4 +75,29 @@ class MaxwellSolver2d(MaxwellSolver):
 
 
 class MaxwellSolver3d(MaxwellSolver):
-    ...
+    def __init__(self, patches: Patches2D) -> None:
+        super().__init__(patches)
+        self.dy: float = patches.dy
+        self.dz: float = patches.dz
+        self.ny: int = patches.ny
+        self.nz: int = patches.nz
+
+    def update_efield(self, dt: float) -> None:
+        update_efield_patches_3d(
+            self.ex_list, self.ey_list, self.ez_list,
+            self.bx_list, self.by_list, self.bz_list,
+            self.jx_list, self.jy_list, self.jz_list,
+            self.npatches,
+            self.dx, self.dy, self.dz, dt,
+            self.nx, self.ny, self.nz, self.n_guard,
+        )
+
+        
+    def update_bfield(self, dt: float) -> None:
+        update_bfield_patches_3d(
+            self.ex_list, self.ey_list, self.ez_list,
+            self.bx_list, self.by_list, self.bz_list,
+            self.npatches,
+            self.dx, self.dy, self.dz, dt,
+            self.nx, self.ny, self.nz, self.n_guard,
+        )
