@@ -1,6 +1,7 @@
-from numba import njit, prange
 import numpy as np
-from scipy.constants import mu_0, epsilon_0, c
+from numba import njit, prange
+from scipy.constants import c, epsilon_0, mu_0
+
 
 @njit(cache=True)
 def update_efield_2d(

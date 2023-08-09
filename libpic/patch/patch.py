@@ -12,6 +12,7 @@ from libpic.patch.cpu import (boris_push, fill_particles,
                               get_num_macro_particles, interpolation,
                               push_position, sync_currents, sync_guard_fields)
 from libpic.species import Species
+from libpic.boundary.cpml import PML, PMLX, PMLY
 
 
 class Patch:
@@ -82,6 +83,9 @@ class Patch2D(Patch):
         self.ymin_neighbor_rank : int = -1
         self.ymax_neighbor_rank : int = -1
 
+        # PML boundaries
+        self.pml_boundary: list[PML] = []
+
         self.particles : list[Particles] = []
     
     def set_neighbor_index(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
@@ -104,12 +108,20 @@ class Patch2D(Patch):
         if ymax >= 0:
             self.ymax_neighbor_rank = ymax
 
-
+    def add_pml_boundary(self, pml: PML) -> None:
+        assert (self.nx >= pml.thickness) and (self.ny >= pml.thickness)
+        assert len(self.pml_boundary) < 2, "cannot assign more than 2 PML boundaries to one patch, \
+                                             try increasing number of patches."
+        if len(self.pml_boundary) == 1:
+            assert isinstance(self.pml_boundary[0], PMLX) ^ isinstance(pml, PMLX)
+            # assert isinstance(self.pml_boundary[0], PMLY) ^ isinstance(pml, PMLY)
+        self.pml_boundary.append(pml)
 
 class Patches2D:
     """ 
     A container for patches of the fields and particles. 
-    The patches will be created by the main class.
+
+    The class handles synchronization of fields and particles between patches.
     """
     def __init__(self) -> None:
         self.npatches = 0
@@ -166,10 +178,10 @@ class Patches2D:
         lists["xaxis"] = typed.List([p.xaxis for p in self.patches])
         lists["yaxis"] = typed.List([p.yaxis for p in self.patches])
 
-        lists["xmin_neighbor_index"] = typed.List([p.xmin_neighbor_index for p in self.patches])
-        lists["xmax_neighbor_index"] = typed.List([p.xmax_neighbor_index for p in self.patches])
-        lists["ymin_neighbor_index"] = typed.List([p.ymin_neighbor_index for p in self.patches])
-        lists["ymax_neighbor_index"] = typed.List([p.ymax_neighbor_index for p in self.patches])
+        lists["xmin_neighbor_index"] = np.array([p.xmin_neighbor_index for p in self.patches])
+        lists["xmax_neighbor_index"] = np.array([p.xmax_neighbor_index for p in self.patches])
+        lists["ymin_neighbor_index"] = np.array([p.ymin_neighbor_index for p in self.patches])
+        lists["ymax_neighbor_index"] = np.array([p.ymax_neighbor_index for p in self.patches])
         self.grid_lists = lists
 
         particle_lists = []
