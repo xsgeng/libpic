@@ -5,14 +5,13 @@ from .interpolation_2d import interpolation_2d
 
 
 @njit(cache=True, parallel=True)
-def interpolation(
+def interpolation_patches_2d(
     x_list, y_list,
     ex_part_list, ey_part_list, ez_part_list,
     bx_part_list, by_part_list, bz_part_list,
-    npart_list,
     ex_list, ey_list, ez_list,
     bx_list, by_list, bz_list,
-    xaxis_list, yaxis_list,
+    x0_list, y0_list,
     npatches,
     dx, dy,
     pruned_list,
@@ -32,8 +31,8 @@ def interpolation(
         bx = bx_list[ipatch]
         by = by_list[ipatch]
         bz = bz_list[ipatch]
-        x0 = xaxis_list[ipatch][0]
-        y0 = yaxis_list[ipatch][0]
+        x0 = x0_list[ipatch]
+        y0 = y0_list[ipatch]
         x = x_list[ipatch]
         y = y_list[ipatch]
         pruned = pruned_list[ipatch]

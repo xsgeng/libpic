@@ -1,9 +1,7 @@
 import numpy as np
-from numba import njit, prange
+from numba import njit
 
-from scipy.constants import mu_0, epsilon_0, c, e
-
-subsize = 32
+subsize = 64
 @njit(cache=True)
 def interpolation_2d(
     x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
@@ -138,61 +136,3 @@ def interp_bz(bz, hx, hy, ix2, iy2):
         +           hx[ 1] * bz[ix2  ,iy2+1] \
         +           hx[ 2] * bz[ix2+1,iy2+1])
     return bx_part
-
-
-def test_interp():
-    from time import perf_counter_ns
-
-    npart = 100000
-    nx = 100
-    ny = 100
-    x0 = 0.0
-    y0 = 0.0
-    dx = 1.0e-6
-    dy = 1.0e-6
-    lx = nx * dx
-    ly = ny * dy
-    dt = dx / c / 2
-    q = e
-    w = np.ones(npart)
-    x = np.random.uniform(low=3*dx, high=lx-3*dx, size=npart)
-    y = np.random.uniform(low=3*dy, high=ly-3*dy, size=npart)
-    ux= np.random.uniform(low=-1.0, high=1.0, size=npart)
-    uy= np.random.uniform(low=-1.0, high=1.0, size=npart)
-    uz= np.random.uniform(low=-1.0, high=1.0, size=npart)
-    inv_gamma = 1 / np.sqrt(1 + ux**2 + uy**2 + uz**2)
-
-    ex_part = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    ey_part = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    ez_part = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    bx_part = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    by_part = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    bz_part = np.random.uniform(low=-1.0, high=1.0, size=npart)
-
-    ex = np.zeros((nx, ny))
-    ey = np.zeros((nx, ny))
-    ez = np.zeros((nx, ny))
-    bx = np.zeros((nx, ny))
-    by = np.zeros((nx, ny))
-    bz = np.zeros((nx, ny))
-
-    pruned = np.full(npart, False)
-
-    interpolation_2d(
-        x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
-        ex, ey, ez, bx, by, bz,
-        dx, dy, x0, y0,
-        pruned,
-    )
-    tic = perf_counter_ns()
-    interpolation_2d(
-        x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
-        ex, ey, ez, bx, by, bz,
-        dx, dy, x0, y0,
-        pruned,
-    )
-    toc = perf_counter_ns()
-    print(f"current_deposit_2d {(toc - tic)/1e6} ms")
-
-if __name__ ==  "__main__":
-    test_interp()
