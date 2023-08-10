@@ -6,49 +6,7 @@ from libpic.pusher import boris, push_position_2d
 """ Parallel functions for patches """
 
 
-@njit(cache=True, parallel=True)
-def boris_push(
-    ux_list, uy_list, uz_list, inv_gamma_list,
-    ex_list, ey_list, ez_list,
-    bx_list, by_list, bz_list,
-    npatches, q, m, npart_list, pruned_list, dt
-) -> None:
-    for ipatch in prange(npatches):
-        ux = ux_list[ipatch]
-        uy = uy_list[ipatch]
-        uz = uz_list[ipatch]
-        inv_gamma = inv_gamma_list[ipatch]
 
-        ex = ex_list[ipatch]
-        ey = ey_list[ipatch]
-        ez = ez_list[ipatch]
-        bx = bx_list[ipatch]
-        by = by_list[ipatch]
-        bz = bz_list[ipatch]
-
-        pruned = pruned_list[ipatch]
-        npart = len(pruned)
-        boris( ux, uy, uz, inv_gamma, ex, ey, ez, bx, by, bz, q, m, npart, pruned, dt )
-
-
-@njit(cache=True, parallel=True)
-def push_position(
-    x_list, y_list,
-    ux_list, uy_list, inv_gamma_list,
-    npatches, pruned_list,
-    dt,
-) -> None:
-    for ipatch in prange(npatches):
-        x = x_list[ipatch]
-        y = y_list[ipatch]
-
-        ux = ux_list[ipatch]
-        uy = uy_list[ipatch]
-        inv_gamma = inv_gamma_list[ipatch]
-
-        pruned = pruned_list[ipatch]
-        npart = len(pruned)
-        push_position_2d( x, y, ux, uy, inv_gamma, npart, pruned, dt )
 
 
 @njit(cache=True, parallel=True)

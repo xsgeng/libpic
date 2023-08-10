@@ -1,6 +1,6 @@
-from scipy.constants import m_e, c, pi, epsilon_0, hbar, e
+from scipy.constants import c
 from math import sqrt
-from numba import njit, prange
+from numba import njit
 
 def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt ) :
 
@@ -36,19 +36,6 @@ def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt ) :
     inv_gamma_new = 1 / sqrt(1 + ux_new**2 + uy_new**2 + uz_new**2)
     return ux_new, uy_new, uz_new, inv_gamma_new
 
-@njit(cache=True)
-def push_position_2d( x, y, ux, uy, inv_gamma, N, pruned, dt):
-    """
-    Advance the particles' positions over `dt` using the momenta `ux`, `uy`, `uz`,
-    """
-    # Timestep, multiplied by c
-    cdt = c*dt
-
-    for ip in prange(N) :
-        if pruned[ip]:
-            continue
-        x[ip] += cdt * inv_gamma[ip] * ux[ip]
-        y[ip] += cdt * inv_gamma[ip] * uy[ip]
 
 
 boris_cpu = njit(boris_inline, inline="always")

@@ -8,9 +8,8 @@ from libpic.boundary.particles import (fill_particles_from_boundary,
                                        mark_out_of_bound_as_pruned)
 from libpic.fields import Fields2D
 from libpic.particles import Particles
-from libpic.patch.cpu import (boris_push, fill_particles,
-                              get_num_macro_particles, interpolation,
-                              push_position, sync_currents, sync_guard_fields)
+from libpic.patch.cpu import (fill_particles, get_num_macro_particles,
+                              sync_currents, sync_guard_fields)
 from libpic.species import Species
 from libpic.boundary.cpml import PML, PMLX, PMLY
 
@@ -361,56 +360,3 @@ class Patches2D:
             )
     
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
-
-
-    def momentum_push(self, dt):
-        plists = self.particle_lists
-        for ispec, s in enumerate(self.species):
-            print(f"Pushing Species {s.name}...", end=" ")
-            tic = perf_counter_ns()
-            boris_push(
-                plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['uz'], plists[ispec]['inv_gamma'],
-                plists[ispec]['ex_part'], plists[ispec]['ey_part'], plists[ispec]['ez_part'],
-                plists[ispec]['bx_part'], plists[ispec]['by_part'], plists[ispec]['bz_part'],
-                self.npatches, s.q, s.m, plists[ispec]['npart'], plists[ispec]['pruned'], dt
-            )
-            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
-    
-    def position_push(self, dt):
-        plists = self.particle_lists
-        for ispec, s in enumerate(self.species):
-            print(f"Pushing Species {s.name}...", end=" ")
-            tic = perf_counter_ns()
-            push_position(
-                plists[ispec]['x'], plists[ispec]['y'], 
-                plists[ispec]['ux'], plists[ispec]['uy'], plists[ispec]['inv_gamma'],
-                self.npatches, plists[ispec]['pruned'], dt
-            )
-            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
-
-    def interpolation(self):
-        lists = self.grid_lists
-        plists = self.particle_lists
-        for ispec, s in enumerate(self.species):
-            print(f"Interpolation of current for Species {s.name}...", end=" ")
-            tic = perf_counter_ns()
-            interpolation(
-                plists[ispec]["x"], plists[ispec]["y"], 
-                plists[ispec]["ex_part"], plists[ispec]["ey_part"], plists[ispec]["ez_part"],
-                plists[ispec]["bx_part"], plists[ispec]["by_part"], plists[ispec]["bz_part"],
-                plists[ispec]["npart"], 
-                lists["ex"], lists["ey"], lists["ez"],
-                lists["bx"], lists["by"], lists["bz"],
-                lists["xaxis"], lists["yaxis"],
-                self.npatches, self.dx, self.dy, plists[ispec]["pruned"],
-            )
-            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
-
-            
-
-
-
-
-
-
-
