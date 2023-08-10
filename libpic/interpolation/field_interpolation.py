@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit, prange, typed, types
 from scipy.constants import c, e, epsilon_0, mu_0
 
-from libpic.patch import Patches2D
+from libpic.patch import Patches
 
 from .cpu import interpolation_patches_2d
 
@@ -15,7 +15,7 @@ class FieldInterpolation:
 
     """
 
-    def __init__(self, patches: Patches2D) -> None:
+    def __init__(self, patches: Patches) -> None:
         """
         Construct from patches.
 
@@ -123,7 +123,7 @@ class FieldInterpolation:
 
 
 class FieldInterpolation2D(FieldInterpolation):
-    def __init__(self, patches: Patches2D) -> None:
+    def __init__(self, patches: Patches) -> None:
         super().__init__(patches)
         self.dy: float = patches.dy
 

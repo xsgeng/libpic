@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit, prange, typed, types
 from scipy.constants import c, e, epsilon_0, mu_0
 
-from ..patch import Patches2D
+from libpic.patch import Patches
 
 
 class CurrentDeposition:
@@ -12,7 +12,7 @@ class CurrentDeposition:
     Holds J, Rho fields and some particle attributes of all patches.
 
     """
-    def __init__(self, patches: Patches2D) -> None:
+    def __init__(self, patches: Patches) -> None:
         """
         Construct from patches.
 
@@ -99,10 +99,10 @@ class CurrentDeposition:
         """
         Called when the arangement of patches changes.
         """
-        # self.generate_field_lists()
-        # self.generate_particle_lists()
-        # self.npatches = self.patches.npatches
-        raise NotImplementedError
+        self.generate_field_lists()
+        self.generate_particle_lists()
+        self.npatches = self.patches.npatches
+        # raise NotImplementedError
 
     def reset(self) -> None:
         """
@@ -130,7 +130,7 @@ class CurrentDeposition:
 
 
 class CurrentDeposition2D(CurrentDeposition):
-    def __init__(self, patches: Patches2D) -> None:
+    def __init__(self, patches: Patches) -> None:
         super().__init__(patches)
         self.dy: float = patches.dy
 
@@ -149,12 +149,6 @@ class CurrentDeposition2D(CurrentDeposition):
     def generate_field_lists(self) -> None:
         super().generate_field_lists()
         self.y0s = np.array([p.y0 for p in self.patches])
-
-
-    def update_patches(self) -> None:
-        self.generate_field_lists()
-        self.generate_particle_lists()
-        self.npatches = self.patches.npatches
 
 
     def __call__(self, ispec:int, dt: float) -> None:

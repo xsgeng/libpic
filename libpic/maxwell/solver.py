@@ -5,14 +5,14 @@ from scipy.constants import c, e, epsilon_0, mu_0
 
 from libpic.boundary.cpml import (PMLX, update_bfield_cpml_patches_2d,
                                   update_efield_cpml_patches_2d)
-from libpic.patch import Patches2D
+from libpic.patch import Patches
 
 from .cpu import (update_bfield_patches_2d, update_bfield_patches_3d,
                   update_efield_patches_2d, update_efield_patches_3d)
 
 
 class MaxwellSolver:
-    def __init__(self, patches: Patches2D) -> None:
+    def __init__(self, patches: Patches) -> None:
         """
         Initialize Maxwell solver from Patches.
 
@@ -97,7 +97,7 @@ class MaxwellSolver:
         raise NotImplementedError
 
 class MaxwellSolver2d(MaxwellSolver):
-    def __init__(self, patches: Patches2D) -> None:
+    def __init__(self, patches: Patches) -> None:
         super().__init__(patches)
         self.dy: float = patches.dy
         self.ny: int = patches.ny
@@ -178,7 +178,7 @@ class MaxwellSolver2d(MaxwellSolver):
 
 
 class MaxwellSolver3d(MaxwellSolver):
-    def __init__(self, patches: Patches2D) -> None:
+    def __init__(self, patches: Patches) -> None:
         super().__init__(patches)
         self.dy: float = patches.dy
         self.dz: float = patches.dz

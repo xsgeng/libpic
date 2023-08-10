@@ -116,19 +116,23 @@ class Patch2D(Patch):
             # assert isinstance(self.pml_boundary[0], PMLY) ^ isinstance(pml, PMLY)
         self.pml_boundary.append(pml)
 
-class Patches2D:
+
+class Patches:
     """ 
     A container for patches of the fields and particles. 
 
     The class handles synchronization of fields and particles between patches.
     """
-    def __init__(self) -> None:
-        self.npatches = 0
+    def __init__(self, dimension: int) -> None:
+        assert (dimension == 1) or (dimension == 2) or (dimension == 3)
+        self.dimension: int = dimension
+
+        self.npatches: int = 0
         self.indexs : list[int] = []
-        self.patches : list[Patch2D] = []
+        self.patches : list[Patch] = []
         self.species : list[Species] = []
     
-    def __getitem__(self, i: int) -> Patch2D:
+    def __getitem__(self, i: int) -> Patch:
         return self.patches[i]
 
     def __len__(self) -> int:
@@ -137,14 +141,14 @@ class Patches2D:
     def __iter__(self):
         return iter(self.patches)
 
-    def append(self, patch: Patch2D):
+    def append(self, patch: Patch):
         if self.patches:
             assert self.patches[-1].index == patch.index - 1
         self.patches.append(patch)
         self.indexs.append(patch.index)
         self.npatches += 1
 
-    def prepend(self, patch: Patch2D):
+    def prepend(self, patch: Patch):
         if self.patches:
             assert self.patches[0].index == patch.index + 1
         self.patches.insert(0, patch)
