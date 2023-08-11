@@ -31,26 +31,27 @@ class Patch:
     yaxis: np.ndarray
 
     # neighbors
-    xmin_neighbor_index: int = -1
-    xmax_neighbor_index: int = -1
-    ymin_neighbor_index: int = -1
-    ymax_neighbor_index: int = -1
-    zmin_neighbor_index: int = -1
-    zmax_neighbor_index: int = -1
+    xmin_neighbor_index: int
+    xmax_neighbor_index: int
+    ymin_neighbor_index: int
+    ymax_neighbor_index: int
+    zmin_neighbor_index: int
+    zmax_neighbor_index: int
 
     # MPI neighbors
-    xmin_neighbor_rank: int = -1
-    xmax_neighbor_rank: int = -1
-    ymin_neighbor_rank: int = -1
-    ymax_neighbor_rank: int = -1
-    zmin_neighbor_rank: int = -1
-    zmax_neighbor_rank: int = -1
+    xmin_neighbor_rank: int
+    xmax_neighbor_rank: int
+    ymin_neighbor_rank: int
+    ymax_neighbor_rank: int
+    zmin_neighbor_rank: int
+    zmax_neighbor_rank: int
 
     fields: Fields
-    # PML boundaries
-    pml_boundary: list[PML] = []
+    def __init__(self) -> None:
+        # PML boundaries
+        self.pml_boundary: list[PML] = []
 
-    particles : list[ParticlesBase] = []
+        self.particles : list[ParticlesBase] = []
 
     def add_particles(self, particles: ParticlesBase) -> None:
         self.particles.append(particles)
@@ -58,6 +59,8 @@ class Patch:
     def set_fields(self, fields: Fields) -> None:
         self.fields = fields
 
+    def add_pml_boundary(self, pml: PML) -> None:
+        raise NotImplementedError
 
 class Patch2D(Patch):
     def __init__(
@@ -100,6 +103,7 @@ class Patch2D(Patch):
         dy : float
             grid spacing in y direction
         """
+        super().__init__()
         self.rank = rank
         self.index = index
         self.ipatch_x = ipatch_x
@@ -114,6 +118,18 @@ class Patch2D(Patch):
 
         self.xaxis = np.arange(self.nx) * self.dx + x0
         self.yaxis = np.arange(self.ny) * self.dy + y0
+
+        # neighbors
+        self.xmin_neighbor_index: int = -1
+        self.xmax_neighbor_index: int = -1
+        self.ymin_neighbor_index: int = -1
+        self.ymax_neighbor_index: int = -1
+
+        # MPI neighbors
+        self.xmin_neighbor_rank: int = -1
+        self.xmax_neighbor_rank: int = -1
+        self.ymin_neighbor_rank: int = -1
+        self.ymax_neighbor_rank: int = -1
 
     def set_neighbor_index(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
         if xmin >= 0:
@@ -276,7 +292,7 @@ class Patches:
         )
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
-    def sync_particles(self):
+    def sync_particles(self) -> None:
         lists = self.grid_lists
         plists = self.particle_lists
         for ispec, s in enumerate(self.species):
@@ -366,7 +382,7 @@ class Patches:
         for ipatch in range(self.npatches):
             particles : ParticlesBase = species.create_particles()
             particles.initialize(num_macro_particles[ipatch])
-            self[ipatch].particles.append(particles)
+            self[ipatch].add_particles(particles)
 
         self.species.append(species)
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
