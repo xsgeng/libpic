@@ -364,19 +364,19 @@ class Patches:
         xaxis = typed.List([p.xaxis for p in self.patches])
         yaxis = typed.List([p.yaxis for p in self.patches])
 
-        if species.density:
-            density_func = njit(species.density)
-        else:
-            density_func = njit(lambda x, y : 0.0)
+        if species.density is not None:
+            density_func = njit(species.density, cache=True)
 
-        num_macro_particles = get_num_macro_particles(
-            density_func,
-            xaxis, 
-            yaxis, 
-            self.npatches, 
-            species.density_min, 
-            species.ppc,
-        )
+            num_macro_particles = get_num_macro_particles(
+                density_func,
+                xaxis, 
+                yaxis, 
+                self.npatches, 
+                species.density_min, 
+                species.ppc,
+            )
+        else:
+            num_macro_particles = np.zeros(self.npatches)
 
 
         for ipatch in range(self.npatches):
@@ -394,18 +394,19 @@ class Patches:
         for ispec, s in enumerate(self.species):
             print(f"Creating Species {s.name}...", end=" ")
             tic = perf_counter_ns()
-            x_list = typed.List([p.particles[ispec].x for p in self.patches])
-            y_list = typed.List([p.particles[ispec].y for p in self.patches])
-            w_list = typed.List([p.particles[ispec].w for p in self.patches])
-            density_func = njit(s.density)
-            fill_particles(
-                density_func,
-                xaxis, 
-                yaxis, 
-                self.npatches, 
-                s.density_min, 
-                s.ppc,
-                x_list,y_list,w_list
-            )
+            if s.density is not None:
+                density_func = njit(s.density, cache=True)
+                x_list = typed.List([p.particles[ispec].x for p in self.patches])
+                y_list = typed.List([p.particles[ispec].y for p in self.patches])
+                w_list = typed.List([p.particles[ispec].w for p in self.patches])
+                fill_particles(
+                    density_func,
+                    xaxis, 
+                    yaxis, 
+                    self.npatches, 
+                    s.density_min, 
+                    s.ppc,
+                    x_list,y_list,w_list
+                )
     
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
