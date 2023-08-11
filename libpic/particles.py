@@ -1,8 +1,9 @@
 import numpy as np
 from scipy.constants import e, m_e
 
+
 class ParticlesBase:
-    attrs = ["x", "y", "w", "ux", "uy", "uz", "inv_gamma",
+    attrs: list[str] = ["x", "y", "w", "ux", "uy", "uz", "inv_gamma",
              "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"]
     
     def initialize(
@@ -47,5 +48,17 @@ class ParticlesBase:
         self.npart = len(self.pruned)
 
 
+class QEDParticles(ParticlesBase):
+    def __init__(self) -> None:
+        self.attrs += ["chi"]
+        super().__init__()
+
+
 class SpinParticles(ParticlesBase):
-    attrs = ParticlesBase.attrs + ["sx", "sy", "sz"]
+    def __init__(self) -> None:
+        self.attrs += ["sx", "sy", "sz"]
+        super().__init__()
+
+
+class SpinQEDParticles(SpinParticles, QEDParticles):
+    ...

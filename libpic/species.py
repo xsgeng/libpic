@@ -1,8 +1,13 @@
-from pydantic import BaseModel, computed_field
 from functools import cached_property
-from typing import Literal, Callable
+from typing import Callable, Literal
+
+from pydantic import BaseModel, computed_field
 from scipy.constants import e, m_e, m_p
-from .particles import ParticlesBase
+
+from libpic.particles import ParticlesBase
+
+from .particles import (ParticlesBase, QEDParticles, SpinParticles,
+                        SpinQEDParticles)
 
 
 class Species(BaseModel):
@@ -14,9 +19,10 @@ class Species(BaseModel):
     density_min: float = 0
     ppc: int = 0
         
-    momentum: tuple[Callable, Callable, Callable] = [None, None, None]
-    radiation: Literal["LL", "photons"] = None
-    photon_name: str = None
+    momentum: tuple[Callable, Callable, Callable] = (None, None, None)
+    polarization: tuple[float, float, float] = None
+
+    pusher: Literal["boris", "photon", "boris+tbmt"] = "boris"
     bw_pair_name: list[str] = [None, None]
 
     @computed_field
@@ -45,19 +51,58 @@ class Electron(Species):
     name: str = 'electron'
     charge: int = -1
     mass: float = 1
-        
+    radiation: Literal["ll", "photons"] = None
+    photon: Species = None
 
-class Positron(Species):
-    def __init__(self, name='positron', **kwargs) -> None:
-        """ shortcut for positron with charge 1 and mass 1 """
-        super().__init__(name=name, charge=1, mass=1, **kwargs)
+    def set_photon(self, photon: Species):
+        assert self.radiation == "photons"
+        assert isinstance(photon, Species)
+        self.photon = photon
+
+    def create_particles(self) -> ParticlesBase:
+        if self.photon:
+            if self.polarization is None:
+                return QEDParticles()
+            else:
+                return SpinQEDParticles()
+        elif self.polarization is not None:
+            return SpinParticles()
+
+        return super().create_particles()
+
+
+class Positron(Electron):
+    name: str = 'positron'
+    charge: int = 1
+    
         
 class Proton(Species):
-    def __init__(self, name='proton', **kwargs) -> None:
-        """ shortcut for proton with charge 1 and mass 1836 """
-        super().__init__(name=name, charge=1, mass=m_p/m_e, **kwargs)  
+    name: str = 'proton'
+    charge: int = 1
+    mass: float = m_p/m_e
         
 class Photon(Species):
-    def __init__(self, name='photon', **kwargs) -> None:
-        """ shortcut for photon with charge 0 and mass 0 """
-        super().__init__(name=name, charge=0, mass=0, **kwargs)
+    name: str = 'photon'
+    charge: int = 0
+    mass: float = 0
+
+    pusher: str = "photon"
+
+    def set_bw_pair(self, *, electron: Species, positron: Species):
+        assert isinstance(electron, Species)
+        assert isinstance(positron, Species)
+        self.electron = electron
+        self.positron = positron
+
+
+    def create_particles(self) -> ParticlesBase:
+        if hasattr(self, "electron"):
+            if self.polarization is None:
+                return QEDParticles()
+            else:
+                return SpinQEDParticles()
+        elif self.polarization is not None:
+                return SpinParticles()
+
+        return super().create_particles()
+
