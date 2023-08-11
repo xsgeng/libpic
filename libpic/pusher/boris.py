@@ -40,7 +40,6 @@ def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt ) :
 
 boris_cpu = njit(boris_inline, inline="always")
 
-subsize = 32
 @njit(cache=True)
 def boris( ux, uy, uz, inv_gamma, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, q, m, npart, pruned, dt ) :
     for ip in range(npart):

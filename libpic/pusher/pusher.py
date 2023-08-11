@@ -10,8 +10,7 @@ from .cpu import boris_push_patches, push_position_patches_2d
 
 
 class PusherBase:
-    
-    def __init__(self, patches: Patches) -> None:
+    def __init__(self, patches: Patches, ispec: int) -> None:
         """
         Construct from patches.
 
@@ -22,19 +21,12 @@ class PusherBase:
         self.dimension = patches.dimension
         self.patches = patches
         self.npatches: int = patches.npatches
+        self.ispec = ispec
 
-        self.x_list = []
-        self.y_list = []
-        self.z_list = []
-        self.ux_list = []
-        self.uy_list = []
-        self.uz_list = []
-        self.inv_gamma_list = []
-        self.pruned_list = []
+        self.q = patches.species[ispec].q
+        self.m = patches.species[ispec].m
 
-        self.q: list[float] = []
-        self.m: list[float] = []
-
+        self.generate_particle_lists()
 
     def generate_particle_lists(self) -> None:
         """
@@ -46,24 +38,21 @@ class PusherBase:
             List of particles of all patches. 
         """
 
-        for ispec, s in enumerate(self.patches.species):
-            self.x_list.append(typed.List([p.particles[ispec].x for p in self.patches]))
-            if self.dimension == 2:
-                self.y_list.append(typed.List([p.particles[ispec].y for p in self.patches]))
-            if self.dimension == 3:
-                self.z_list.append(typed.List([p.particles[ispec].z for p in self.patches]))
-            self.ux_list.append(typed.List([p.particles[ispec].ux for p in self.patches]))
-            self.uy_list.append(typed.List([p.particles[ispec].uy for p in self.patches]))
-            self.uz_list.append(typed.List([p.particles[ispec].uz for p in self.patches]))
-            self.inv_gamma_list.append(typed.List([p.particles[ispec].inv_gamma for p in self.patches]))
+        ispec = self.ispec
+        self.x_list = typed.List([p.particles[ispec].x for p in self.patches])
+        if self.dimension >= 2:
+            self.y_list = typed.List([p.particles[ispec].y for p in self.patches])
+        if self.dimension == 3:
+            self.z_list = typed.List([p.particles[ispec].z for p in self.patches])
+        self.ux_list = typed.List([p.particles[ispec].ux for p in self.patches])
+        self.uy_list = typed.List([p.particles[ispec].uy for p in self.patches])
+        self.uz_list = typed.List([p.particles[ispec].uz for p in self.patches])
+        self.inv_gamma_list = typed.List([p.particles[ispec].inv_gamma for p in self.patches])
 
-            self.pruned_list.append(typed.List([p.particles[ispec].pruned for p in self.patches]))
-
-            self.q.append(s.q)
-            self.m.append(s.m)
+        self.pruned_list = typed.List([p.particles[ispec].pruned for p in self.patches])
 
 
-    def update_particle_lists(self, ipatch: int, ispec: int) -> None:
+    def update_particle_lists(self, ipatch: int) -> None:
         """
         Update particle lists of a species in a patch.
 
@@ -74,40 +63,74 @@ class PusherBase:
         ispec : int
             Species index.
         """
-        self.x_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].x
-        if self.dimension == 2:
-            self.y_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].y
+
+        particles = self.patches[ipatch].particles[self.ispec]
+
+        self.x_list[ipatch] = particles.x
+        if self.dimension >= 2:
+            self.y_list[ipatch] = particles.y
         if self.dimension == 3:
-            self.z_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].z
-        self.ex_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ex_part
-        self.ey_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ey_part
-        self.ez_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ez_part
-        self.bx_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].bx_part
-        self.by_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].by_part
-        self.bz_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].bz_part
-        self.pruned_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].pruned
+            self.z_list[ipatch] = particles.z
+        self.ex_part_list[ipatch] = particles.ex_part
+        self.ey_part_list[ipatch] = particles.ey_part
+        self.ez_part_list[ipatch] = particles.ez_part
+        self.bx_part_list[ipatch] = particles.bx_part
+        self.by_part_list[ipatch] = particles.by_part
+        self.bz_part_list[ipatch] = particles.bz_part
+        self.pruned_list[ipatch] = particles.pruned
 
 
-    def push_position(self, ispec: int, dt: float):
+    def push_position(self, dt: float):
         if self.dimension == 2:
             push_position_patches_2d(
-                self.x_list[ispec], self.y_list[ispec],
-                self.ux_list[ispec], self.uy_list[ispec], self.inv_gamma_list[ispec],
-                self.pruned_list[ispec], 
+                self.x_list, self.y_list,
+                self.ux_list, self.uy_list, self.inv_gamma_list,
+                self.pruned_list, 
                 self.npatches, dt,
             )
 
 
-    def __call__(self, ispec: int, dt: float) -> None:
+    def __call__(self, dt: float) -> None:
         raise NotImplementedError
     
 
 class BorisPusher(PusherBase):
-    def __call__(self, ispec: int, dt: float) -> None:
+    def __call__(self, dt: float) -> None:
         boris_push_patches(
-            self.ux_list[ispec], self.uy_list[ispec], self.uz_list[ispec], self.inv_gamma_list[ispec],
-            self.ex_list[ispec], self.ey_list[ispec], self.ez_list[ispec],
-            self.bx_list[ispec], self.by_list[ispec], self.bz_list[ispec],
-            self.pruned_list[ispec],
-            self.npatches, self.q[ispec], self.m[ispec], dt
+            self.ux_list, self.uy_list, self.uz_list, self.inv_gamma_list,
+            self.ex_list, self.ey_list, self.ez_list,
+            self.bx_list, self.by_list, self.bz_list,
+            self.pruned_list,
+            self.npatches, self.q, self.m, dt
         )
+
+
+class PhotonPusher(PusherBase):
+    def __call__(self, dt: float):
+        from .cpu import photon_push_patches
+        photon_push_patches(
+            self.ux_list, self.uy_list, self.uz_list,
+            self.inv_gamma_list,
+            self.pruned_list,
+            self.npatches,
+        )
+        
+
+class BorisTBMTPusher(PusherBase):
+    def generate_particle_lists(self) -> None:
+        super().generate_particle_lists()
+        self.sx_list = typed.List([p.particles[self.ispec].sx for p in self.patches])
+        self.sy_list = typed.List([p.particles[self.ispec].sy for p in self.patches])
+        self.sz_list = typed.List([p.particles[self.ispec].sz for p in self.patches])
+
+
+    def update_particle_lists(self, ipatch: int) -> None:
+        super().update_particle_lists(ipatch)
+        particles = self.patches[ipatch].particles[self.ispec]
+        self.sx_list[ipatch] = particles.sx
+        self.sy_list[ipatch] = particles.sy
+        self.sz_list[ipatch] = particles.sz
+
+
+    def __call__(self, dt: float) -> None:
+        ...

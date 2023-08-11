@@ -2,6 +2,7 @@ from numba import njit, prange
 from scipy.constants import c
 
 from .boris import boris
+from .photon import update_photon_gamma
 
 
 @njit(cache=True, parallel=True)
@@ -28,6 +29,24 @@ def boris_push_patches(
         pruned = pruned_list[ipatch]
         npart = len(pruned)
         boris( ux, uy, uz, inv_gamma, ex, ey, ez, bx, by, bz, q, m, npart, pruned, dt )
+
+
+@njit(cache=True, parallel=True)
+def photon_push_patches(
+    ux_list, uy_list, uz_list, inv_gamma_list,
+    pruned_list,
+    npatches,
+) -> None:
+    """ Update inv_gamma only. """
+    for ipatch in prange(npatches):
+        ux = ux_list[ipatch]
+        uy = uy_list[ipatch]
+        uz = uz_list[ipatch]
+        inv_gamma = inv_gamma_list[ipatch]
+
+        pruned = pruned_list[ipatch]
+        npart = len(pruned)
+        update_photon_gamma(ux, uy, uz, inv_gamma, npart, pruned)
 
 
 @njit(cache=True)

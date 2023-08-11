@@ -1,8 +1,6 @@
 import numpy as np
 from numba import njit, prange
 
-from libpic.pusher import boris, push_position_2d
-
 """ Parallel functions for patches """
 
 
