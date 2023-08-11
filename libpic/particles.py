@@ -1,19 +1,10 @@
 import numpy as np
 from scipy.constants import e, m_e
 
-class Particles:
+class ParticlesBase:
     attrs = ["x", "y", "w", "ux", "uy", "uz", "inv_gamma",
              "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"]
-
-    def __init__(self, species) -> None:
-        self.species = species
-        self.q : float = species.charge * e
-        self.m : float = species.mass * m_e
     
-    @property
-    def name(self) -> str:
-        return self.species.name
-
     def initialize(
         self, 
         npart : int,
@@ -55,8 +46,6 @@ class Particles:
         self.pruned = self.pruned[~self.pruned]
         self.npart = len(self.pruned)
 
-    def __repr__(self) -> str:
-        return f"Particles({self.npart} particles of {self.name} species)"
 
-    def __str__(self) -> str:
-        return f"Particles({self.npart} particles of {self.name} species)"
+class SpinParticles(ParticlesBase):
+    attrs = ParticlesBase.attrs + ["sx", "sy", "sz"]

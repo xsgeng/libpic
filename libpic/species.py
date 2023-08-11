@@ -2,20 +2,22 @@ from pydantic import BaseModel, computed_field
 from functools import cached_property
 from typing import Literal, Callable
 from scipy.constants import e, m_e, m_p
-from .particles import Particles
+from .particles import ParticlesBase
 
 
 class Species(BaseModel):
     name: str
-    charge: int = 1
-    mass: float = 1
+    charge: int
+    mass: float
         
     density: Callable = None
     density_min: float = 0
     ppc: int = 0
         
     momentum: tuple[Callable, Callable, Callable] = [None, None, None]
-    radiation: Literal["none", "LL", "photons"] = "none"
+    radiation: Literal["LL", "photons"] = None
+    photon_name: str = None
+    bw_pair_name: list[str] = [None, None]
 
     @computed_field
     @cached_property
@@ -27,7 +29,7 @@ class Species(BaseModel):
     def m(self) -> float:
         return self.mass * m_e
 
-    def create_particles(self) -> Particles:
+    def create_particles(self) -> ParticlesBase:
         """ 
         Create Particles from the species.
 
@@ -37,13 +39,12 @@ class Species(BaseModel):
         
         Then particles are created within the patch.
         """
-        return Particles(self)
-
+        return ParticlesBase()
 
 class Electron(Species):
-    def __init__(self, name='electron', **kwargs) -> None:
-        """ shortcut for electron with charge -1 and mass 1 """
-        super().__init__(name=name, charge=-1, mass=1, **kwargs)
+    name: str = 'electron'
+    charge: int = -1
+    mass: float = 1
         
 
 class Positron(Species):

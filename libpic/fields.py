@@ -1,7 +1,15 @@
 import numpy as np
-from .maxwell_2d import update_bfield_2d, update_efield_2d
 
 class Fields:
+    nx: int
+    ny: int
+    nz: int
+    n_guard: int
+    dx: float
+    dy: float
+    dz: float
+    shape: tuple
+
     attrs = ["ex", "ey", "ez", "bx", "by", "bz", "jx", "jy", "jz", "rho"]
     
     def _init_fields(self):

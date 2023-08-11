@@ -3,19 +3,61 @@ from time import perf_counter_ns
 import numpy as np
 from numba import njit, typed
 
+from libpic.boundary.cpml import PML, PMLX, PMLY
 from libpic.boundary.particles import (fill_particles_from_boundary,
                                        get_npart_to_extend,
                                        mark_out_of_bound_as_pruned)
-from libpic.fields import Fields2D
-from libpic.particles import Particles
+from libpic.fields import Fields, Fields2D
+from libpic.particles import ParticlesBase
 from libpic.patch.cpu import (fill_particles, get_num_macro_particles,
                               sync_currents, sync_guard_fields)
 from libpic.species import Species
-from libpic.boundary.cpml import PML, PMLX, PMLY
 
 
 class Patch:
-    ...
+    rank: int
+    index: int
+    ipatch_x: int
+    ipatch_y: int
+    x0: float
+    y0: float
+
+    nx: int
+    ny: int
+    dx: float
+    dy: float
+
+    xaxis: np.ndarray
+    yaxis: np.ndarray
+
+    # neighbors
+    xmin_neighbor_index: int = -1
+    xmax_neighbor_index: int = -1
+    ymin_neighbor_index: int = -1
+    ymax_neighbor_index: int = -1
+    zmin_neighbor_index: int = -1
+    zmax_neighbor_index: int = -1
+
+    # MPI neighbors
+    xmin_neighbor_rank: int = -1
+    xmax_neighbor_rank: int = -1
+    ymin_neighbor_rank: int = -1
+    ymax_neighbor_rank: int = -1
+    zmin_neighbor_rank: int = -1
+    zmax_neighbor_rank: int = -1
+
+    fields: Fields
+    # PML boundaries
+    pml_boundary: list[PML] = []
+
+    particles : list[ParticlesBase] = []
+
+    def add_particles(self, particles: ParticlesBase) -> None:
+        self.particles.append(particles)
+
+    def set_fields(self, fields: Fields) -> None:
+        self.fields = fields
+
 
 class Patch2D(Patch):
     def __init__(
@@ -26,7 +68,10 @@ class Patch2D(Patch):
         ipatch_y: int,
         x0 : float, 
         y0 : float,
-        fields: Fields2D,
+        nx: int,
+        ny: int,
+        dx: float,
+        dy: float,
     ) -> None:
         """ 
         Patch2D is a container for the fields and particles of a single patch.
@@ -62,31 +107,14 @@ class Patch2D(Patch):
         self.x0 = x0
         self.y0 = y0
 
-        self.fields = fields
-        self.nx = fields.nx
-        self.ny = fields.ny
-        self.dx = fields.dx
-        self.dy = fields.dy
+        self.nx = nx
+        self.ny = ny
+        self.dx = dx
+        self.dy = dy
 
         self.xaxis = np.arange(self.nx) * self.dx + x0
         self.yaxis = np.arange(self.ny) * self.dy + y0
 
-        # neighbors
-        self.xmin_neighbor_index : int = -1
-        self.xmax_neighbor_index : int = -1
-        self.ymin_neighbor_index : int = -1
-        self.ymax_neighbor_index : int = -1
-        # MPI neighbors
-        self.xmin_neighbor_rank : int = -1
-        self.xmax_neighbor_rank : int = -1
-        self.ymin_neighbor_rank : int = -1
-        self.ymax_neighbor_rank : int = -1
-
-        # PML boundaries
-        self.pml_boundary: list[PML] = []
-
-        self.particles : list[Particles] = []
-    
     def set_neighbor_index(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
         if xmin >= 0:
             self.xmin_neighbor_index = xmin
@@ -115,6 +143,7 @@ class Patch2D(Patch):
             assert isinstance(self.pml_boundary[0], PMLX) ^ isinstance(pml, PMLX)
             # assert isinstance(self.pml_boundary[0], PMLY) ^ isinstance(pml, PMLY)
         self.pml_boundary.append(pml)
+
 
 
 class Patches:
@@ -335,7 +364,7 @@ class Patches:
 
 
         for ipatch in range(self.npatches):
-            particles : Particles = species.create_particles()
+            particles : ParticlesBase = species.create_particles()
             particles.initialize(num_macro_particles[ipatch])
             self[ipatch].particles.append(particles)
 
