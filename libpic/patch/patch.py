@@ -313,8 +313,10 @@ class Patches:
             # typed.List cannot modify the attr of the particle object since
             # the address is modified after being extended.
             for ipatches in range(self.npatches):
+                p = self[ipatches].particles[ispec]
                 if npart_to_extend[ipatches] > 0:
-                    self[ipatches].particles[ispec].extend(npart_to_extend[ipatches])
+                    p.extend(npart_to_extend[ipatches])
+                    p.extended = True
                     self.update_particle_lists(ipatches)
 
             fill_particles_from_boundary(

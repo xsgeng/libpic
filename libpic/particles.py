@@ -3,8 +3,13 @@ from scipy.constants import e, m_e
 
 
 class ParticlesBase:
-    attrs: list[str] = ["x", "y", "w", "ux", "uy", "uz", "inv_gamma",
-             "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"]
+
+    def __init__(self) -> None:
+        self.attrs: list[str] = [
+            "x", "y", "w", "ux", "uy", "uz", "inv_gamma",
+            "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"
+        ]
+        self.extended: bool = False
     
     def initialize(
         self, 
@@ -50,14 +55,14 @@ class ParticlesBase:
 
 class QEDParticles(ParticlesBase):
     def __init__(self) -> None:
-        self.attrs += ["chi"]
         super().__init__()
+        self.attrs += ["chi"]
 
 
 class SpinParticles(ParticlesBase):
     def __init__(self) -> None:
-        self.attrs += ["sx", "sy", "sz"]
         super().__init__()
+        self.attrs += ["sx", "sy", "sz"]
 
 
 class SpinQEDParticles(SpinParticles, QEDParticles):
