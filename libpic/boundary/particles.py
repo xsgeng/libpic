@@ -355,46 +355,54 @@ def fill_boundary_particles_to_buffer(
         attr_list = attrs_list[iattr]
         ibuff = 0
 
-        attr = attr_list[xmin_index]
-        for idx in xmin_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+        if xmin_index >= 0:                
+            attr = attr_list[xmin_index]
+            for idx in xmin_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
-        attr = attr_list[xmax_index]
-        for idx in xmax_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+        if xmax_index >= 0:    
+            attr = attr_list[xmax_index]
+            for idx in xmax_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
-        attr = attr_list[ymin_index]
-        for idx in ymin_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+        if ymin_index >= 0:    
+            attr = attr_list[ymin_index]
+            for idx in ymin_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
-        attr = attr_list[ymax_index]
-        for idx in ymax_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+        if ymax_index >= 0:    
+            attr = attr_list[ymax_index]
+            for idx in ymax_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
-        # corners
-        attr = attr_list[xminymin_index]
-        for idx in xminymin_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+            # corners
+        if xminymin_index >= 0:                
+            attr = attr_list[xminymin_index]
+            for idx in xminymin_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
-        attr = attr_list[xmaxymin_index]
-        for idx in xmaxymin_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+        if xmaxymin_index >= 0:    
+            attr = attr_list[xmaxymin_index]
+            for idx in xmaxymin_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
-        attr = attr_list[xminymax_index]
-        for idx in xminymax_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+        if xminymax_index >= 0:    
+            attr = attr_list[xminymax_index]
+            for idx in xminymax_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
-        attr = attr_list[xmaxymax_index]
-        for idx in xmaxymax_indices:
-            buffer[ibuff, iattr] = attr[idx]
-            ibuff += 1
+        if xmaxymax_index >= 0:    
+            attr = attr_list[xmaxymax_index]
+            for idx in xmaxymax_indices:
+                buffer[ibuff, iattr] = attr[idx]
+                ibuff += 1
 
 
 @njit(cache=True, parallel=True)
