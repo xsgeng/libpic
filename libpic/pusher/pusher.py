@@ -49,6 +49,13 @@ class PusherBase:
         self.uz_list = typed.List([p.particles[ispec].uz for p in self.patches])
         self.inv_gamma_list = typed.List([p.particles[ispec].inv_gamma for p in self.patches])
 
+        self.ex_part_list = typed.List([p.particles[ispec].ex_part for p in self.patches])
+        self.ey_part_list = typed.List([p.particles[ispec].ey_part for p in self.patches])
+        self.ez_part_list = typed.List([p.particles[ispec].ez_part for p in self.patches])
+        self.bx_part_list = typed.List([p.particles[ispec].bx_part for p in self.patches])
+        self.by_part_list = typed.List([p.particles[ispec].by_part for p in self.patches])
+        self.bz_part_list = typed.List([p.particles[ispec].bz_part for p in self.patches])
+
         self.pruned_list = typed.List([p.particles[ispec].pruned for p in self.patches])
 
 
@@ -71,6 +78,12 @@ class PusherBase:
             self.y_list[ipatch] = particles.y
         if self.dimension == 3:
             self.z_list[ipatch] = particles.z
+
+        self.ux_list[ipatch] = particles.ux
+        self.uy_list[ipatch] = particles.uy
+        self.uz_list[ipatch] = particles.uz
+        self.inv_gamma_list[ipatch] = particles.inv_gamma
+
         self.ex_part_list[ipatch] = particles.ex_part
         self.ey_part_list[ipatch] = particles.ey_part
         self.ez_part_list[ipatch] = particles.ez_part
@@ -98,8 +111,8 @@ class BorisPusher(PusherBase):
     def __call__(self, dt: float) -> None:
         boris_push_patches(
             self.ux_list, self.uy_list, self.uz_list, self.inv_gamma_list,
-            self.ex_list, self.ey_list, self.ez_list,
-            self.bx_list, self.by_list, self.bz_list,
+            self.ex_part_list, self.ey_part_list, self.ez_part_list,
+            self.bx_part_list, self.by_part_list, self.bz_part_list,
             self.pruned_list,
             self.npatches, self.q, self.m, dt
         )

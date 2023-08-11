@@ -57,7 +57,7 @@ def push_position_2d( x, y, ux, uy, inv_gamma, N, pruned, dt):
     # Timestep, multiplied by c
     cdt = c*dt
 
-    for ip in prange(N) :
+    for ip in range(N) :
         if pruned[ip]:
             continue
         x[ip] += cdt * inv_gamma[ip] * ux[ip]
