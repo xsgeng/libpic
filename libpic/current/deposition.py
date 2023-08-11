@@ -36,6 +36,9 @@ class CurrentDeposition:
 
         self.q = []
 
+        self.generate_field_lists()
+        self.generate_particle_lists()
+
     def generate_particle_lists(self) -> None:
         """
         Add species to the current deposition class.
@@ -156,7 +159,8 @@ class CurrentDeposition2D(CurrentDeposition):
             self.rho_list,
             self.jx_list, self.jy_list, self.jz_list,
             self.x0s, self.y0s,
-            self.x_list[ispec], self.y_list[ispec], self.ux_list[ispec], self.uy_list[ispec], self.uz_list[ispec],
+            self.x_list[ispec], self.y_list[ispec], 
+            self.ux_list[ispec], self.uy_list[ispec], self.uz_list[ispec],
             self.inv_gamma_list[ispec],
             self.pruned_list[ispec],
             self.npatches,

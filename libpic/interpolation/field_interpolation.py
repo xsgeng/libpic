@@ -38,6 +38,9 @@ class FieldInterpolation:
         self.bz_part_list = []
         self.pruned_list = []
 
+        self.generate_particle_lists()
+        self.generate_field_lists()
+
 
     def generate_particle_lists(self) -> None:
         """
@@ -72,14 +75,16 @@ class FieldInterpolation:
         ispec : int
             Species index.
         """
-        self.x_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].x
-        self.ex_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ex_part
-        self.ey_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ey_part
-        self.ez_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ez_part
-        self.bx_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].bx_part
-        self.by_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].by_part
-        self.bz_part_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].bz_part
-        self.pruned_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].pruned
+        particles = self.patches[ipatch].particles[ispec]
+
+        self.x_list[ispec][ipatch] = particles.x
+        self.ex_part_list[ispec][ipatch] = particles.ex_part
+        self.ey_part_list[ispec][ipatch] = particles.ey_part
+        self.ez_part_list[ispec][ipatch] = particles.ez_part
+        self.bx_part_list[ispec][ipatch] = particles.bx_part
+        self.by_part_list[ispec][ipatch] = particles.by_part
+        self.bz_part_list[ispec][ipatch] = particles.bz_part
+        self.pruned_list[ispec][ipatch] = particles.pruned
 
     
     def generate_field_lists(self) -> None:
@@ -150,7 +155,7 @@ class FieldInterpolation2D(FieldInterpolation):
             self.bx_part_list[ispec], self.by_part_list[ispec], self.bz_part_list[ispec],
             self.ex_list, self.ey_list, self.ez_list,
             self.bx_list, self.by_list, self.bz_list,
-            self.x0_list, self.y0_list,
+            self.x0s, self.y0s,
             self.npatches,
             self.dx, self.dy,
             self.pruned_list[ispec],
