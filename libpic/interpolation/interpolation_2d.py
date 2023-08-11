@@ -33,16 +33,13 @@ def interpolation_2d(
             iy2 = int(np.floor(y_over_dy))
             get_gx(iy2 - y_over_dy + 0.5, hy[:, ip])
 
-        # for ip in range(npart_vec):
-        #     ipart_global = ivect + ip
-            if not pruned[ipart_global]:
-                ex_part[ipart_global] = interp_ex(ex, hx[:, ip], gy[:, ip], ix2, iy1)
-                ey_part[ipart_global] = interp_ey(ey, gx[:, ip], hy[:, ip], ix1, iy2)
-                ez_part[ipart_global] = interp_ez(ez, gx[:, ip], gy[:, ip], ix1, iy1)
+            ex_part[ipart_global] = interp_ex(ex, hx[:, ip], gy[:, ip], ix2, iy1)
+            ey_part[ipart_global] = interp_ey(ey, gx[:, ip], hy[:, ip], ix1, iy2)
+            ez_part[ipart_global] = interp_ez(ez, gx[:, ip], gy[:, ip], ix1, iy1)
 
-                bx_part[ipart_global] = interp_bx(bx, gx[:, ip], hy[:, ip], ix1, iy2)
-                by_part[ipart_global] = interp_by(by, hx[:, ip], gy[:, ip], ix2, iy1)
-                bz_part[ipart_global] = interp_bz(bz, hx[:, ip], hy[:, ip], ix2, iy2)
+            bx_part[ipart_global] = interp_bx(bx, gx[:, ip], hy[:, ip], ix1, iy2)
+            by_part[ipart_global] = interp_by(by, hx[:, ip], gy[:, ip], ix2, iy1)
+            bz_part[ipart_global] = interp_bz(bz, hx[:, ip], hy[:, ip], ix2, iy2)
 
 
 @njit(cache=True, inline="always")
