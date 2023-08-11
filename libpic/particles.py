@@ -3,7 +3,20 @@ from scipy.constants import e, m_e
 
 
 class ParticlesBase:
+    x: np.ndarray
+    y: np.ndarray
+    w: np.ndarray
+    ux: np.ndarray
+    uy: np.ndarray
+    uz: np.ndarray
+    inv_gamma: np.ndarray
 
+    ex_part: np.ndarray
+    ey_part: np.ndarray
+    ez_part: np.ndarray
+    bx_part: np.ndarray
+    by_part: np.ndarray
+    bz_part: np.ndarray
     def __init__(self) -> None:
         self.attrs: list[str] = [
             "x", "y", "w", "ux", "uy", "uz", "inv_gamma",
@@ -18,21 +31,10 @@ class ParticlesBase:
         assert npart >= 0
         self.npart = npart
 
-        self.x = np.zeros(npart)
-        self.y = np.zeros(npart)
-        self.w = np.zeros(npart)
-        self.ux = np.zeros(npart)
-        self.uy = np.zeros(npart)
-        self.uz = np.zeros(npart)
-        self.inv_gamma = np.ones(npart)
+        for attr in self.attrs:
+            setattr(self, attr, np.zeros(npart))
 
-        self.ex_part = np.zeros(npart)
-        self.ey_part = np.zeros(npart)
-        self.ez_part = np.zeros(npart)
-        self.bx_part = np.zeros(npart)
-        self.by_part = np.zeros(npart)
-        self.bz_part = np.zeros(npart)
-
+        self.inv_gamma[:] = 1
         self.pruned = np.full(npart, False)
 
     def extend(self, n : int):
