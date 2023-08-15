@@ -2,7 +2,8 @@ from scipy.constants import c
 from math import sqrt
 from numba import njit
 
-def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt ) :
+
+def boris_inline(ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt):
 
     efactor = q*dt/(2*m*c)
     bfactor = q*dt/(2*m)
@@ -16,7 +17,7 @@ def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt ) :
     Tx = bfactor * Bx * inv_gamma_minus
     Ty = bfactor * By * inv_gamma_minus
     Tz = bfactor * Bz * inv_gamma_minus
-    
+
     ux_prime = ux_minus + uy_minus * Tz - uz_minus * Ty
     uy_prime = uy_minus + uz_minus * Tx - ux_minus * Tz
     uz_prime = uz_minus + ux_minus * Ty - uy_minus * Tx
@@ -37,11 +38,11 @@ def boris_inline( ux, uy, uz, Ex, Ey, Ez, Bx, By, Bz, q, m, dt ) :
     return ux_new, uy_new, uz_new, inv_gamma_new
 
 
-
 boris_cpu = njit(boris_inline, inline="always")
 
+
 @njit(cache=True)
-def boris( ux, uy, uz, inv_gamma, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, q, m, npart, pruned, dt ) :
+def boris(ux, uy, uz, inv_gamma, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, q, m, npart, pruned, dt):
     for ip in range(npart):
         if pruned[ip]:
             continue

@@ -33,8 +33,6 @@ def interpolation_patches_2d(
         bz = bz_list[ipatch]
         x0 = x0_list[ipatch]
         y0 = y0_list[ipatch]
-        x = x_list[ipatch]
-        y = y_list[ipatch]
         pruned = pruned_list[ipatch]
         npart = len(pruned)
         interpolation_2d(

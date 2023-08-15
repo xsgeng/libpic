@@ -17,16 +17,17 @@ class ParticlesBase:
     bx_part: np.ndarray
     by_part: np.ndarray
     bz_part: np.ndarray
+
     def __init__(self) -> None:
         self.attrs: list[str] = [
             "x", "y", "w", "ux", "uy", "uz", "inv_gamma",
             "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part"
         ]
         self.extended: bool = False
-    
+
     def initialize(
-        self, 
-        npart : int,
+        self,
+        npart: int,
     ) -> None:
         assert npart >= 0
         self.npart = npart
@@ -37,7 +38,7 @@ class ParticlesBase:
         self.inv_gamma[:] = 1
         self.pruned = np.full(npart, False)
 
-    def extend(self, n : int):
+    def extend(self, n: int):
         if n <= 0:
             return
         for attr in self.attrs:

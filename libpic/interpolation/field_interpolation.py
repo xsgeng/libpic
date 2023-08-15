@@ -21,7 +21,7 @@ class FieldInterpolation:
 
         Parameters
         ----------
-        
+
         """
         self.patches = patches
         self.npatches: int = patches.npatches
@@ -41,7 +41,6 @@ class FieldInterpolation:
         self.generate_particle_lists()
         self.generate_field_lists()
 
-
     def generate_particle_lists(self) -> None:
         """
         Generate typed.List of particle data of all species in all patches.
@@ -53,16 +52,23 @@ class FieldInterpolation:
         """
 
         for ispec, s in enumerate(self.patches.species):
-            self.x_list.append(typed.List([p.particles[ispec].x for p in self.patches]))
-            self.ex_part_list.append(typed.List([p.particles[ispec].ex_part for p in self.patches]))
-            self.ey_part_list.append(typed.List([p.particles[ispec].ey_part for p in self.patches]))
-            self.ez_part_list.append(typed.List([p.particles[ispec].ez_part for p in self.patches]))
-            self.bx_part_list.append(typed.List([p.particles[ispec].bx_part for p in self.patches]))
-            self.by_part_list.append(typed.List([p.particles[ispec].by_part for p in self.patches]))
-            self.bz_part_list.append(typed.List([p.particles[ispec].bz_part for p in self.patches]))
+            self.x_list.append(typed.List(
+                [p.particles[ispec].x for p in self.patches]))
+            self.ex_part_list.append(typed.List(
+                [p.particles[ispec].ex_part for p in self.patches]))
+            self.ey_part_list.append(typed.List(
+                [p.particles[ispec].ey_part for p in self.patches]))
+            self.ez_part_list.append(typed.List(
+                [p.particles[ispec].ez_part for p in self.patches]))
+            self.bx_part_list.append(typed.List(
+                [p.particles[ispec].bx_part for p in self.patches]))
+            self.by_part_list.append(typed.List(
+                [p.particles[ispec].by_part for p in self.patches]))
+            self.bz_part_list.append(typed.List(
+                [p.particles[ispec].bz_part for p in self.patches]))
 
-            self.pruned_list.append(typed.List([p.particles[ispec].pruned for p in self.patches]))
-
+            self.pruned_list.append(typed.List(
+                [p.particles[ispec].pruned for p in self.patches]))
 
     def update_particle_lists(self, ipatch: int, ispec: int) -> None:
         """
@@ -86,7 +92,6 @@ class FieldInterpolation:
         self.bz_part_list[ispec][ipatch] = particles.bz_part
         self.pruned_list[ispec][ipatch] = particles.pruned
 
-    
     def generate_field_lists(self) -> None:
         """
         Update field lists of all patches.
@@ -114,7 +119,6 @@ class FieldInterpolation:
         self.npatches = self.patches.npatches
         # raise NotImplementedError
 
-
     def __call__(self, ispec: int) -> None:
         """
         Call field interpolation.
@@ -132,17 +136,15 @@ class FieldInterpolation2D(FieldInterpolation):
         super().__init__(patches)
         self.dy: float = patches.dy
 
-
     def generate_particle_lists(self) -> None:
         super().generate_particle_lists()
         for ispec, s in enumerate(self.patches.species):
-            self.y_list.append(typed.List([p.particles[ispec].y for p in self.patches]))
-
+            self.y_list.append(typed.List(
+                [p.particles[ispec].y for p in self.patches]))
 
     def update_particle_lists(self, ipatch: int, ispec: int):
         super().update_particle_lists(ipatch, ispec)
         self.y_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].y
-
 
     def generate_field_lists(self) -> None:
         super().generate_field_lists()

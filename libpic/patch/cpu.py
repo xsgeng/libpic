@@ -2,11 +2,6 @@ import numpy as np
 from numba import njit, prange
 
 """ Parallel functions for patches """
-
-
-
-
-
 @njit(cache=True, parallel=True)
 def sync_currents(
     jx_list, jy_list, jz_list,

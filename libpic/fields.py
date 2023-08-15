@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Fields:
     nx: int
     ny: int
@@ -11,7 +12,7 @@ class Fields:
     shape: tuple
 
     attrs = ["ex", "ey", "ez", "bx", "by", "bz", "jx", "jy", "jz", "rho"]
-    
+
     def _init_fields(self):
         self.ex = np.zeros(self.shape)
         self.ey = np.zeros(self.shape)
@@ -29,6 +30,7 @@ class Fields:
 
     def __setitem__(self, key, value):
         self.ex[key], self.ey[key], self.ez[key], self.bx[key], self.by[key], self.bz[key], self.jx[key], self.jy[key], self.jz[key] = value
+
 
 class Fields2D(Fields):
 
@@ -54,6 +56,7 @@ class Fields2D(Fields):
         self.y0 = y0
         self.yaxis = yaxis[None, :] + y0
 
+
 class Fields3D(Fields):
 
     def __init__(self, nx, ny, nz, dx, dy, dz, x0, y0, z0, n_guard) -> None:
@@ -68,7 +71,7 @@ class Fields3D(Fields):
         self.shape = (nx+2*n_guard, ny+2*n_guard, nz+2*n_guard)
         self._init_fields()
 
-         # x axis
+        # x axis
         xaxis = np.arange(nx+n_guard*2, dtype=float)
         xaxis[-n_guard:] = np.arange(-n_guard, 0)
         xaxis *= dx
@@ -88,4 +91,3 @@ class Fields3D(Fields):
         zaxis *= dz
         self.z0 = z0
         self.zaxis = zaxis[None, None, :] + z0
-        

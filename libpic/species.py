@@ -14,16 +14,15 @@ class Species(BaseModel):
     name: str
     charge: int
     mass: float
-        
+
     density: Callable = None
     density_min: float = 0
     ppc: int = 0
-        
+
     momentum: tuple[Callable, Callable, Callable] = (None, None, None)
     polarization: tuple[float, float, float] = None
 
     pusher: Literal["boris", "photon", "boris+tbmt"] = "boris"
-    bw_pair_name: list[str] = [None, None]
 
     @computed_field
     @cached_property
@@ -42,10 +41,11 @@ class Species(BaseModel):
         Particles class holds the particle data.
 
         Called by patch. 
-        
+
         Then particles are created within the patch.
         """
         return ParticlesBase()
+
 
 class Electron(Species):
     name: str = 'electron'
@@ -74,13 +74,14 @@ class Electron(Species):
 class Positron(Electron):
     name: str = 'positron'
     charge: int = 1
-    
-        
+
+
 class Proton(Species):
     name: str = 'proton'
     charge: int = 1
     mass: float = m_p/m_e
-        
+
+
 class Photon(Species):
     name: str = 'photon'
     charge: int = 0
@@ -94,7 +95,6 @@ class Photon(Species):
         self.electron = electron
         self.positron = positron
 
-
     def create_particles(self) -> ParticlesBase:
         if hasattr(self, "electron"):
             if self.polarization is None:
@@ -102,7 +102,6 @@ class Photon(Species):
             else:
                 return SpinQEDParticles()
         elif self.polarization is not None:
-                return SpinParticles()
+            return SpinParticles()
 
         return super().create_particles()
-
