@@ -89,6 +89,9 @@ class Photon(Species):
 
     pusher: str = "photon"
 
+    electron: Species = None
+    positron: Species = None
+
     def set_bw_pair(self, *, electron: Species, positron: Species):
         assert isinstance(electron, Species)
         assert isinstance(positron, Species)

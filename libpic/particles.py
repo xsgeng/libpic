@@ -59,7 +59,19 @@ class ParticlesBase:
 class QEDParticles(ParticlesBase):
     def __init__(self) -> None:
         super().__init__()
-        self.attrs += ["chi"]
+        self.attrs += ["chi", "tau"]
+
+    def initialize(self, npart: int) -> None:
+        super().initialize(npart)
+        self.event = np.full(npart, False)
+
+    def extend(self, n: int):
+        super().extend(n)
+        self.event = np.append(self.event, np.full(n, False))
+
+    def prune(self):
+        super().prune()
+        self.event = self.event[~self.pruned]
 
 
 class SpinParticles(ParticlesBase):
