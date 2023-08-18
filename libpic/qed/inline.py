@@ -5,15 +5,15 @@ from scipy.constants import c, e, hbar, m_e
 def calculate_chi_inline(Ex, Ey, Ez, Bx, By, Bz, ux, uy, uz, inv_gamma):
     factor = e*hbar / (m_e**2 * c**3)
     gamma = 1.0 / inv_gamma
-    return factor * sqrt(
+    return factor * (
         (gamma*Ex + (uy*Bz - uz*By)*c)**2 +
         (gamma*Ey + (uz*Bx - ux*Bz)*c)**2 +
         (gamma*Ez + (ux*By - uy*Bx)*c)**2 -
         (ux*Ex + uy*Ey + uz*Ez)**2
-    )
+    ) ** 0.5
 
 
-def find_event_index(event):
+def find_event_index_inline(event):
     '''
     find an event index given an event array.
     

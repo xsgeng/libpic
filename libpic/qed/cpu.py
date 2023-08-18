@@ -1,6 +1,8 @@
+import numpy as np
 from numba import boolean, float64, int64, njit, prange, void
 
-from .inline import calculate_chi_inline, create_photon_inline, find_event_index
+from .inline import (calculate_chi_inline, create_photon_inline,
+                     find_event_index_inline)
 from .optical_depth import update_tau_e
 
 calculate_chi_cpu = njit(calculate_chi_inline)
@@ -66,11 +68,15 @@ def radiation_event_patches(
         for ip in range(npart):
             if pruned[ip]:
                 continue
-            update_tau_e(tau_e, inv_gamma, chi_e, dt,
-                         npart, pruned, event, delta)
+            update_tau_e(
+                tau_e, inv_gamma, chi_e, dt,
+                npart, pruned, event, delta
+            )
 
 
 create_photon = njit(create_photon_inline)
+find_event_index = njit(find_event_index_inline)
+
 @njit(parallel=True)
 def create_photon_patches(
     x_ele_list, y_ele_list, z_ele_list, ux_ele_list, uy_ele_list, uz_ele_list,
@@ -111,7 +117,7 @@ def create_photon_patches(
         )
 
 
-@njit(void(*[float64[:]]*4, boolean[:], float64[:], int64, boolean[:]), parallel=True, cache=False)
+@njit(parallel=True, cache=False)
 def photon_recoil_patches(
     ux_list, uy_list, uz_list, inv_gamma_list,
     event_list, delta_list, pruned_list,
@@ -134,4 +140,43 @@ def photon_recoil_patches(
                 uy[ip] *= 1 - delta[ip]
                 uz[ip] *= 1 - delta[ip]
                 inv_gamma[ip] = (1 + ux[ip]**2 + uy[ip]**2 + uz[ip]**2) ** -0.5
-        
+
+@njit
+def get_particle_extension_size(event, pruned):
+    """
+    Get the number to extend for the target particle.
+
+    Parameters
+    ----------
+    event: bool array
+        QED events of the source particle
+    pruned: bool array
+        pruned flag of the target particle.
+
+    """
+    npho = 0
+    npruned = 0
+
+    for event_ in event:
+        npho += int(event_)
+    for pruned in pruned:
+        npruned += int(pruned)
+
+    if npruned < npho:
+        return int(len(pruned)*0.25 + npruned - npho)
+
+    return 0
+
+    
+
+@njit(parallel=True)
+def get_particle_extension_size_patches(event_list, pruned_list, npatches):
+    num_to_extend = np.zeros(npatches)
+
+    for ipatch in prange(npatches):
+        event = event_list[ipatch]
+        pruned = pruned_list[ipatch]
+
+        num_to_extend[ipatch] = get_particle_extension_size(event, pruned)
+
+    return num_to_extend

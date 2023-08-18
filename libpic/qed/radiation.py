@@ -3,8 +3,9 @@ from numba import typed
 
 from ..patch import Patches
 from ..species import Electron, Photon, Species
-from .cpu import (create_photon_patches, photon_recoil_patches,
-                  radiation_event_patches, update_chi_patches)
+from .cpu import (create_photon_patches, get_particle_extension_size_patches,
+                  photon_recoil_patches, radiation_event_patches,
+                  update_chi_patches)
 
 
 class RadiationBase:
@@ -52,6 +53,28 @@ class RadiationBase:
 
         self.event_list = typed.List([p.particles[ispec].event for p in self.patches])
         self.pruned_list = typed.List([p.particles[ispec].pruned for p in self.patches])
+
+    def update_particle_lists(self, ipatch: int) -> None:
+        particles = self.patches[ipatch].particles[self.ispec]
+        self.tau_list[ipatch] = particles.tau
+        self.chi_list[ipatch] = particles.chi
+        self.delta_list[ipatch] = particles.delta
+
+        self.ux_list[ipatch] = particles.ux
+        self.uy_list[ipatch] = particles.uy
+        self.uz_list[ipatch] = particles.uz
+        self.inv_gamma_list[ipatch] = particles.inv_gamma
+
+
+        self.ex_part_list[ipatch] = particles.ex_part
+        self.ey_part_list[ipatch] = particles.ey_part
+        self.ez_part_list[ipatch] = particles.ez_part
+        self.bx_part_list[ipatch] = particles.bx_part
+        self.by_part_list[ipatch] = particles.by_part
+        self.bz_part_list[ipatch] = particles.bz_part
+
+        self.event_list[ipatch] = particles.event
+        self.pruned_list[ipatch] = particles.pruned
 
     def update_chi(self) -> None:
         update_chi_patches(
@@ -115,6 +138,34 @@ class NonlinearComptonLCFA(RadiationBase):
 
         self.delta_pho_list = typed.List([p.delta for p in particles])
 
+
+    def update_particle_lists(self, ipatch: int) -> None:
+        super().update_particle_lists(ipatch)
+        # electrons
+        electrons = self.patches[ipatch].particles[self.ispec]
+        self.x_list[ipatch] = electrons.x
+        if self.dimension >= 2:
+            self.y_list[ipatch] = electrons.y
+        if self.dimension == 3:
+            self.z_list[ipatch] = electrons.z
+
+        # photons
+        photons = self.patches[ipatch].particles[self.photon_ispec]
+        self.x_list[ipatch] = photons.x
+        if self.dimension >= 2:
+            self.y_list[ipatch] = photons.y
+        if self.dimension == 3:
+            self.z_list[ipatch] = photons.z
+        self.ux_pho_list[ipatch] = photons.ux
+        self.uy_pho_list[ipatch] = photons.uy
+        self.uz_pho_list[ipatch] = photons.uz
+        self.inv_gamma_pho_list[ipatch] = photons.inv_gamma
+
+        self.pruned_pho_list[ipatch] = photons.pruned
+
+        self.delta_pho_list[ipatch] = photons.delta
+
+
     def event(self, dt: float) -> None:
         radiation_event_patches(
             self.tau_list, self.chi_list, self.inv_gamma_list,
@@ -126,6 +177,14 @@ class NonlinearComptonLCFA(RadiationBase):
 
     def create_particles(self) -> None:
         # extend photons
+        num_photons_extend = get_particle_extension_size_patches(
+            self.event_list, self.pruned_pho_list, self.npatches
+        )
+        for ipatch in range(self.npatches):
+            n = num_photons_extend[ipatch]
+            if n > 0:
+                self.patches[ipatch].particles[self.photon_ispec].extend(n)
+                self.update_particle_lists[ipatch]
 
         # fillin photons
         create_photon_patches(
