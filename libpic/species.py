@@ -1,6 +1,9 @@
+import inspect
 from functools import cached_property
 from typing import Callable, Literal
 
+from numba import njit
+from numba.extending import is_jitted
 from pydantic import BaseModel, computed_field
 from scipy.constants import e, m_e, m_p
 
@@ -33,6 +36,18 @@ class Species(BaseModel):
     @cached_property
     def m(self) -> float:
         return self.mass * m_e
+
+    @computed_field
+    @cached_property
+    def density_jit(self) -> Callable | None:
+        if is_jitted(self.density):
+            self.density.enable_caching()
+            return self.density
+        elif inspect.isfunction(self.density):
+            return njit(self.density, cache=True)
+        elif self.density is None:
+            return None
+        
 
     def create_particles(self) -> ParticlesBase:
         """ 

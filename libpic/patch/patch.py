@@ -367,10 +367,9 @@ class Patches:
         yaxis = typed.List([p.yaxis for p in self.patches])
 
         if species.density is not None:
-            density_func = njit(species.density, cache=True)
 
             num_macro_particles = get_num_macro_particles(
-                density_func,
+                species.density_jit,
                 xaxis, 
                 yaxis, 
                 self.npatches, 
@@ -397,12 +396,11 @@ class Patches:
             print(f"Creating Species {s.name}...", end=" ")
             tic = perf_counter_ns()
             if s.density is not None:
-                density_func = njit(s.density, cache=True)
                 x_list = typed.List([p.particles[ispec].x for p in self.patches])
                 y_list = typed.List([p.particles[ispec].y for p in self.patches])
                 w_list = typed.List([p.particles[ispec].w for p in self.patches])
                 fill_particles(
-                    density_func,
+                    s.density_jit,
                     xaxis, 
                     yaxis, 
                     self.npatches, 
