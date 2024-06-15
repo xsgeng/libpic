@@ -44,7 +44,7 @@ class Species(BaseModel):
             self.density.enable_caching()
             return self.density
         elif inspect.isfunction(self.density):
-            return njit(self.density, cache=True)
+            return njit(self.density)
         elif self.density is None:
             return None
         
