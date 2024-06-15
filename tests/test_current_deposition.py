@@ -9,6 +9,42 @@ from libpic.current.deposition import CurrentDeposition2D
 
 
 class TestCurrentDeposition(unittest.TestCase):
+    def test_precision(self):
+        nx = 6
+        ny = 6
+        npart = 1
+        dx = dy = 1.0e-6
+        x0 = -3*dx
+        y0 = -3*dy
+        dt = dx / c * 0.9
+        q = e
+
+        ne = 1e27
+        w = np.array([ne*dx*dy])
+        
+        ux = np.random.uniform(-10.0, 10.0, (1,))
+        uy = np.random.uniform(-10.0, 10.0, (1,))
+        uz = np.random.uniform(-10.0, 10.0, (1,))
+        inv_gamma = 1 / np.sqrt(1 + ux**2 + uy**2 + uz**2)
+
+        rho = np.zeros((nx, ny))
+        jx = np.zeros((nx, ny))
+        jy = np.zeros((nx, ny))
+        jz = np.zeros((nx, ny))
+
+        pruned = np.full(npart, False)
+
+        x = np.random.uniform(-dx, dx, (1,))
+        y = np.random.uniform(-dy, dy, (1,))
+        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
+        vx = ux*inv_gamma*c
+        vy = uy*inv_gamma*c
+        vz = uz*inv_gamma*c
+
+        self.assertLess(abs(jx.sum() - q*ne*vx)/(q*ne*vx), 1e-10)
+        self.assertLess(abs(jy.sum() - q*ne*vy)/(q*ne*vy), 1e-10)
+        self.assertLess(abs(jz.sum() - q*ne*vz)/(q*ne*vz), 1e-10)
+        self.assertLess(abs(rho.sum() - ne*q)/(ne*q), 1e-10)
 
     def test_numba_func(self):
         nx = 100

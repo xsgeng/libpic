@@ -95,8 +95,8 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npa
             y_over_dy0 = y_old[ip] / dy
             iy0 = int(np.floor(y_over_dy0+0.5))
 
-            calculate_S(x_over_dx0 - ix0, 0, ip, S0x)
-            calculate_S(y_over_dy0 - iy0, 0, ip, S0y)
+            calculate_S(ix0 - x_over_dx0, 0, ip, S0x) #gx
+            calculate_S(iy0 - y_over_dy0, 0, ip, S0y)
 
             # positions at t + 3/2*dt, after pusher
             x_over_dx1 = x_adv[ip] / dx
@@ -107,8 +107,8 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npa
             iy1 = int(np.floor(y_over_dy1+0.5))
             dcell_y = iy1 - iy0
 
-            calculate_S(x_over_dx1 - ix1, dcell_x, ip, S1x)
-            calculate_S(y_over_dy1 - iy1, dcell_y, ip, S1y)
+            calculate_S(ix1 - x_over_dx1 , dcell_x, ip, S1x)
+            calculate_S(iy1 - y_over_dy1 , dcell_y, ip, S1y)
 
             for i in range(5):
                 DSx[i, ip] = S1x[i, ip] - S0x[i, ip]
@@ -142,5 +142,5 @@ def current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npa
 
                     jx[ix, iy] += jx_buff
                     jy[ix, iy] += jy_buff[i, ip]
-                    jz[ix, iy] += factor * wz * vz[ip]
+                    jz[ix, iy] += factor*dt * wz * vz[ip]
                     rho[ix, iy] += charge_density * S1x[i, ip] * S1y[j, ip]
