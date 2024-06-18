@@ -280,7 +280,7 @@ class Patches:
         print(f"Synching currents...", end=" ")
         tic = perf_counter_ns()
         sync_currents(
-            lists['jx'], lists['jy'], lists['jz'],
+            lists['jx'], lists['jy'], lists['jz'], lists["rho"],
             lists['xmin_neighbor_index'], 
             lists['xmax_neighbor_index'], 
             lists['ymin_neighbor_index'], 
