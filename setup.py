@@ -6,7 +6,7 @@ extensions = [
         include_dirs=["/home/chcl3/miniconda3/envs/libpic/lib/python3.12/site-packages/numpy/core/include"],
         # libraries=[...],
         # library_dirs=[...],
-        extra_compile_args=['-march=native', '-fopenmp'],
+        extra_compile_args=['-march=native', '-fopenmp', '-O3', '-mavx2', '-mfma'],
         extra_link_args=['-fopenmp'],
     ),
 ]
