@@ -257,8 +257,6 @@ class Patches:
 
     def sync_guard_fields(self):
         lists = self.grid_lists
-        print(f"Synching guard fields...", end=" ")
-        tic = perf_counter_ns()
         sync_guard_fields(
             lists['ex'], lists['ey'], lists['ez'],
             lists['bx'], lists['by'], lists['bz'],
@@ -272,13 +270,10 @@ class Patches:
             self.ny,
             self.n_guard,
         )
-        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
 
     def sync_currents(self):
         lists = self.grid_lists
-        print(f"Synching currents...", end=" ")
-        tic = perf_counter_ns()
         sync_currents(
             lists['jx'], lists['jy'], lists['jz'], lists["rho"],
             lists['xmin_neighbor_index'], 
@@ -290,14 +285,11 @@ class Patches:
             self.ny,
             self.n_guard,
         )
-        print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
     def sync_particles(self) -> None:
         lists = self.grid_lists
         plists = self.particle_lists
         for ispec, s in enumerate(self.species):
-            print(f"Synching Species {s.name}...", end=" ")
-            tic = perf_counter_ns()
 
             npart_to_extend, npart_incoming, npart_outgoing = get_npart_to_extend(
                 plists[ispec]["x"], plists[ispec]["y"],
@@ -334,7 +326,6 @@ class Patches:
                 lists["xaxis"], lists["yaxis"],
                 self.npatches, self.dx, self.dy,
             )
-            print(f"{(perf_counter_ns() - tic)/1e6} ms.")
 
         
     @property
