@@ -64,7 +64,7 @@ def create_photon_inline(
 
     idx_pho = 0
     for idx_ele in event_index:
-        while ~pruned_pho[idx_pho]:
+        while not pruned_pho[idx_pho]:
             idx_pho += 1
         x_pho[idx_pho] = x_ele[idx_ele]
         y_pho[idx_pho] = y_ele[idx_ele]

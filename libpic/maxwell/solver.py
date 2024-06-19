@@ -67,6 +67,7 @@ class MaxwellSolver:
             self.jx_pml_list = typed.List([p.fields.jx for p in patches_pml_boundary])
             self.jy_pml_list = typed.List([p.fields.jy for p in patches_pml_boundary])
             self.jz_pml_list = typed.List([p.fields.jz for p in patches_pml_boundary])
+            self.generate_kappa_lists()
 
     def generate_kappa_lists(self) -> None:
         """
