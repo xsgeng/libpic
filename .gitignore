@@ -1,4 +1,33 @@
-__pycache__
+# Numba and Cython project .gitignore
+
+# Numba cache directories
+**/__pycache__
+**/*.pyc
+**/numba_cache
+
+# Cython generated files
+**/*.c
+**/*.cpp
+**/*.h
+**/*.hpp
+
+# Compiled binary files
+**/*.so
+**/*.pyd
+**/*.dll
+**/*.dylib
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints
 *.ipynb
-.vscode
-*.so
+
+# Temporary files
+*~
+# MacOS system files
+.DS_Store
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.[oa]
