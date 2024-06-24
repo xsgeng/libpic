@@ -98,7 +98,7 @@ def sync_guard_fields(
                 field[ipatch][nx:nx+ng, ny:ny+ng] = field[xmaxymax_index][:ng, :ng]
 
 
-@njit(cache=True, parallel=True)
+@njit(cache=False, parallel=True)
 def get_num_macro_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc) -> np.ndarray:
     num_particles = np.zeros(npatches, dtype=np.int64)
     for ipatch in prange(npatches):

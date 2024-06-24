@@ -377,8 +377,11 @@ class Patches:
             self[ipatch].add_particles(particles)
 
         self.species.append(species)
+        
+        num_macro_particles_sum = sum(num_macro_particles)
         print(f"{(perf_counter_ns() - tic)/1e6} ms.")
         print(f"Species {species.name} initialized with {sum(num_macro_particles)} macro particles.")
+        return num_macro_particles_sum
 
     def fill_particles(self):
         xaxis = typed.List([p.xaxis for p in self.patches])
