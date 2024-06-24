@@ -200,10 +200,10 @@ cdef void current_deposit_2d(
                 jx_buff -= factor * dx * wx
                 jy_buff[i] -= factor * dy * wy
 
-                jx[ix + nx*iy] += jx_buff
-                jy[ix + nx*iy] += jy_buff[i]
-                jz[ix + nx*iy] += factor*dt * wz * vz
-                rho[ix + nx*iy] += charge_density * S1x[i] * S1y[j]
+                jx[iy + ny*ix] += jx_buff
+                jy[iy + ny*ix] += jy_buff[i]
+                jz[iy + ny*ix] += factor*dt * wz * vz
+                rho[iy + ny*ix] += charge_density * S1x[i] * S1y[j]
 
 def current_deposition_cpu(
     CListDouble rho_list,
