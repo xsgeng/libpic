@@ -55,8 +55,7 @@ class ParticleSort2D:
 
         self.attrs_list = []
         for attr in self.attrs:
-            if attr not in ['x', 'y', 'z']:
-                self.attrs_list.append(typed.List([getattr(p.particles[ispec], attr) for p in self.patches]))
+            self.attrs_list.append(typed.List([getattr(p.particles[ispec], attr) for p in self.patches]))
 
         self.pruned_list = typed.List([p.particles[ispec].pruned for p in self.patches])
         
@@ -83,11 +82,8 @@ class ParticleSort2D:
         if self.dimension == 3:
             self.z_list[ipatch] = particles.z
 
-        iattr = 0
-        for attr in self.attrs:
-            if attr not in ['x', 'y', 'z']:
-                self.attrs_list[iattr][ipatch] = getattr(particles, attr)
-                iattr += 1
+        for iattr, attr in enumerate(self.attrs):
+            self.attrs_list[iattr][ipatch] = getattr(particles, attr)
                 
         self.pruned_list[ipatch] = particles.pruned
         
