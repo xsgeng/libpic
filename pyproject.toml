@@ -31,3 +31,5 @@ requires = [
     "cython",
 ]
 
+[tool.setuptools]
+packages = ["libpic"]
