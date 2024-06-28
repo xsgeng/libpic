@@ -9,7 +9,7 @@
 from pypi
 
 ```bash
-pip install libpc
+pip install libpic
 ```
 
 from source
