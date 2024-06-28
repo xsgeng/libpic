@@ -1,4 +1,4 @@
-from typing import Callable, List
+from collections.abc import Callable, Sequence
 
 from scipy.constants import c, e, epsilon_0, m_e, mu_0, pi
 from tqdm.auto import trange
@@ -8,7 +8,7 @@ from .fields import Fields2D
 from .interpolation.field_interpolation import FieldInterpolation2D
 from .maxwell.solver import MaxwellSolver2d
 from .patch.patch import Patch2D, Patches
-from .pusher.pusher import BorisPusher, PhotonPusher
+from .pusher.pusher import BorisPusher, PhotonPusher, PusherBase
 from .sort.particle_sort import ParticleSort2D
 from .species import Species
 from .util import Timer
@@ -89,22 +89,20 @@ class Simulation:
         self.patches.update_lists()
 
 
-    def add_species(self, species: list[Species]|tuple[Species]):
-        if isinstance(species, (list, tuple)):
-            for s in species:
+    def add_species(self, species: Sequence[Species]):
+        for s in species:
+            if isinstance(s, Species):
                 self.patches.add_species(s)
-        else:
-            raise TypeError("Species must be a list or tuple of Species objects")
+            else:
+                raise TypeError("`species` must be a sequence of Species objects")
 
 
-        self.pusher = []
+        self.pusher: list[PusherBase] = []
         for ispec, s in enumerate(self.patches.species):
             if s.pusher == "boris":
                 self.pusher.append(BorisPusher(self.patches, ispec))
             elif s.pusher == "photon":
                 self.pusher.append(PhotonPusher(self.patches, ispec))
-            else:
-                raise ValueError(f"Unknown pusher type {s.pusher}")
             
         self.patches.fill_particles()
         self.patches.update_lists()
@@ -113,7 +111,7 @@ class Simulation:
         self.current_depositor = CurrentDeposition2D(self.patches)
 
 
-    def run(self, nsteps: int, callback: List[Callable[[int], None]] = None, callback_species: List[Callable[[int, int], None]] = None):
+    def run(self, nsteps: int, callback: Sequence[Callable[[int], None]] = None, callback_species: Sequence[Callable[[int, int], None]] = None):
         for it in trange(nsteps):
             # EM from t to t+0.5dt
             with Timer('Maxwell'):

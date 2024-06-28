@@ -141,4 +141,4 @@ if __name__ == "__main__":
             )
             fig.savefig(f'ey_{it:04d}.png')
 
-    sim.run(500, callback_species=[store_ne], callback=[plot_ey_rho])
+    sim.run(501, callback_species=[store_ne], callback=[plot_ey_rho])
