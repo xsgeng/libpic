@@ -26,10 +26,9 @@ classifiers = [
 
 [build-system]
 requires = [
-    "wheel",
     "setuptools",
     "cython",
 ]
 
-[tool.setuptools]
-packages = ["libpic"]
+[tool.setuptools.packages.find]
+include = ["libpic"]
