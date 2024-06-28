@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build setuptools cython
+        pip install build setuptools cython numpy
     - name: Build package
       run: python -m build -s
     - name: Publish package

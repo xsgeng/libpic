@@ -1,11 +1,12 @@
 from setuptools import Extension, setup
 from Cython.Build import cythonize
+import numpy as np
 
 extensions = [
     Extension(
         name="libpic.current.cpu", 
         sources=["libpic/current/cpu.pyx"],
-        include_dirs=["/home/chcl3/miniconda3/envs/libpic/lib/python3.12/site-packages/numpy/core/include"],
+        include_dirs=[np.get_include()],
         # libraries=[...],
         # library_dirs=[...],
         extra_compile_args=['-march=native', '-fopenmp', '-O3', '-mavx2', '-mfma'],
@@ -14,5 +15,5 @@ extensions = [
 ]
 setup(
     name="libpic",
-    ext_modules=cythonize(extensions),
+    ext_modules=extensions,
 )
