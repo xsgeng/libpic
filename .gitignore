@@ -1,9 +1,11 @@
-# Numba and Cython project .gitignore
+# build
+build/
+*.egg-info
+dist/
 
 # Numba cache directories
 **/__pycache__
 **/*.pyc
-**/numba_cache
 
 # Cython generated files
 **/*.c
