@@ -1,7 +1,7 @@
 [project]
 name = "libpic"
 description = "Particle-in-cell library for plasma physics"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
     "numpy",
     "numba",
@@ -24,11 +24,11 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
 ]
 
+[project.urls]
+Homepage = "https://github.com/xsgeng/libpic"
+
 [build-system]
 requires = [
     "setuptools",
     "cython",
 ]
-
-[tool.setuptools.packages.find]
-include = ["libpic"]
