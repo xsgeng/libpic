@@ -11,7 +11,7 @@ from .patch.patch import Patch2D, Patches
 from .pusher.pusher import BorisPusher, PhotonPusher, PusherBase
 from .sort.particle_sort import ParticleSort2D
 from .species import Species
-from .util import Timer
+from .utils.timer import Timer
 
 
 class Simulation:

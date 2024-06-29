@@ -3,7 +3,8 @@ from numba import njit, prange, typed
 
 from libpic.patch import Patches
 
-from .cpu import current_deposition_cpu, CList
+from .cpu import current_deposition_cpu
+from ..utils.clist import CList
 
 
 class CurrentDeposition:
