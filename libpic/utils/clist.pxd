@@ -9,6 +9,8 @@ cdef struct ArrayInfo:
     void* data_ptr
     intp* shape
     int ndim
+
+
 cdef class CListBase(list):
     cdef ArrayInfo* array_infos
     cdef int size
@@ -30,3 +32,10 @@ cdef class CListBool(CListBase):
             return NULL
 
         return <cnp.npy_bool*>self.array_infos[index].data_ptr
+
+cdef class CListIntp(CListBase):
+     cdef inline intp* get_ptr(self, int index) noexcept nogil:
+        if index < 0 or index >= self.size:
+            return NULL
+
+        return <intp*>self.array_infos[index].data_ptr

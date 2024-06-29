@@ -70,5 +70,9 @@ class CList:
         assert all(arr.dtype == arrays[0].dtype for arr in arrays), "arrays types are not same"
         if arrays[0].dtype == np.float64:
             return CListDouble(arrays)
-        if arrays[0].dtype == bool:
+        elif arrays[0].dtype == bool:
             return CListBool(arrays)
+        elif arrays[0].dtype == int:
+            return CListIntp(arrays)
+        else:
+            raise TypeError("Unsupported dtype")
