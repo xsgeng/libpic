@@ -4,7 +4,7 @@ import numpy as np
 from numba import njit, prange, typed, types
 from scipy.constants import c, e, epsilon_0, mu_0
 
-from libpic.patch import Patches
+from ..patch import Patches
 
 from .cpu import boris_push_patches, push_position_patches_2d
 

@@ -3,15 +3,15 @@ from time import perf_counter_ns
 import numpy as np
 from numba import njit, typed
 
-from libpic.boundary.cpml import PML, PMLX, PMLY
-from libpic.boundary.particles import (fill_particles_from_boundary,
+from ..boundary.cpml import PML, PMLX, PMLY
+from ..boundary.particles import (fill_particles_from_boundary,
                                        get_npart_to_extend,
                                        mark_out_of_bound_as_pruned)
-from libpic.fields import Fields, Fields2D
-from libpic.particles import ParticlesBase
-from libpic.patch.cpu import (fill_particles, get_num_macro_particles,
+from ..fields import Fields, Fields2D
+from ..particles import ParticlesBase
+from ..patch.cpu import (fill_particles, get_num_macro_particles,
                               sync_currents, sync_guard_fields)
-from libpic.species import Species
+from ..species import Species
 
 
 class Patch:

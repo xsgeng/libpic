@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit, prange, typed
 
-from libpic.patch import Patches
+from ..patch import Patches
 
 from .cpu import current_deposition_cpu
 from ..utils.clist import CList

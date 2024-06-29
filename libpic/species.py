@@ -7,8 +7,6 @@ from numba.extending import is_jitted
 from pydantic import BaseModel, computed_field
 from scipy.constants import e, m_e, m_p
 
-from libpic.particles import ParticlesBase
-
 from .particles import (ParticlesBase, QEDParticles, SpinParticles,
                         SpinQEDParticles)
 

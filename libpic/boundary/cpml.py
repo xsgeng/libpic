@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit, prange
 from scipy.constants import c, epsilon_0
 
-from libpic.fields import Fields, Fields2D, Fields3D
+from ..fields import Fields, Fields2D, Fields3D
 
 
 class Boundary:
