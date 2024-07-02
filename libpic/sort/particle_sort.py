@@ -56,10 +56,10 @@ class ParticleSort2D:
 
         self.attrs_list = CList([getattr(p.particles[ispec], attr) for p in self.patches for attr in self.attrs ])
 
-        self.pruned_list = CList([p.particles[ispec].pruned for p in self.patches])
+        self.is_dead_list = CList([p.particles[ispec].is_dead for p in self.patches])
         
-        self.particle_cell_indices_list = CList([np.full(p.particles[ispec].pruned.size, -1, dtype=int) for p in self.patches])
-        self.sorted_indices_list = CList([np.full(p.particles[ispec].pruned.size, -1, dtype=int) for p in self.patches])
+        self.particle_cell_indices_list = CList([np.full(p.particles[ispec].is_dead.size, -1, dtype=int) for p in self.patches])
+        self.sorted_indices_list = CList([np.full(p.particles[ispec].is_dead.size, -1, dtype=int) for p in self.patches])
 
     def update_particle_lists(self, ipatch: int) -> None:
         """
@@ -84,10 +84,10 @@ class ParticleSort2D:
         for iattr, attr in enumerate(self.attrs):
             self.attrs_list[iattr+self.nattrs*ipatch] = getattr(particles, attr)
                 
-        self.pruned_list[ipatch] = particles.pruned
+        self.is_dead_list[ipatch] = particles.is_dead
         
-        self.particle_cell_indices_list[ipatch] = np.full(particles.pruned.size, -1, dtype=int)
-        self.sorted_indices_list[ipatch] = np.full(particles.pruned.size, -1, dtype=int)
+        self.particle_cell_indices_list[ipatch] = np.full(particles.is_dead.size, -1, dtype=int)
+        self.sorted_indices_list[ipatch] = np.full(particles.is_dead.size, -1, dtype=int)
         
     def generate_field_lists(self) -> None:
         """
@@ -110,6 +110,6 @@ class ParticleSort2D:
             self.grid_cell_count_list, self.cell_bound_min_list, self.cell_bound_max_list, self.x0s, self.y0s,
             self.nx, self.ny, self.dx, self.dy, 
             self.npatches, 
-            self.particle_cell_indices_list, self.sorted_indices_list, self.x_list, self.y_list, self.pruned_list,
+            self.particle_cell_indices_list, self.sorted_indices_list, self.x_list, self.y_list, self.is_dead_list,
             self.attrs_list
         )

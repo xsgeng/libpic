@@ -34,7 +34,7 @@ class CurrentDeposition:
         self.uy_list = []
         self.uz_list = []
         self.inv_gamma_list = []
-        self.pruned_list = []
+        self.is_dead_list = []
 
         self.q = []
 
@@ -58,7 +58,7 @@ class CurrentDeposition:
             self.uy_list.append(CList([p.particles[ispec].uy for p in self.patches]))
             self.uz_list.append(CList([p.particles[ispec].uz for p in self.patches]))
             self.inv_gamma_list.append(CList([p.particles[ispec].inv_gamma for p in self.patches]))
-            self.pruned_list.append(CList([p.particles[ispec].pruned for p in self.patches]))
+            self.is_dead_list.append(CList([p.particles[ispec].is_dead for p in self.patches]))
 
             self.q.append(s.q)
 
@@ -81,7 +81,7 @@ class CurrentDeposition:
         self.uy_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uy
         self.uz_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uz
         self.inv_gamma_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].inv_gamma
-        self.pruned_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].pruned
+        self.is_dead_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].is_dead
 
     
     def generate_field_lists(self) -> None:
@@ -164,7 +164,7 @@ class CurrentDeposition2D(CurrentDeposition):
             self.x_list[ispec], self.y_list[ispec], 
             self.ux_list[ispec], self.uy_list[ispec], self.uz_list[ispec],
             self.inv_gamma_list[ispec],
-            self.pruned_list[ispec],
+            self.is_dead_list[ispec],
             self.npatches,
             self.dx, self.dy, dt, self.w_list[ispec], self.q[ispec],
         )

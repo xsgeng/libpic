@@ -42,9 +42,9 @@ boris_cpu = njit(boris_inline, inline="always")
 
 
 @njit(cache=True)
-def boris(ux, uy, uz, inv_gamma, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, q, m, npart, pruned, dt):
+def boris(ux, uy, uz, inv_gamma, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, q, m, npart, is_dead, dt):
     for ip in range(npart):
-        if pruned[ip]:
+        if is_dead[ip]:
             continue
 
         ux[ip], uy[ip], uz[ip], inv_gamma[ip] = boris_cpu(

@@ -20,13 +20,13 @@ class TestSortParticles(unittest.TestCase):
         self.uy = np.random.uniform(-1, 1, self.num_particles)
         self.uz = np.random.uniform(-1, 1, self.num_particles)
         self.particle_cell_indices = np.zeros(self.num_particles, dtype=int)
-        self.pruned = np.full(self.num_particles, False)
+        self.is_dead = np.full(self.num_particles, False)
         self.grid_cell_count = np.zeros((self.nx, self.ny), dtype=int)
         self.cell_bound_min = np.zeros((self.nx, self.ny), dtype=int)
         self.cell_bound_max = np.zeros((self.nx, self.ny), dtype=int)
 
     def test_calculate_cell_index(self):
-        _calculate_cell_index(self.x, self.y, self.pruned, self.num_particles, self.nx, self.ny, self.dx, self.dy, self.x0, self.y0, self.particle_cell_indices, self.grid_cell_count)
+        _calculate_cell_index(self.x, self.y, self.is_dead, self.num_particles, self.nx, self.ny, self.dx, self.dy, self.x0, self.y0, self.particle_cell_indices, self.grid_cell_count)
         
         particle_cell_indices_expected = np.floor((self.y - self.y0) / self.dy).astype(int) + np.floor((self.x - self.x0) / self.dx).astype(int) * self.ny
         grid_cell_count_expected = np.histogram2d(self.x, self.y, bins=(self.nx, self.ny), range=((self.x0, self.x0 + self.nx * self.dx), (self.y0, self.y0 + self.ny * self.dy)))[0]
@@ -36,7 +36,7 @@ class TestSortParticles(unittest.TestCase):
 
 
     def test_cell_sort(self):
-        _calculate_cell_index(self.x, self.y, self.pruned, self.num_particles, self.nx, self.ny, self.dx, self.dy, self.x0, self.y0, self.particle_cell_indices, self.grid_cell_count)
+        _calculate_cell_index(self.x, self.y, self.is_dead, self.num_particles, self.nx, self.ny, self.dx, self.dy, self.x0, self.y0, self.particle_cell_indices, self.grid_cell_count)
         _sorted_cell_bound(self.grid_cell_count, self.cell_bound_min, self.cell_bound_max, self.nx, self.ny)
 
         self.assertEqual(self.cell_bound_max[-1, -1], self.num_particles)
@@ -50,12 +50,12 @@ class TestSortParticles(unittest.TestCase):
         #             self.assertTrue((self.y[j] >= self.y0 + iy * self.dy) and (self.y[j] < self.y0 + (iy + 1) * self.dy))
 
     def test_cycle_sort(self):
-        _calculate_cell_index(self.x, self.y, self.pruned, self.num_particles, self.nx, self.ny, self.dx, self.dy, self.x0, self.y0, self.particle_cell_indices, self.grid_cell_count)
+        _calculate_cell_index(self.x, self.y, self.is_dead, self.num_particles, self.nx, self.ny, self.dx, self.dy, self.x0, self.y0, self.particle_cell_indices, self.grid_cell_count)
         _sorted_cell_bound(self.grid_cell_count, self.cell_bound_min, self.cell_bound_max, self.nx, self.ny)
         
         sorted_indices = np.arange(self.num_particles)
         particle_cell_indices_expected = np.sort(self.particle_cell_indices)
-        ops = _cycle_sort(self.cell_bound_min, self.cell_bound_max, self.nx, self.ny, self.particle_cell_indices, self.pruned, sorted_indices)
+        ops = _cycle_sort(self.cell_bound_min, self.cell_bound_max, self.nx, self.ny, self.particle_cell_indices, self.is_dead, sorted_indices)
         self.assertTrue((self.particle_cell_indices == particle_cell_indices_expected).all())
         self.assertLess(ops, self.num_particles)
         

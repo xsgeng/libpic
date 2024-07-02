@@ -56,7 +56,7 @@ class PusherBase:
         self.by_part_list = typed.List([p.particles[ispec].by_part for p in self.patches])
         self.bz_part_list = typed.List([p.particles[ispec].bz_part for p in self.patches])
 
-        self.pruned_list = typed.List([p.particles[ispec].pruned for p in self.patches])
+        self.is_dead_list = typed.List([p.particles[ispec].is_dead for p in self.patches])
 
 
     def update_particle_lists(self, ipatch: int) -> None:
@@ -90,7 +90,7 @@ class PusherBase:
         self.bx_part_list[ipatch] = particles.bx_part
         self.by_part_list[ipatch] = particles.by_part
         self.bz_part_list[ipatch] = particles.bz_part
-        self.pruned_list[ipatch] = particles.pruned
+        self.is_dead_list[ipatch] = particles.is_dead
 
 
     def push_position(self, dt: float):
@@ -98,7 +98,7 @@ class PusherBase:
             push_position_patches_2d(
                 self.x_list, self.y_list,
                 self.ux_list, self.uy_list, self.inv_gamma_list,
-                self.pruned_list, 
+                self.is_dead_list, 
                 self.npatches, dt,
             )
 
@@ -113,7 +113,7 @@ class BorisPusher(PusherBase):
             self.ux_list, self.uy_list, self.uz_list, self.inv_gamma_list,
             self.ex_part_list, self.ey_part_list, self.ez_part_list,
             self.bx_part_list, self.by_part_list, self.bz_part_list,
-            self.pruned_list,
+            self.is_dead_list,
             self.npatches, self.q, self.m, dt
         )
 
@@ -124,7 +124,7 @@ class PhotonPusher(PusherBase):
         photon_push_patches(
             self.ux_list, self.uy_list, self.uz_list,
             self.inv_gamma_list,
-            self.pruned_list,
+            self.is_dead_list,
             self.npatches,
         )
         

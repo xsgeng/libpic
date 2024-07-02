@@ -36,7 +36,7 @@ class ParticlesBase:
             setattr(self, attr, np.zeros(npart))
 
         self.inv_gamma[:] = 1
-        self.pruned = np.full(npart, False)
+        self.is_dead = np.full(npart, False)
 
     def extend(self, n: int):
         if n <= 0:
@@ -46,14 +46,14 @@ class ParticlesBase:
             arr = np.append(arr, np.full(n, np.nan))
             setattr(self, attr, arr)
         self.w[-n:] = 0
-        self.pruned = np.append(self.pruned, np.full(n, True))
+        self.is_dead = np.append(self.is_dead, np.full(n, True))
         self.npart += n
 
     def prune(self):
         for attr in self.attrs:
-            setattr(self, attr, getattr(self, attr)[~self.pruned])
-        self.pruned = self.pruned[~self.pruned]
-        self.npart = len(self.pruned)
+            setattr(self, attr, getattr(self, attr)[~self.is_dead])
+        self.is_dead = self.is_dead[np.logical_not(self.is_dead)]
+        self.npart = len(self.is_dead)
 
 
 class QEDParticles(ParticlesBase):
@@ -71,7 +71,7 @@ class QEDParticles(ParticlesBase):
 
     def prune(self):
         super().prune()
-        self.event = self.event[~self.pruned]
+        self.event = self.event[np.logical_not(self.is_dead)]
 
 
 class SpinParticles(ParticlesBase):

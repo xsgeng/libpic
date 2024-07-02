@@ -233,4 +233,4 @@ class TestPatches(unittest.TestCase):
         for patch in patches:
             p = patch.particles[0]
             with self.subTest(f"Patch {patch.index}:"):
-                self.assertTrue(all(not np.isnan(p.pos[0, not p.pruned])), f"pos={p.pos[0]} pruned={p.pruned}")
+                self.assertTrue(all(not np.isnan(p.pos[0, np.logical_not(p.is_dead)])), f"pos={p.pos[0]} is_dead={p.is_dead}")

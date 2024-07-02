@@ -7,7 +7,7 @@ def interpolation_2d(
     x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
     ex, ey, ez, bx, by, bz,
     dx, dy, x0, y0,
-    pruned,
+    is_dead,
 ):
     gx = np.zeros((3, subsize))
     gy = np.zeros((3, subsize))

@@ -52,7 +52,7 @@ class RadiationBase:
         self.bz_part_list = typed.List([p.particles[ispec].bz_part for p in self.patches])
 
         self.event_list = typed.List([p.particles[ispec].event for p in self.patches])
-        self.pruned_list = typed.List([p.particles[ispec].pruned for p in self.patches])
+        self.is_dead_list = typed.List([p.particles[ispec].is_dead for p in self.patches])
 
     def update_particle_lists(self, ipatch: int) -> None:
         particles = self.patches[ipatch].particles[self.ispec]
@@ -74,7 +74,7 @@ class RadiationBase:
         self.bz_part_list[ipatch] = particles.bz_part
 
         self.event_list[ipatch] = particles.event
-        self.pruned_list[ipatch] = particles.pruned
+        self.is_dead_list[ipatch] = particles.is_dead
 
     def update_chi(self) -> None:
         update_chi_patches(
@@ -82,7 +82,7 @@ class RadiationBase:
             self.inv_gamma_list,
             self.ex_part_list, self.ey_part_list, self.ez_part_list,
             self.bx_part_list, self.by_part_list, self.bz_part_list,
-            self.pruned_list, self.npatches, self.chi_list,
+            self.is_dead_list, self.npatches, self.chi_list,
         )
 
     def event(self, dt: float) -> None:
@@ -134,7 +134,7 @@ class NonlinearComptonLCFA(RadiationBase):
         self.uz_pho_list = typed.List([p.uz for p in particles])
         self.inv_gamma_pho_list = typed.List([p.inv_gamma for p in particles])
 
-        self.pruned_pho_list = typed.List([p.pruned for p in particles])
+        self.is_dead_pho_list = typed.List([p.is_dead for p in particles])
 
         self.delta_pho_list = typed.List([p.delta for p in particles])
 
@@ -161,7 +161,7 @@ class NonlinearComptonLCFA(RadiationBase):
         self.uz_pho_list[ipatch] = photons.uz
         self.inv_gamma_pho_list[ipatch] = photons.inv_gamma
 
-        self.pruned_pho_list[ipatch] = photons.pruned
+        self.is_dead_pho_list[ipatch] = photons.is_dead
 
         self.delta_pho_list[ipatch] = photons.delta
 
@@ -169,7 +169,7 @@ class NonlinearComptonLCFA(RadiationBase):
     def event(self, dt: float) -> None:
         radiation_event_patches(
             self.tau_list, self.chi_list, self.inv_gamma_list,
-            self.pruned_list,
+            self.is_dead_list,
             self.npatches, dt, 
             self.event_list, self.delta_list,
         )
@@ -178,7 +178,7 @@ class NonlinearComptonLCFA(RadiationBase):
     def create_particles(self) -> None:
         # extend photons
         num_photons_extend = get_particle_extension_size_patches(
-            self.event_list, self.pruned_pho_list, self.npatches
+            self.event_list, self.is_dead_pho_list, self.npatches
         )
         for ipatch in range(self.npatches):
             n = num_photons_extend[ipatch]
@@ -190,7 +190,7 @@ class NonlinearComptonLCFA(RadiationBase):
         create_photon_patches(
             self.x_list, self.y_list, self.z_list, self.ux_list, self.uy_list, self.uz_list,
             self.x_pho_list, self.y_pho_list, self.z_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list,
-            self.inv_gamma_pho_list, self.pruned_pho_list, self.delta_pho_list,
+            self.inv_gamma_pho_list, self.is_dead_pho_list, self.delta_pho_list,
             self.event_list,
             self.npatches,
         )
@@ -198,7 +198,7 @@ class NonlinearComptonLCFA(RadiationBase):
     def reaction(self) -> None:
         photon_recoil_patches(
             self.ux_list, self.uy_list, self.uz_list, self.inv_gamma_list,
-            self.event_list, self.delta_list, self.pruned_list,
+            self.event_list, self.delta_list, self.is_dead_list,
             self.npatches,
         )
 

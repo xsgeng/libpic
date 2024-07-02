@@ -32,11 +32,11 @@ class TestCurrentDeposition(unittest.TestCase):
         jy = np.zeros((nx, ny))
         jz = np.zeros((nx, ny))
 
-        pruned = np.full(npart, False)
+        is_dead = np.full(npart, False)
 
         x = np.random.uniform(-dx, dx, (1,))
         y = np.random.uniform(-dy, dy, (1,))
-        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
+        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, is_dead, npart, dx, dy, x0, y0, dt, w, q)
         vx = ux*inv_gamma*c
         vy = uy*inv_gamma*c
         vz = uz*inv_gamma*c
@@ -85,16 +85,16 @@ class TestCurrentDeposition(unittest.TestCase):
         jy = np.zeros((nx, ny))
         jz = np.zeros((nx, ny))
 
-        pruned = np.full(npart, False)
+        is_dead = np.full(npart, False)
 
-        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
+        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, is_dead, npart, dx, dy, x0, y0, dt, w, q)
         self.assertFalse(np.isnan(rho).any())
         self.assertFalse(np.isnan(jx).any())
         self.assertFalse(np.isnan(jy).any())
         self.assertFalse(np.isnan(jz).any())
 
         tic = perf_counter_ns()
-        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, pruned, npart, dx, dy, x0, y0, dt, w, q)
+        current_deposit_2d(rho, jx, jy, jz, x, y, ux, uy, uz, inv_gamma, is_dead, npart, dx, dy, x0, y0, dt, w, q)
         toc = perf_counter_ns()
         print(f"current_deposit_2d {(toc - tic)/1e6:.0f} ms")
         print(f"current_deposit_2d {(toc - tic)/npart:.0f} ns per particle")

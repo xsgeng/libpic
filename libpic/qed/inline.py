@@ -47,7 +47,7 @@ def create_photon_inline(
     event_index, 
     x_ele, y_ele, z_ele, ux_ele, uy_ele, uz_ele,
     x_pho, y_pho, z_pho, ux_pho, uy_pho, uz_pho,
-    inv_gamma_pho, pruned_pho, delta_pho,
+    inv_gamma_pho, is_dead_pho, delta_pho,
 ):
     """
     create photon from electron to photon.
@@ -64,7 +64,7 @@ def create_photon_inline(
 
     idx_pho = 0
     for idx_ele in event_index:
-        while not pruned_pho[idx_pho]:
+        while not is_dead_pho[idx_pho]:
             idx_pho += 1
         x_pho[idx_pho] = x_ele[idx_ele]
         y_pho[idx_pho] = y_ele[idx_ele]
@@ -76,5 +76,5 @@ def create_photon_inline(
         
         inv_gamma_pho[idx_pho] = (ux_pho[idx_pho]**2 + uy_pho[idx_pho]**2 + uz_pho[idx_pho]**2) ** -0.5
         # mark created photon as existing
-        pruned_pho[idx_pho] = False
+        is_dead_pho[idx_pho] = False
         

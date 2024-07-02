@@ -11,7 +11,7 @@ from .optical_depth_tables import (_log_chi_range,
 _chi_min = 10.0**_log_chi_range[0]
 @njit( void(float64[:], float64[:], float64[:], float64, int64, boolean[:], boolean[:], float64[:]),
     cache=False)
-def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, pruned, event, delta):
+def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, is_dead, event, delta):
     '''
     update optical depth tau of electron
     
@@ -26,8 +26,8 @@ def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, pruned, event, delta):
     dt : float
         dt
     N : int
-        total number of particles, pruned included
-    to_be_pruned : array of booleans
+        total number of particles, is_dead included
+    is_dead : array of booleans
         to be pruned flag
     event : array of booleans
         event flag
@@ -35,7 +35,7 @@ def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, pruned, event, delta):
         photon delta
     '''
     for ip in range(npart):
-        if pruned[ip] or chi_e[ip]  < _chi_min:
+        if is_dead[ip] or chi_e[ip]  < _chi_min:
             event[ip] = False
             delta[ip] = 0.0
             continue
@@ -60,7 +60,7 @@ def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, pruned, event, delta):
     void(float64[:], float64[:], float64[:], float64, int64, boolean[:], boolean[:], float64[:]),
     cache=False
 )
-def update_tau_gamma(tau_gamma, inv_gamma, chi_gamma, dt, npart, pruned, event, delta):
+def update_tau_gamma(tau_gamma, inv_gamma, chi_gamma, dt, npart, is_dead, event, delta):
     '''
     update optical depth tau of gamma photon
     
@@ -75,8 +75,8 @@ def update_tau_gamma(tau_gamma, inv_gamma, chi_gamma, dt, npart, pruned, event, 
     dt : float
         dt
     N : int
-        total number of particles, pruned included
-    to_be_pruned : array of booleans
+        total number of particles, is_dead included
+    is_dead : array of booleans
         to be pruned flag
     event : array of booleans
         event flag
@@ -84,7 +84,7 @@ def update_tau_gamma(tau_gamma, inv_gamma, chi_gamma, dt, npart, pruned, event, 
         pair delta
     '''
     for ip in range(npart):
-        if pruned[ip] or chi_gamma[ip] < _chi_min:
+        if is_dead[ip] or chi_gamma[ip] < _chi_min:
             event[ip] = False
             delta[ip] = 0.0
             continue

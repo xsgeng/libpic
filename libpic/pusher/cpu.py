@@ -10,7 +10,7 @@ def boris_push_patches(
     ux_list, uy_list, uz_list, inv_gamma_list,
     ex_list, ey_list, ez_list,
     bx_list, by_list, bz_list,
-    pruned_list,
+    is_dead_list,
     npatches, q, m, dt
 ) -> None:
     for ipatch in prange(npatches):
@@ -26,15 +26,15 @@ def boris_push_patches(
         by = by_list[ipatch]
         bz = bz_list[ipatch]
 
-        pruned = pruned_list[ipatch]
-        npart = len(pruned)
-        boris( ux, uy, uz, inv_gamma, ex, ey, ez, bx, by, bz, q, m, npart, pruned, dt )
+        is_dead = is_dead_list[ipatch]
+        npart = len(is_dead)
+        boris( ux, uy, uz, inv_gamma, ex, ey, ez, bx, by, bz, q, m, npart, is_dead, dt )
 
 
 @njit(cache=True, parallel=True)
 def photon_push_patches(
     ux_list, uy_list, uz_list, inv_gamma_list,
-    pruned_list,
+    is_dead_list,
     npatches,
 ) -> None:
     """ Update inv_gamma only. """
@@ -44,13 +44,13 @@ def photon_push_patches(
         uz = uz_list[ipatch]
         inv_gamma = inv_gamma_list[ipatch]
 
-        pruned = pruned_list[ipatch]
-        npart = len(pruned)
-        update_photon_gamma(ux, uy, uz, inv_gamma, npart, pruned)
+        is_dead = is_dead_list[ipatch]
+        npart = len(is_dead)
+        update_photon_gamma(ux, uy, uz, inv_gamma, npart, is_dead)
 
 
 @njit(cache=True)
-def push_position_2d( x, y, ux, uy, inv_gamma, N, pruned, dt):
+def push_position_2d( x, y, ux, uy, inv_gamma, N, is_dead, dt):
     """
     Advance the particles' positions over `dt` using the momenta `ux`, `uy`, `uz`,
     """
@@ -58,7 +58,7 @@ def push_position_2d( x, y, ux, uy, inv_gamma, N, pruned, dt):
     cdt = c*dt
 
     for ip in range(N) :
-        if pruned[ip]:
+        if is_dead[ip]:
             continue
         x[ip] += cdt * inv_gamma[ip] * ux[ip]
         y[ip] += cdt * inv_gamma[ip] * uy[ip]
@@ -67,7 +67,7 @@ def push_position_2d( x, y, ux, uy, inv_gamma, N, pruned, dt):
 def push_position_patches_2d(
     x_list, y_list,
     ux_list, uy_list, inv_gamma_list,
-    pruned_list, 
+    is_dead_list, 
     npatches, dt,
 ) -> None:
     for ipatch in prange(npatches):
@@ -78,6 +78,6 @@ def push_position_patches_2d(
         uy = uy_list[ipatch]
         inv_gamma = inv_gamma_list[ipatch]
 
-        pruned = pruned_list[ipatch]
-        npart = len(pruned)
-        push_position_2d( x, y, ux, uy, inv_gamma, npart, pruned, dt )
+        is_dead = is_dead_list[ipatch]
+        npart = len(is_dead)
+        push_position_2d( x, y, ux, uy, inv_gamma, npart, is_dead, dt )

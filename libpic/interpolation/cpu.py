@@ -14,7 +14,7 @@ def interpolation_patches_2d(
     x0_list, y0_list,
     npatches,
     dx, dy,
-    pruned_list,
+    is_dead_list,
 ) -> None:
     for ipatch in prange(npatches):
         x = x_list[ipatch]
@@ -33,11 +33,11 @@ def interpolation_patches_2d(
         bz = bz_list[ipatch]
         x0 = x0_list[ipatch]
         y0 = y0_list[ipatch]
-        pruned = pruned_list[ipatch]
-        npart = len(pruned)
+        is_dead = is_dead_list[ipatch]
+        npart = len(is_dead)
         interpolation_2d(
             x, y, ex_part, ey_part, ez_part, bx_part, by_part, bz_part, npart,
             ex, ey, ez, bx, by, bz,
             dx, dy, x0, y0,
-            pruned,
+            is_dead,
         )

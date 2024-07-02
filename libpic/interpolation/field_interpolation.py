@@ -36,7 +36,7 @@ class FieldInterpolation:
         self.bx_part_list = []
         self.by_part_list = []
         self.bz_part_list = []
-        self.pruned_list = []
+        self.is_dead_list = []
 
         self.generate_particle_lists()
         self.generate_field_lists()
@@ -67,8 +67,8 @@ class FieldInterpolation:
             self.bz_part_list.append(typed.List(
                 [p.particles[ispec].bz_part for p in self.patches]))
 
-            self.pruned_list.append(typed.List(
-                [p.particles[ispec].pruned for p in self.patches]))
+            self.is_dead_list.append(typed.List(
+                [p.particles[ispec].is_dead for p in self.patches]))
 
     def update_particle_lists(self, ipatch: int, ispec: int) -> None:
         """
@@ -90,7 +90,7 @@ class FieldInterpolation:
         self.bx_part_list[ispec][ipatch] = particles.bx_part
         self.by_part_list[ispec][ipatch] = particles.by_part
         self.bz_part_list[ispec][ipatch] = particles.bz_part
-        self.pruned_list[ispec][ipatch] = particles.pruned
+        self.is_dead_list[ispec][ipatch] = particles.is_dead
 
     def generate_field_lists(self) -> None:
         """
@@ -160,5 +160,5 @@ class FieldInterpolation2D(FieldInterpolation):
             self.x0s, self.y0s,
             self.npatches,
             self.dx, self.dy,
-            self.pruned_list[ispec],
+            self.is_dead_list[ispec],
         )

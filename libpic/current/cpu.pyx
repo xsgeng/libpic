@@ -36,7 +36,7 @@ cdef void calculate_S(double delta, int shift, double* S) noexcept nogil:
 cdef void current_deposit_2d(
     double* rho, double* jx, double* jy, double* jz, 
     double* x, double* y, double* ux, double* uy, double* uz, double* inv_gamma, 
-    cnp.npy_bool* pruned, 
+    cnp.npy_bool* is_dead, 
     cnp.npy_intp npart, cnp.npy_intp nx, cnp.npy_intp ny,
     double dx, double dy, double x0, double y0, double dt, double* w, double q
 ) noexcept nogil:
@@ -53,11 +53,11 @@ cdef void current_deposit_2d(
     
     cdef double charge_density, factor, jx_buff
     for ipart in range(npart):
-        if pruned[ipart]:
+        if is_dead[ipart]:
             continue
         vx = ux[ipart]*c*inv_gamma[ipart]
         vy = uy[ipart]*c*inv_gamma[ipart]
-        vz = uz[ipart]*c*inv_gamma[ipart] if not pruned[ipart] else 0.0
+        vz = uz[ipart]*c*inv_gamma[ipart] if not is_dead[ipart] else 0.0
         x_old = x[ipart] - vx*0.5*dt - x0
         y_old = y[ipart] - vy*0.5*dt - y0
         x_adv = x[ipart] + vx*0.5*dt - x0
@@ -91,7 +91,7 @@ cdef void current_deposit_2d(
             DSy[i] = S1y[i] - S0y[i]
             jy_buff[i] = 0
 
-        charge_density = q * w[ipart] / (dx*dy) if not pruned[ipart] else 0.0
+        charge_density = q * w[ipart] / (dx*dy) if not is_dead[ipart] else 0.0
         factor = charge_density / dt
 
 
@@ -128,7 +128,7 @@ def current_deposition_cpu(
     double[:] x0_list, double[:] y0_list,
     CListDouble x_list, CListDouble y_list, CListDouble ux_list, CListDouble uy_list, CListDouble uz_list,
     CListDouble inv_gamma_list,
-    CListBool pruned_list,
+    CListBool is_dead_list,
     cnp.npy_intp npatches,
     double dx, double dy, double dt, CListDouble w_list, double q,
 ):
@@ -144,7 +144,7 @@ def current_deposition_cpu(
     cdef double* uy
     cdef double* uz
     cdef double* inv_gamma
-    cdef cnp.npy_bool* pruned
+    cdef cnp.npy_bool* is_dead
 
     cdef double x0, y0
     cdef cnp.npy_intp npart, nx, ny
@@ -160,8 +160,8 @@ def current_deposition_cpu(
         uz = uz_list.get_ptr(ipatch)
         w = w_list.get_ptr(ipatch)
         inv_gamma = inv_gamma_list.get_ptr(ipatch)
-        pruned = pruned_list.get_ptr(ipatch)
-        npart = pruned_list.get_size(ipatch)
+        is_dead = is_dead_list.get_ptr(ipatch)
+        npart = is_dead_list.get_size(ipatch)
 
         x0 = x0_list[ipatch]
         y0 = y0_list[ipatch]
@@ -171,7 +171,7 @@ def current_deposition_cpu(
         current_deposit_2d(
             rho, jx, jy, jz, 
             x, y, ux, uy, uz, inv_gamma, 
-            pruned, 
+            is_dead, 
             npart, nx, ny,
             dx, dy, x0, y0, dt, w, q
         )

@@ -3,10 +3,10 @@ from numba import njit, prange, typed
 
 
 @njit(parallel=True, cache=True)
-def mark_out_of_bound_as_pruned(
+def mark_out_of_bound_as_dead(
     x_list, y_list,
     npart_list,
-    pruned_list,
+    is_dead_list,
     xaxis_list,
     yaxis_list,
     npatches, dx, dy,
@@ -14,7 +14,7 @@ def mark_out_of_bound_as_pruned(
     for ipatches in prange(npatches):
         x = x_list[ipatches]
         y = y_list[ipatches]
-        pruned = pruned_list[ipatches]
+        is_dead = is_dead_list[ipatches]
         xaxis = xaxis_list[ipatches]
         yaxis = yaxis_list[ipatches]
 
@@ -22,29 +22,29 @@ def mark_out_of_bound_as_pruned(
         xmax = xaxis[-1] + 0.5*dx
         ymin = yaxis[ 0] - 0.5*dy
         ymax = yaxis[-1] + 0.5*dy
-        # mark pruned
-        for i in range(len(pruned)):
-            if pruned[i]:
+        # mark is_dead
+        for i in range(len(is_dead)):
+            if is_dead[i]:
                 x[i] = np.nan
                 y[i] = np.nan
                 continue
             if x[i] < xmin:
-                pruned[i] = True
+                is_dead[i] = True
                 x[i] = np.nan
                 y[i] = np.nan
                 continue
             if x[i] > xmax:
-                pruned[i] = True
+                is_dead[i] = True
                 x[i] = np.nan
                 y[i] = np.nan
                 continue
             if y[i] < ymin:
-                pruned[i] = True
+                is_dead[i] = True
                 x[i] = np.nan
                 y[i] = np.nan
                 continue
             if y[i] > ymax:
-                pruned[i] = True
+                is_dead[i] = True
                 x[i] = np.nan
                 y[i] = np.nan
                 continue
@@ -96,7 +96,7 @@ def count_outgoing_particles(x, y, xmin, xmax, ymin, ymax):
 def get_npart_to_extend(
     x_list, y_list,
     npart_list,
-    pruned_list,
+    is_dead_list,
     xaxis_list,
     yaxis_list,
     xmin_index_list,
@@ -130,7 +130,7 @@ def get_npart_to_extend(
         npart_outgoing[7, ipatches] = npart_xmaxymax
 
     for ipatches in prange(npatches):
-        pruned = pruned_list[ipatches]
+        is_dead = is_dead_list[ipatches]
 
         xmin_index = xmin_index_list[ipatches]
         xmax_index = xmax_index_list[ipatches]
@@ -162,13 +162,14 @@ def get_npart_to_extend(
             npart_new += npart_outgoing[7, xminymin_index]
 
         # count vacants
-        npruned = 0
-        for pruned_ in pruned:
-            if pruned_: npruned += 1
+        ndead = 0
+        for is_dead_ in is_dead:
+            if is_dead_: 
+                ndead += 1
 
-        if (npart_new - npruned) > 0:
+        if (npart_new - ndead) > 0:
             # reserved more space for new particles in the following loops
-            npart_to_extend[ipatches] = npart_new - npruned + int(len(pruned)*0.25)
+            npart_to_extend[ipatches] = npart_new - ndead + int(len(is_dead)*0.25)
 
         npart_incoming[ipatches] = npart_new
     return npart_to_extend, npart_incoming, npart_outgoing
@@ -407,7 +408,7 @@ def fill_boundary_particles_to_buffer(
 
 @njit(cache=True, parallel=True)
 def fill_particles_from_boundary(
-    pruned_list,
+    is_dead_list,
     xaxis_list,
     yaxis_list,
     xmin_index_list,
@@ -425,7 +426,7 @@ def fill_particles_from_boundary(
         if npart_new <= 0:
             continue
 
-        pruned = pruned_list[ipatches]
+        is_dead = is_dead_list[ipatches]
 
         xmin_index = xmin_index_list[ipatches]
         xmax_index = xmax_index_list[ipatches]
@@ -487,11 +488,11 @@ def fill_particles_from_boundary(
 
         ibuff = 0
         attrs = typed.List([attrs_list[iattr][ipatches] for iattr in range(nattrs)])
-        for ipart in range(len(pruned)):
+        for ipart in range(len(is_dead)):
             if ibuff >= npart_new:
                 break
-            if pruned[ipart]:
+            if is_dead[ipart]:
                 for iattr in range(nattrs):
                     attrs[iattr][ipart] = buffer[ibuff, iattr]
-                pruned[ipart] = False
+                is_dead[ipart] = False
                 ibuff += 1

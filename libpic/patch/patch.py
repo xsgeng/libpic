@@ -6,7 +6,7 @@ from numba import njit, typed
 from ..boundary.cpml import PML, PMLX, PMLY
 from ..boundary.particles import (fill_particles_from_boundary,
                                        get_npart_to_extend,
-                                       mark_out_of_bound_as_pruned)
+                                       mark_out_of_bound_as_dead)
 from ..fields import Fields, Fields2D
 from ..particles import ParticlesBase
 from ..patch.cpu import (fill_particles, get_num_macro_particles,
@@ -237,7 +237,7 @@ class Patches:
             particle_lists.append({})
             lists = particle_lists[ispec]
             lists["npart"] = typed.List([p.particles[ispec].npart for p in self.patches])
-            lists["pruned"] = typed.List([p.particles[ispec].pruned for p in self.patches])
+            lists["is_dead"] = typed.List([p.particles[ispec].is_dead for p in self.patches])
 
             for attr in self[0].particles[ispec].attrs:
                 lists[attr] = typed.List([getattr(p.particles[ispec], attr) for p in self.patches])
@@ -250,7 +250,7 @@ class Patches:
         patch = self[ipatch]
         for ispec, s in enumerate(self.species):
             plists[ispec]["npart"][ipatch] = patch.particles[ispec].npart
-            plists[ispec]["pruned"][ipatch] = patch.particles[ispec].pruned
+            plists[ispec]["is_dead"][ipatch] = patch.particles[ispec].is_dead
 
             for attr in patch.particles[ispec].attrs:
                 plists[ispec][attr][ipatch] = getattr(patch.particles[ispec], attr)
@@ -293,7 +293,7 @@ class Patches:
 
             npart_to_extend, npart_incoming, npart_outgoing = get_npart_to_extend(
                 plists[ispec]["x"], plists[ispec]["y"],
-                plists[ispec]["npart"], plists[ispec]["pruned"],
+                plists[ispec]["npart"], plists[ispec]["is_dead"],
                 lists["xaxis"], lists["yaxis"],
                 lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], 
                 lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
@@ -312,7 +312,7 @@ class Patches:
                     self.update_particle_lists(ipatches)
 
             fill_particles_from_boundary(
-                plists[ispec]["pruned"],
+                plists[ispec]["is_dead"],
                 lists["xaxis"], lists["yaxis"],
                 lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
                 npart_incoming, npart_outgoing,
@@ -320,9 +320,9 @@ class Patches:
                 *[plists[ispec][attr] for attr in self[ipatches].particles[ispec].attrs],
             )
 
-            mark_out_of_bound_as_pruned(
+            mark_out_of_bound_as_dead(
                 plists[ispec]["x"], plists[ispec]["y"],
-                plists[ispec]["npart"], plists[ispec]["pruned"],
+                plists[ispec]["npart"], plists[ispec]["is_dead"],
                 lists["xaxis"], lists["yaxis"],
                 self.npatches, self.dx, self.dy,
             )
