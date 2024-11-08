@@ -3,7 +3,7 @@ from math import sqrt
 from scipy.constants import c, pi, epsilon_0
 import numpy as np
 
-@njit
+@njit(cache=True)
 def self_pairing(dead, ip_start, ip_end, random_gen):
     nbuf = ip_end - ip_start
     npart = nbuf - dead[ip_start:ip_end].sum()
@@ -51,7 +51,7 @@ def self_pairing(dead, ip_start, ip_end, random_gen):
             
         yield ipair, idx[ip1], idx[ip2], w_corr
 
-@njit
+@njit(cache=True)
 def pairing(
     dead1, ip_start1, ip_end1,
     dead2, ip_start2, ip_end2,
@@ -85,7 +85,7 @@ def pairing(
             for ip1 in range(ip1+1, nbuf1):
                 if not dead1[shuffled_idx[ip1]]:
                     break
-            if ipair == npart2:
+            if ipair % npart2 == 0:
                 ip2 = -1
             for ip2 in range((ip2+1) % nbuf2, nbuf2):
                 if not dead2[ip_start2+ip2]:
@@ -100,7 +100,7 @@ def pairing(
             for ip2 in range(ip2+1, nbuf2):
                 if not dead2[shuffled_idx[ip2]]:
                     break
-            if ipair == npart1:
+            if ipair % npart1 == 0:
                 ip1 = -1
             for ip1 in range((ip1+1) % nbuf1, nbuf1):
                 if not dead1[ip_start1 + ip1]:
@@ -113,8 +113,35 @@ def pairing(
                 
             yield ipair, ip_start1 + ip1, shuffled_idx[ip2], w_corr
 
+def debye_length_cell_2d(
+    ux, uy, uz, inv_gamma, w, dead,
+    m, q, lnLambda,
+    ip_start, ip_end,
+    dx, dy, dt,
+    debye_length
+):
+    nbuf = ip_end - ip_start
+    npart = nbuf - dead[ip_start:ip_end].sum()
+    if npart == 0:
+        return
 
-@njit
+    density = 0.0
+    kT = 0.0 # in mc2
+    mean_charge = 0.0
+    for ip in range(ip_start, ip_end):
+        if dead[ip]: 
+            continue
+        px = ux[ip] * m * c
+        py = uy[ip] * m * c
+        pz = uz[ip] * m * c
+        p2 = px**2 + py**2 + pz**2
+        kT += p2 * inv_gamma[ip]
+        density += w[ip]
+        mean_charge += w[ip] * q
+
+    density /= dx*dy
+
+@njit(cache=True)
 def self_collision_cell_2d(
     ux, uy, uz, inv_gamma, w, dead,
     m, q, lnLambda,
@@ -221,7 +248,7 @@ def self_collision_cell_2d(
             uz[ip2] = p2z_new / m / c
             inv_gamma[ip2] = 1/sqrt(ux[ip2]**2 + uy[ip2]**2 + uz[ip2]**2 + 1)
 
-@njit
+@njit(cache=True)
 def inter_collision_cell_2d(
     ux1, uy1, uz1, inv_gamma1, w1, dead1, ip_start1, ip_end1,
     ux2, uy2, uz2, inv_gamma2, w2, dead2, ip_start2, ip_end2,
@@ -343,7 +370,7 @@ def inter_collision_cell_2d(
             uz2[ip2] = p2z_new / m2 / c
             inv_gamma2[ip2] = 1/sqrt(ux2[ip2]**2 + uy2[ip2]**2 + uz2[ip2]**2 + 1)
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def self_collision_parallel_2d(
     cell_bound_min, cell_bound_max, 
     nx, ny, dx, dy, dt,
@@ -364,7 +391,7 @@ def self_collision_parallel_2d(
             random_gen
         )
 
-@njit(parallel=True)
+@njit(cache=True)
 def self_collision_2d(
     cell_bound_min, cell_bound_max, 
     nx, ny, dx, dy, dt,
@@ -385,7 +412,7 @@ def self_collision_2d(
             )
 
 
-@njit(parallel=True)
+@njit(parallel=True, cache=True)
 def inter_collision_parallel_2d(
     cell_bound_min1, cell_bound_max1, 
     cell_bound_min2, cell_bound_max2, 
@@ -415,7 +442,7 @@ def inter_collision_parallel_2d(
             random_gen
         )
 
-@njit
+@njit(cache=True)
 def inter_collision_2d(
     cell_bound_min1, cell_bound_max1, 
     cell_bound_min2, cell_bound_max2, 
