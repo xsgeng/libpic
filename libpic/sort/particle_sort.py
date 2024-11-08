@@ -2,8 +2,18 @@ import numpy as np
 from ..patch import Patches
 
 from .cpu import sort_particles_patches
-
-class ParticleSort2D:
+from ..utils.clist import CList
+class ParticleSort:
+    def generate_particle_lists(self) -> None:
+        raise NotImplementedError
+    
+    def generate_field_lists(self) -> None:
+        raise NotImplementedError
+    
+    def __call__(self) -> None:
+        raise NotImplementedError
+    
+class ParticleSort2D(ParticleSort):
     """
     sort after particle sync: no particles in guard cells
     """
