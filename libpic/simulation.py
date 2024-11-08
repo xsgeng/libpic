@@ -90,6 +90,7 @@ class Simulation:
 
 
     def add_species(self, species: Sequence[Species]):
+        self.species = species
         for s in species:
             if isinstance(s, Species):
                 self.patches.add_species(s)
