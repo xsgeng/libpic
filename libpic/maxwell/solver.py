@@ -148,14 +148,17 @@ class MaxwellSolver2d(MaxwellSolver):
         # Maxwell equation with kappa of PML boundary
         if self.patches_pml_boundary:
             update_efield_cpml_patches_2d(
-                self.ex_pml_list, self.ey_pml_list, self.ey_pml_list, 
-                self.bx_pml_list, self.by_pml_list, self.by_pml_list, 
-                self.jx_pml_list, self.jy_pml_list, self.jy_pml_list, 
+                self.ex_pml_list, self.ey_pml_list, self.ez_pml_list, 
+                self.bx_pml_list, self.by_pml_list, self.bz_pml_list, 
+                self.jx_pml_list, self.jy_pml_list, self.jz_pml_list, 
                 self.kappa_ex_list, self.kappa_ey_list,
                 len(self.patches_pml_boundary),
                 self.dx, self.dy, dt,
                 self.nx, self.ny, self.n_guard,
             )
+            for p in self.patches_pml_boundary:
+                for pml in p.pml_boundary:
+                    pml.advance_e_currents(dt)
 
         
     def update_bfield(self, dt: float) -> None:
@@ -169,13 +172,16 @@ class MaxwellSolver2d(MaxwellSolver):
         # Maxwell equation with kappa of PML boundary
         if self.patches_pml_boundary:
             update_bfield_cpml_patches_2d(
-                self.ex_pml_list, self.ey_pml_list, self.ey_pml_list, 
-                self.bx_pml_list, self.by_pml_list, self.by_pml_list, 
+                self.ex_pml_list, self.ey_pml_list, self.ez_pml_list, 
+                self.bx_pml_list, self.by_pml_list, self.bz_pml_list, 
                 self.kappa_bx_list, self.kappa_by_list,
                 len(self.patches_pml_boundary),
                 self.dx, self.dy, dt,
                 self.nx, self.ny, self.n_guard,
             )
+            for p in self.patches_pml_boundary:
+                for pml in p.pml_boundary:
+                    pml.advance_b_currents(dt)
 
 
 class MaxwellSolver3d(MaxwellSolver):
