@@ -1,14 +1,15 @@
 [project]
 name = "libpic"
 description = "Particle-in-cell library for plasma physics"
-version = "0.0.5"
+version = "0.0.7"
 dependencies = [
     "numpy",
     "numba",
     "scipy",
     "pydantic",
     "tqdm",
-    "loguru"
+    "loguru",
+    "deprecated",
 ]
 requires-python = ">=3.10"
 
