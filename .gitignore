@@ -33,3 +33,14 @@ dist/
 .idea/
 *.swp
 *.[oa]
+
+# imgages
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+/*.py
+/*.ipynb
+.*/**
