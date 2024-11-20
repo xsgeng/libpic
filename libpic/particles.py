@@ -42,11 +42,16 @@ class ParticlesBase:
         if n <= 0:
             return
         for attr in self.attrs:
-            arr = getattr(self, attr)
-            arr = np.append(arr, np.full(n, np.nan))
-            setattr(self, attr, arr)
+            arr: np.ndarray = getattr(self, attr)
+            arr.resize(n + self.npart, refcheck=False)
+            # new data set to nan
+            arr[-n:] = np.nan
+
         self.w[-n:] = 0
-        self.is_dead = np.append(self.is_dead, np.full(n, True))
+
+        self.is_dead.resize(n + self.npart, refcheck=False)
+        self.is_dead[-n:] = True
+
         self.npart += n
 
     def prune(self):

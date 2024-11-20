@@ -2,7 +2,7 @@ import numpy as np
 
 from ..patch import Patches
 from .cpu import current_deposition_cpu
-
+from deprecated import deprecated
 
 class CurrentDeposition:
     """
@@ -59,6 +59,7 @@ class CurrentDeposition:
 
             self.q.append(s.q)
 
+    @deprecated(reason="No need to update particle for currentdeposition. It has no effect now.")
     def update_particle_lists(self, ipatch: int, ispec: int) -> None:
         """
         Update particle lists of a species in a patch.
@@ -72,13 +73,14 @@ class CurrentDeposition:
         particle : Particles
             Particle object in the patch.
         """
-        self.x_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].x
-        self.w_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].w
-        self.ux_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ux
-        self.uy_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uy
-        self.uz_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uz
-        self.inv_gamma_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].inv_gamma
-        self.is_dead_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].is_dead
+        pass
+        # self.x_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].x
+        # self.w_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].w
+        # self.ux_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].ux
+        # self.uy_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uy
+        # self.uz_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].uz
+        # self.inv_gamma_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].inv_gamma
+        # self.is_dead_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].is_dead
 
     
     def generate_field_lists(self) -> None:
@@ -143,9 +145,9 @@ class CurrentDeposition2D(CurrentDeposition):
             self.y_list.append([p.particles[ispec].y for p in self.patches])
 
 
-    def update_particle_lists(self, ipatch: int, ispec: int):
-        super().update_particle_lists(ipatch, ispec)
-        self.y_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].y
+    # def update_particle_lists(self, ipatch: int, ispec: int):
+    #     super().update_particle_lists(ipatch, ispec)
+    #     self.y_list[ispec][ipatch] = self.patches[ipatch].particles[ispec].y
 
 
     def generate_field_lists(self) -> None:
