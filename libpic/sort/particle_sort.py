@@ -2,7 +2,6 @@ import numpy as np
 from ..patch import Patches
 
 from .cpu import sort_particles_patches
-from ..utils.clist import CList
 
 class ParticleSort2D:
     """
@@ -48,18 +47,18 @@ class ParticleSort2D:
 
         ispec = self.ispec
         
-        self.x_list = CList([p.particles[ispec].x for p in self.patches])
+        self.x_list = [p.particles[ispec].x for p in self.patches]
         if self.dimension >= 2:
-            self.y_list = CList([p.particles[ispec].y for p in self.patches])
+            self.y_list = [p.particles[ispec].y for p in self.patches]
         if self.dimension == 3:
-            self.z_list = CList([p.particles[ispec].z for p in self.patches])
+            self.z_list = [p.particles[ispec].z for p in self.patches]
 
-        self.attrs_list = CList([getattr(p.particles[ispec], attr) for p in self.patches for attr in self.attrs ])
+        self.attrs_list = [getattr(p.particles[ispec], attr) for p in self.patches for attr in self.attrs ]
 
-        self.is_dead_list = CList([p.particles[ispec].is_dead for p in self.patches])
+        self.is_dead_list = [p.particles[ispec].is_dead for p in self.patches]
         
-        self.particle_cell_indices_list = CList([np.full(p.particles[ispec].is_dead.size, -1, dtype=int) for p in self.patches])
-        self.sorted_indices_list = CList([np.full(p.particles[ispec].is_dead.size, -1, dtype=int) for p in self.patches])
+        self.particle_cell_indices_list = [np.full(p.particles[ispec].is_dead.size, -1, dtype=int) for p in self.patches]
+        self.sorted_indices_list = [np.full(p.particles[ispec].is_dead.size, -1, dtype=int) for p in self.patches]
 
     def update_particle_lists(self, ipatch: int) -> None:
         """
@@ -98,12 +97,12 @@ class ParticleSort2D:
         fields : list of Fields2D
             List of fields of all patches.
         """
-        self.grid_cell_count_list = CList([np.full((self.nx, self.ny), 0, dtype=int) for _ in range(self.npatches)])
-        self.cell_bound_min_list = CList([np.full((self.nx, self.ny), -1, dtype=int) for _ in range(self.npatches)])
-        self.cell_bound_max_list = CList([np.full((self.nx, self.ny), -1, dtype=int) for _ in range(self.npatches)])
+        self.grid_cell_count_list = [np.full((self.nx, self.ny), 0, dtype=int) for _ in range(self.npatches)]
+        self.cell_bound_min_list = [np.full((self.nx, self.ny), -1, dtype=int) for _ in range(self.npatches)]
+        self.cell_bound_max_list = [np.full((self.nx, self.ny), -1, dtype=int) for _ in range(self.npatches)]
 
-        self.x0s = np.array([p.x0 - self.dx/2 for p in self.patches])
-        self.y0s = np.array([p.y0 - self.dy/2 for p in self.patches])
+        self.x0s = [p.x0 - self.dx/2 for p in self.patches]
+        self.y0s = [p.y0 - self.dy/2 for p in self.patches]
         
     def __call__(self) -> None:
         sort_particles_patches(

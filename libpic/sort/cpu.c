@@ -114,7 +114,7 @@ static intp cycle_sort(
                             tmp = sorted_idx[ip_dst];
                             sorted_idx[ip_dst] = idx_dst;
                             idx_dst = tmp;
-                            
+
                             ip_src = ip_dst;  // Update source index
                             ops += 1;  // Increment operation count
                             break;
@@ -219,7 +219,7 @@ static PyObject* sort_particles_patches(PyObject* self, PyObject* args) {
     intp nx, ny, npatches;
     double dx, dy;
 
-    if (!PyArg_ParseTuple(args, "OOOOOOOOOOOOOndd", 
+    if (!PyArg_ParseTuple(args, "OOOOOnnddnOOOOOO", 
         &grid_cell_count_list, &cell_bound_min_list, &cell_bound_max_list, 
         &x0s, &y0s, 
         &nx, &ny, &dx, &dy, 
