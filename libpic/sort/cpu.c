@@ -3,8 +3,7 @@
 #include <omp.h>
 #include <math.h>
 
-typedef npy_intp intp;
-
+#define GetPatchArrayData(list, ipatch) PyArray_DATA((PyArrayObject*)PyList_GetItem(list, ipatch))
 /**
  * Calculate the cell index for each particle based on its position.
  * 
@@ -23,15 +22,15 @@ typedef npy_intp intp;
  */
 static void calculate_cell_index(
     double* x, double* y, npy_bool* is_dead, 
-    intp npart, intp nx, intp ny, double dx, double dy, double x0, double y0, 
-    intp* particle_cell_indices, intp* grid_cell_count
+    npy_intp npart, npy_intp nx, npy_intp ny, double dx, double dy, double x0, double y0, 
+    npy_intp* particle_cell_indices, npy_intp* grid_cell_count
 ) {
-    intp ix, iy, ip, icell;
+    npy_intp ix, iy, ip, icell;
     icell = 0;
     for (ip = 0; ip < npart; ip++) {
         if (!is_dead[ip]) {
-            ix = (intp) floor((x[ip] - x0) / dx);  // Calculate the x-index of the cell
-            iy = (intp) floor((y[ip] - y0) / dy);  // Calculate the y-index of the cell
+            ix = (npy_intp) floor((x[ip] - x0) / dx);  // Calculate the x-index of the cell
+            iy = (npy_intp) floor((y[ip] - y0) / dy);  // Calculate the y-index of the cell
             icell = iy + ix * ny;  // Calculate the cell index
             if (0 <= ix && ix < nx && 0 <= iy && iy < ny) {
                 particle_cell_indices[ip] = icell;  // Store the cell index for the particle
@@ -52,7 +51,7 @@ static void calculate_cell_index(
  */
 static PyObject* _calculate_cell_index(PyObject* self, PyObject* args) {
     PyObject *x, *y, *is_dead, *particle_cell_indices, *grid_cell_count;
-    intp nx, ny, npart;
+    npy_intp nx, ny, npart;
     double dx, dy, x0, y0;
     if (!PyArg_ParseTuple(args, "OOOnnnddddOO", 
         &x, &y, &is_dead, 
@@ -64,7 +63,7 @@ static PyObject* _calculate_cell_index(PyObject* self, PyObject* args) {
     calculate_cell_index(
         (double*) PyArray_DATA(x), (double*) PyArray_DATA(y), (npy_bool*) PyArray_DATA(is_dead), 
         npart, nx, ny, dx, dy, x0, y0, 
-        (intp*) PyArray_DATA(particle_cell_indices), (intp*) PyArray_DATA(grid_cell_count)
+        (npy_intp*) PyArray_DATA(particle_cell_indices), (npy_intp*) PyArray_DATA(grid_cell_count)
     );
     Py_RETURN_NONE;  
 }
@@ -81,13 +80,13 @@ static PyObject* _calculate_cell_index(PyObject* self, PyObject* args) {
  * @param sorted_idx Pointer to the array to store the sorted indices.
  * @return Number of operations performed.
  */
-static intp cycle_sort(
-    intp* cell_bound_min, intp* cell_bound_max, 
-    intp nx, intp ny, 
-    intp* particle_cell_indices, npy_bool* is_dead, intp* sorted_idx
+static npy_intp cycle_sort(
+    npy_intp* cell_bound_min, npy_intp* cell_bound_max, 
+    npy_intp nx, npy_intp ny, 
+    npy_intp* particle_cell_indices, npy_bool* is_dead, npy_intp* sorted_idx
 ) {
-    intp ops = 0;
-    intp ix, iy, ip, ip_src, ip_dst, icell_src, icell_dst, idx_dst;
+    npy_intp ops = 0;
+    npy_intp ix, iy, ip, ip_src, ip_dst, icell_src, icell_dst, idx_dst;
     
     for (ix = 0; ix < nx; ix++) {
         for (iy = 0; iy < ny; iy++) {
@@ -107,7 +106,7 @@ static intp cycle_sort(
                     for (ip_dst = cell_bound_min[icell_dst]; ip_dst < cell_bound_max[icell_dst]; ip_dst++) {
                         if (particle_cell_indices[ip_dst] != icell_dst || is_dead[ip_dst]) {
                             // swap
-                            intp tmp = particle_cell_indices[ip_dst];
+                            npy_intp tmp = particle_cell_indices[ip_dst];
                             particle_cell_indices[ip_dst] = icell_dst;
                             icell_dst = tmp;
 
@@ -145,17 +144,17 @@ static intp cycle_sort(
  */
 static PyObject* _cycle_sort(PyObject* self, PyObject* args) {
     PyArrayObject *cell_bound_min, *cell_bound_max, *particle_cell_indices, *is_dead, *sorted_idx;
-    intp nx, ny;
+    npy_intp nx, ny;
     if (!PyArg_ParseTuple(args, "OOnnOOO", 
         &cell_bound_min, &cell_bound_max, 
         &nx, &ny, 
         &particle_cell_indices, &is_dead, &sorted_idx)) {
         return NULL;  
     }
-    intp ops = cycle_sort(
-        (intp*) PyArray_DATA(cell_bound_min), (intp*) PyArray_DATA(cell_bound_max), 
+    npy_intp ops = cycle_sort(
+        (npy_intp*) PyArray_DATA(cell_bound_min), (npy_intp*) PyArray_DATA(cell_bound_max), 
         nx, ny, 
-        (intp*) PyArray_DATA(particle_cell_indices), (npy_bool*) PyArray_DATA(is_dead), (intp*) PyArray_DATA(sorted_idx)
+        (npy_intp*) PyArray_DATA(particle_cell_indices), (npy_bool*) PyArray_DATA(is_dead), (npy_intp*) PyArray_DATA(sorted_idx)
     );
     return PyLong_FromLong(ops);  
 }
@@ -170,10 +169,10 @@ static PyObject* _cycle_sort(PyObject* self, PyObject* args) {
  * @param ny Number of cells in the y-direction.
  */
 static void sorted_cell_bound(
-    intp* grid_cell_count, intp* cell_bound_min, intp* cell_bound_max, 
-    intp nx, intp ny
+    npy_intp* grid_cell_count, npy_intp* cell_bound_min, npy_intp* cell_bound_max, 
+    npy_intp nx, npy_intp ny
 ) {
-    intp icell, icell_prev;
+    npy_intp icell, icell_prev;
     cell_bound_min[0] = 0;  // Initialize the minimum bound for the first cell
 
     for (icell = 1; icell < nx * ny; icell++) {
@@ -193,14 +192,14 @@ static void sorted_cell_bound(
  */
 static PyObject* _sorted_cell_bound(PyObject* self, PyObject* args) {
     PyArrayObject *grid_cell_count, *cell_bound_min, *cell_bound_max;
-    intp nx, ny;
+    npy_intp nx, ny;
     if (!PyArg_ParseTuple(args, "OOOnn", 
         &grid_cell_count, &cell_bound_min, &cell_bound_max, 
         &nx, &ny)) {
         return NULL;  
     }
     sorted_cell_bound(
-        (intp*) PyArray_DATA(grid_cell_count), (intp*) PyArray_DATA(cell_bound_min), (intp*) PyArray_DATA(cell_bound_max), 
+        (npy_intp*) PyArray_DATA(grid_cell_count), (npy_intp*) PyArray_DATA(cell_bound_min), (npy_intp*) PyArray_DATA(cell_bound_max), 
         nx, ny
     );
     Py_RETURN_NONE;  
@@ -216,7 +215,7 @@ static PyObject* _sorted_cell_bound(PyObject* self, PyObject* args) {
  */
 static PyObject* sort_particles_patches(PyObject* self, PyObject* args) {
     PyObject *grid_cell_count_list, *cell_bound_min_list, *cell_bound_max_list, *x0s, *y0s, *particle_cell_indices_list, *sorted_indices_list, *x_list, *y_list, *is_dead_list, *attrs_list;
-    intp nx, ny, npatches;
+    npy_intp nx, ny, npatches;
     double dx, dy;
 
     if (!PyArg_ParseTuple(args, "OOOOOnnddnOOOOOO", 
@@ -232,56 +231,24 @@ static PyObject* sort_particles_patches(PyObject* self, PyObject* args) {
         Py_RETURN_NONE;  // Return None if there are no patches
     }
 
-    intp** grid_cell_count_data = malloc(npatches * sizeof(intp*));  // Allocate memory for grid cell count data
-    intp** cell_bound_min_data = malloc(npatches * sizeof(intp*));  // Allocate memory for cell bound min data
-    intp** cell_bound_max_data = malloc(npatches * sizeof(intp*));  // Allocate memory for cell bound max data
-    double* x0_data = malloc(npatches * sizeof(double));  // Allocate memory for x0 data
-    double* y0_data = malloc(npatches * sizeof(double));  // Allocate memory for y0 data
-    intp** particle_cell_indices_data = malloc(npatches * sizeof(intp*));  // Allocate memory for particle cell indices data
-    intp** sorted_indices_data = malloc(npatches * sizeof(intp*));  // Allocate memory for sorted indices data
-    double** x_data = malloc(npatches * sizeof(double*));  // Allocate memory for x data
-    double** y_data = malloc(npatches * sizeof(double*));  // Allocate memory for y data
-    npy_bool** is_dead_data = malloc(npatches * sizeof(npy_bool*));  // Allocate memory for is_dead data
-
-    intp nattrs = PyList_Size(attrs_list) / npatches;  
-    double** attrs_data = malloc(npatches * nattrs * sizeof(double*));  // Allocate memory for attrs data
-
-    intp* npart_data = malloc(npatches * sizeof(intp));  
-
-    for (intp ipatch = 0; ipatch < npatches; ipatch++) {
-        grid_cell_count_data[ipatch] = (intp*)PyArray_DATA((PyArrayObject*)PyList_GetItem(grid_cell_count_list, ipatch));  // Get grid cell count data
-        cell_bound_min_data[ipatch] = (intp*)PyArray_DATA((PyArrayObject*)PyList_GetItem(cell_bound_min_list, ipatch));  // Get cell bound min data
-        cell_bound_max_data[ipatch] = (intp*)PyArray_DATA((PyArrayObject*)PyList_GetItem(cell_bound_max_list, ipatch));  // Get cell bound max data
-        x0_data[ipatch] = PyFloat_AsDouble(PyList_GetItem(x0s, ipatch));  // Get x0 data
-        y0_data[ipatch] = PyFloat_AsDouble(PyList_GetItem(y0s, ipatch));  // Get y0 data
-        particle_cell_indices_data[ipatch] = (intp*)PyArray_DATA((PyArrayObject*)PyList_GetItem(particle_cell_indices_list, ipatch));  // Get particle cell indices data
-        sorted_indices_data[ipatch] = (intp*)PyArray_DATA((PyArrayObject*)PyList_GetItem(sorted_indices_list, ipatch));  // Get sorted indices data
-        x_data[ipatch] = (double*)PyArray_DATA((PyArrayObject*)PyList_GetItem(x_list, ipatch));  // Get x data
-        y_data[ipatch] = (double*)PyArray_DATA((PyArrayObject*)PyList_GetItem(y_list, ipatch));  // Get y data
-        is_dead_data[ipatch] = (npy_bool*)PyArray_DATA((PyArrayObject*)PyList_GetItem(is_dead_list, ipatch));  // Get is_dead data
-
-        npart_data[ipatch] = PyArray_DIM((PyArrayObject*)PyList_GetItem(is_dead_list, ipatch), 0);
-        for (intp iattr = 0; iattr < nattrs; iattr++) {
-            attrs_data[ipatch * nattrs + iattr] = (double*)PyArray_DATA((PyArrayObject*)PyList_GetItem(attrs_list, ipatch * nattrs + iattr));  
-        }
-    }
+    npy_intp nattrs = PyList_Size(attrs_list) / npatches;  
 
     #pragma omp parallel for  // Parallelize the loop using OpenMP
-    for (intp ipatch = 0; ipatch < npatches; ipatch++) {
-        intp* grid_cell_count = grid_cell_count_data[ipatch];  // Get grid cell count for the current patch
-        intp* cell_bound_min = cell_bound_min_data[ipatch];  // Get cell bound min for the current patch
-        intp* cell_bound_max = cell_bound_max_data[ipatch];  // Get cell bound max for the current patch
-        double x0 = x0_data[ipatch];  // Get x0 for the current patch
-        double y0 = y0_data[ipatch];  // Get y0 for the current patch
-        intp* particle_cell_indices = particle_cell_indices_data[ipatch];  // Get particle cell indices for the current patch
-        intp* sorted_indices = sorted_indices_data[ipatch];  // Get sorted indices for the current patch
-        double* x = x_data[ipatch];  // Get x for the current patch
-        double* y = y_data[ipatch];  // Get y for the current patch
-        npy_bool* is_dead = is_dead_data[ipatch];  // Get is_dead for the current patch
-        intp npart = npart_data[ipatch];  
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        npy_intp* grid_cell_count = (npy_intp*) GetPatchArrayData(grid_cell_count_list, ipatch);  
+        npy_intp* cell_bound_min = (npy_intp*) GetPatchArrayData(cell_bound_min_list, ipatch);
+        npy_intp* cell_bound_max = (npy_intp*) GetPatchArrayData(cell_bound_max_list, ipatch);
+        double x0 = PyFloat_AsDouble(PyList_GetItem(x0s, ipatch));  
+        double y0 = PyFloat_AsDouble(PyList_GetItem(y0s, ipatch));  
+        npy_intp* particle_cell_indices = (npy_intp*) GetPatchArrayData(particle_cell_indices_list, ipatch);  
+        npy_intp* sorted_indices = (npy_intp*) GetPatchArrayData(sorted_indices_list, ipatch);  
+        double* x = (double*) GetPatchArrayData(x_list, ipatch);  
+        double* y = (double*) GetPatchArrayData(y_list, ipatch);  
+        npy_bool* is_dead = (npy_bool*) GetPatchArrayData(is_dead_list, ipatch);  
 
+        npy_intp npart = PyArray_DIM(PyList_GetItem(x_list, ipatch), 0);  
 
-        for (intp icell = 0; icell < nx * ny; icell++) {
+        for (npy_intp icell = 0; icell < nx * ny; icell++) {
             grid_cell_count[icell] = 0;  // Initialize grid cell count for the current patch
         }
 
@@ -300,21 +267,26 @@ static PyObject* sort_particles_patches(PyObject* self, PyObject* args) {
             nx, ny
         );  // Calculate cell bounds for the current patch
 
-        for (intp ip = 0; ip < npart; ip++) {
+        for (npy_intp ip = 0; ip < npart; ip++) {
             sorted_indices[ip] = ip;  // Initialize sorted indices for the current patch
         }
 
         cycle_sort(cell_bound_min, cell_bound_max, nx, ny, particle_cell_indices, is_dead, sorted_indices);  // Perform cycle sort for the current patch
-
+        
+        // attributes in ipatch
+        double** attrs = (double**) malloc(nattrs * sizeof(double*));
+        for (npy_intp iattr = 0; iattr < nattrs; iattr++) {
+            attrs[iattr] = (double*) GetPatchArrayData(attrs_list, ipatch * nattrs + iattr);  
+        }
         double* buf = (double*) malloc(npart * sizeof(double));  // Allocate memory for buffer
-        for (intp iattr = 0; iattr < nattrs; iattr++) {
-            double* attr = attrs_data[ipatch * nattrs + iattr];  
-            for (intp ip = 0; ip < npart; ip++) {
+        for (npy_intp iattr = 0; iattr < nattrs; iattr++) {
+            double* attr = attrs[iattr];
+            for (npy_intp ip = 0; ip < npart; ip++) {
                 if (ip != sorted_indices[ip]) {
                     buf[ip] = attr[sorted_indices[ip]];  // Copy attributes to buffer
                 }
             }
-            for (intp ip = 0; ip < npart; ip++) {
+            for (npy_intp ip = 0; ip < npart; ip++) {
                 if (ip != sorted_indices[ip]) {
                     attr[ip] = buf[ip];  // Copy attributes from buffer
                 }
@@ -322,19 +294,6 @@ static PyObject* sort_particles_patches(PyObject* self, PyObject* args) {
         }
         free(buf);  // Free buffer memory
     }
-
-    free(grid_cell_count_data);
-    free(cell_bound_min_data);
-    free(cell_bound_max_data);
-    free(x0_data);
-    free(y0_data);
-    free(particle_cell_indices_data);
-    free(sorted_indices_data);
-    free(x_data);
-    free(y_data);
-    free(is_dead_data);
-    free(attrs_data);
-    free(npart_data);
 
     Py_RETURN_NONE;
 }
