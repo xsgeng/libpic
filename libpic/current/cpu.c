@@ -7,6 +7,8 @@
 #define LIGHT_SPEED 299792458.0
 #define one_third 0.3333333333333333
 
+#define GetPatchArrayData(list, ipatch) PyArray_DATA((PyArrayObject*)PyList_GetItem(list, ipatch))
+
 static void calculate_S(double delta, int shift, double* S) {
     double delta2 = delta * delta;
 
@@ -132,85 +134,36 @@ static PyObject* current_deposition_cpu(PyObject* self, PyObject* args) {
         Py_RETURN_NONE;
     }
 
-    double** rho_data = malloc(npatches * sizeof(double*));
-    double** jx_data = malloc(npatches * sizeof(double*));
-    double** jy_data = malloc(npatches * sizeof(double*));
-    double** jz_data = malloc(npatches * sizeof(double*));
-    double** x_data = malloc(npatches * sizeof(double*));
-    double** y_data = malloc(npatches * sizeof(double*));
-    double** ux_data = malloc(npatches * sizeof(double*));
-    double** uy_data = malloc(npatches * sizeof(double*));
-    double** uz_data = malloc(npatches * sizeof(double*));
-    double** inv_gamma_data = malloc(npatches * sizeof(double*));
-    npy_bool** is_dead_data = malloc(npatches * sizeof(npy_bool*));
-    double** w_data = malloc(npatches * sizeof(double*));
-    double* x0 = malloc(npatches * sizeof(double));
-    double* y0 = malloc(npatches * sizeof(double));
-    npy_intp* npart = malloc(npatches * sizeof(npy_intp));
-
     npy_intp nx = PyArray_DIM((PyArrayObject*)PyList_GetItem(jx_list, 0), 0);
     npy_intp ny = PyArray_DIM((PyArrayObject*)PyList_GetItem(jx_list, 0), 1);
 
-    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
-        PyArrayObject *rho = (PyArrayObject*)PyList_GetItem(rho_list, ipatch);
-        PyArrayObject *jx = (PyArrayObject*)PyList_GetItem(jx_list, ipatch);
-        PyArrayObject *jy = (PyArrayObject*)PyList_GetItem(jy_list, ipatch);
-        PyArrayObject *jz = (PyArrayObject*)PyList_GetItem(jz_list, ipatch);
-        PyArrayObject *x = (PyArrayObject*)PyList_GetItem(x_list, ipatch);
-        PyArrayObject *y = (PyArrayObject*)PyList_GetItem(y_list, ipatch);
-        PyArrayObject *ux = (PyArrayObject*)PyList_GetItem(ux_list, ipatch);
-        PyArrayObject *uy = (PyArrayObject*)PyList_GetItem(uy_list, ipatch);
-        PyArrayObject *uz = (PyArrayObject*)PyList_GetItem(uz_list, ipatch);
-        PyArrayObject *inv_gamma = (PyArrayObject*)PyList_GetItem(inv_gamma_list, ipatch);
-        PyArrayObject *is_dead = (PyArrayObject*)PyList_GetItem(is_dead_list, ipatch);
-        PyArrayObject *w = (PyArrayObject*)PyList_GetItem(w_list, ipatch);
-
-        rho_data[ipatch] = (double*)PyArray_DATA(rho);
-        jx_data[ipatch] = (double*)PyArray_DATA(jx);
-        jy_data[ipatch] = (double*)PyArray_DATA(jy);
-        jz_data[ipatch] = (double*)PyArray_DATA(jz);
-        x_data[ipatch] = (double*)PyArray_DATA(x);
-        y_data[ipatch] = (double*)PyArray_DATA(y);
-        ux_data[ipatch] = (double*)PyArray_DATA(ux);
-        uy_data[ipatch] = (double*)PyArray_DATA(uy);
-        uz_data[ipatch] = (double*)PyArray_DATA(uz);
-        inv_gamma_data[ipatch] = (double*)PyArray_DATA(inv_gamma);
-        is_dead_data[ipatch] = (npy_bool*)PyArray_DATA(is_dead);
-        w_data[ipatch] = (double*)PyArray_DATA(w);
-
-        x0[ipatch] = PyFloat_AsDouble(PyList_GetItem(x0_list, ipatch));
-        y0[ipatch] = PyFloat_AsDouble(PyList_GetItem(y0_list, ipatch));
-
-        npart[ipatch] = PyArray_DIM(w, 0);
-    }
-
     #pragma omp parallel for
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        double *rho        = (double*) GetPatchArrayData(rho_list, ipatch);
+        double *jx         = (double*) GetPatchArrayData(jx_list, ipatch);
+        double *jy         = (double*) GetPatchArrayData(jy_list, ipatch);
+        double *jz         = (double*) GetPatchArrayData(jz_list, ipatch);
+        double *x          = (double*) GetPatchArrayData(x_list, ipatch);
+        double *y          = (double*) GetPatchArrayData(y_list, ipatch);
+        double *ux         = (double*) GetPatchArrayData(ux_list, ipatch);
+        double *uy         = (double*) GetPatchArrayData(uy_list, ipatch);
+        double *uz         = (double*) GetPatchArrayData(uz_list, ipatch);
+        double *inv_gamma  = (double*) GetPatchArrayData(inv_gamma_list, ipatch);
+        npy_bool *is_dead  = (npy_bool*) GetPatchArrayData(is_dead_list, ipatch);
+        double *w          = (double*) GetPatchArrayData(w_list, ipatch);
+
+        npy_intp npart = PyArray_DIM((PyArrayObject*)PyList_GetItem(w_list, ipatch), 0);
+        double    x0   = PyFloat_AsDouble(PyList_GetItem(x0_list, ipatch));
+        double    y0   = PyFloat_AsDouble(PyList_GetItem(y0_list, ipatch));
 
         current_deposit_2d(
-            rho_data[ipatch], jx_data[ipatch], jy_data[ipatch], jz_data[ipatch], 
-            x_data[ipatch], y_data[ipatch], ux_data[ipatch], uy_data[ipatch], uz_data[ipatch], inv_gamma_data[ipatch], 
-            is_dead_data[ipatch], 
-            npart[ipatch], nx, ny,
-            dx, dy, x0[ipatch], y0[ipatch], dt, w_data[ipatch], q
+            rho, jx, jy, jz, 
+            x, y, ux, uy, uz, inv_gamma, 
+            is_dead, 
+            npart, nx, ny,
+            dx, dy, x0, y0, dt, w, q
         );
     }
-
-    free(rho_data);
-    free(jx_data);
-    free(jy_data);
-    free(jz_data);
-    free(x_data);
-    free(y_data);
-    free(ux_data);
-    free(uy_data);
-    free(uz_data);
-    free(inv_gamma_data);
-    free(is_dead_data);
-    free(w_data);
-    free(x0);
-    free(y0);
-    free(npart);
 
     Py_RETURN_NONE;
 }
