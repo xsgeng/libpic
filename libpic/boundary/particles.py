@@ -448,10 +448,10 @@ def fill_particles_from_boundary(
         npart_incoming_ymax = npart_outgoing[2, ymax_index] if  ymax_index >= 0 else 0
         npart_incoming_ymin = npart_outgoing[3, ymin_index] if  ymin_index >= 0 else 0
         # corners
-        npart_incoming_xmaxymax = npart_outgoing[4, xmaxymax_index] if xminymin_index >= 0 else 0
-        npart_incoming_xminymax = npart_outgoing[5, xminymax_index] if xmaxymin_index >= 0 else 0
-        npart_incoming_xmaxymin = npart_outgoing[6, xmaxymin_index] if xminymax_index >= 0 else 0
-        npart_incoming_xminymin = npart_outgoing[7, xminymin_index] if xmaxymax_index >= 0 else 0
+        npart_incoming_xmaxymax = npart_outgoing[4, xmaxymax_index] if xmaxymax_index >= 0 else 0
+        npart_incoming_xminymax = npart_outgoing[5, xminymax_index] if xminymax_index >= 0 else 0
+        npart_incoming_xmaxymin = npart_outgoing[6, xmaxymin_index] if xmaxymin_index >= 0 else 0
+        npart_incoming_xminymin = npart_outgoing[7, xminymin_index] if xminymin_index >= 0 else 0
 
         # indices of particles coming from boundary
         xmin_incoming_indices = np.zeros(npart_incoming_xmin, dtype='i8')
