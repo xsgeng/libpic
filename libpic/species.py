@@ -112,12 +112,9 @@ class Photon(Species):
         self.positron = positron
 
     def create_particles(self) -> ParticlesBase:
-        if hasattr(self, "electron"):
-            if self.polarization is None:
-                return QEDParticles()
-            else:
-                return SpinQEDParticles()
-        elif self.polarization is not None:
-            return SpinParticles()
+        if self.electron is not None:
+            return QEDParticles()
+        # else:
+        #     return SpinQEDParticles()
 
         return super().create_particles()

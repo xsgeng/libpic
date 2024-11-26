@@ -1,4 +1,4 @@
-print("Using optical depth method.")
+# print("Using optical depth method.")
 from numba import boolean, float64, int64, njit, prange, void
 from numpy import log, random
 
@@ -9,9 +9,9 @@ from .optical_depth_tables import (_log_chi_range,
                                    photon_delta_from_chi_delta_table)
 
 _chi_min = 10.0**_log_chi_range[0]
-@njit( void(float64[:], float64[:], float64[:], float64, int64, boolean[:], boolean[:], float64[:]),
-    cache=False)
-def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, is_dead, event, delta):
+@njit( void(float64[:], float64[:], float64[:], float64, int64, boolean[:], boolean[:], float64[:], float64[:, :], float64[:]),
+    cache=False, inline="always")
+def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, is_dead, event, delta, integral_photon_prob_along_delta, photon_prob_rate_total_table):
     '''
     update optical depth tau of electron
     
@@ -39,7 +39,7 @@ def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, is_dead, event, delta):
             event[ip] = False
             delta[ip] = 0.0
             continue
-        integ_prob_rate = integ_photon_prob_rate_from_table(chi_e[ip])
+        integ_prob_rate = integ_photon_prob_rate_from_table(chi_e[ip], photon_prob_rate_total_table)
         dtau = dt * inv_gamma[ip]
 
         # reset if not set
@@ -51,7 +51,7 @@ def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, is_dead, event, delta):
         if tau_e[ip] < 0:
             tau_e[ip] = -log(1 - random.rand())
             event[ip] = True
-            delta[ip] = photon_delta_from_chi_delta_table(chi_e[ip])
+            delta[ip] = photon_delta_from_chi_delta_table(chi_e[ip], integral_photon_prob_along_delta)
         else:
             event[ip] = False
             delta[ip] = 0.0

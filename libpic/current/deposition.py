@@ -156,18 +156,19 @@ class CurrentDeposition2D(CurrentDeposition):
 
 
     def __call__(self, ispec:int, dt: float) -> None:
-        current_deposition_cpu(
-            self.rho_list,
-            self.jx_list, self.jy_list, self.jz_list,
-            self.x0s, self.y0s,
-            self.x_list[ispec], self.y_list[ispec], 
-            self.ux_list[ispec], self.uy_list[ispec], self.uz_list[ispec],
-            self.inv_gamma_list[ispec],
-            self.is_dead_list[ispec],
-            self.w_list[ispec],
-            self.npatches,
-            self.dx, self.dy, dt, self.q[ispec]
-        )
+        if self.q[ispec] != 0:
+            current_deposition_cpu(
+                self.rho_list,
+                self.jx_list, self.jy_list, self.jz_list,
+                self.x0s, self.y0s,
+                self.x_list[ispec], self.y_list[ispec], 
+                self.ux_list[ispec], self.uy_list[ispec], self.uz_list[ispec],
+                self.inv_gamma_list[ispec],
+                self.is_dead_list[ispec],
+                self.w_list[ispec],
+                self.npatches,
+                self.dx, self.dy, dt, self.q[ispec]
+            )
 
 class CurrentDeposition3D(CurrentDeposition):
     ...

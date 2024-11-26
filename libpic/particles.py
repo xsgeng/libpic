@@ -53,6 +53,7 @@ class ParticlesBase:
         self.is_dead[-n:] = True
 
         self.npart += n
+        self.extended = True
 
     def prune(self):
         for attr in self.attrs:
@@ -64,15 +65,16 @@ class ParticlesBase:
 class QEDParticles(ParticlesBase):
     def __init__(self) -> None:
         super().__init__()
-        self.attrs += ["chi", "tau"]
+        self.attrs += ["chi", "tau", "delta"]
 
     def initialize(self, npart: int) -> None:
         super().initialize(npart)
         self.event = np.full(npart, False)
 
     def extend(self, n: int):
+        self.event.resize(n + self.npart, refcheck=False)
+        self.event[-n:] = False
         super().extend(n)
-        self.event = np.append(self.event, np.full(n, False))
 
     def prune(self):
         super().prune()

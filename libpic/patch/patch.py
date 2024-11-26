@@ -368,7 +368,7 @@ class Patches:
                 species.ppc,
             )
         else:
-            num_macro_particles = np.zeros(self.npatches, dtype=int)
+            num_macro_particles = np.zeros(self.npatches, dtype='int64')
 
 
         for ipatch in range(self.npatches):

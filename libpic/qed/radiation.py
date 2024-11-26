@@ -91,7 +91,7 @@ class RadiationBase:
     def filter(self) -> None:
         raise NotImplementedError
 
-    def create_particles(self) -> None:
+    def create_particles(self, extra_buff=0.25) -> None:
         raise NotImplementedError
 
     def reaction(self) -> None:
@@ -124,19 +124,17 @@ class NonlinearComptonLCFA(RadiationBase):
         # photons
         ispec = self.photon_ispec
         particles = [p.particles[ispec] for p in self.patches]
-        self.x_list = typed.List([p.x for p in particles])
+        self.x_pho_list = typed.List([p.x for p in particles])
         if self.dimension >= 2:
-            self.y_list = typed.List([p.y for p in particles])
+            self.y_pho_list = typed.List([p.y for p in particles])
         if self.dimension == 3:
-            self.z_list = typed.List([p.z for p in particles])
+            self.z_pho_list = typed.List([p.z for p in particles])
         self.ux_pho_list = typed.List([p.ux for p in particles])
         self.uy_pho_list = typed.List([p.uy for p in particles])
         self.uz_pho_list = typed.List([p.uz for p in particles])
         self.inv_gamma_pho_list = typed.List([p.inv_gamma for p in particles])
 
         self.is_dead_pho_list = typed.List([p.is_dead for p in particles])
-
-        self.delta_pho_list = typed.List([p.delta for p in particles])
 
 
     def update_particle_lists(self, ipatch: int) -> None:
@@ -151,11 +149,12 @@ class NonlinearComptonLCFA(RadiationBase):
 
         # photons
         photons = self.patches[ipatch].particles[self.photon_ispec]
-        self.x_list[ipatch] = photons.x
+        self.x_pho_list[ipatch] = photons.x
         if self.dimension >= 2:
-            self.y_list[ipatch] = photons.y
+            self.y_pho_list[ipatch] = photons.y
         if self.dimension == 3:
-            self.z_list[ipatch] = photons.z
+            self.z_pho_list[ipatch] = photons.z
+
         self.ux_pho_list[ipatch] = photons.ux
         self.uy_pho_list[ipatch] = photons.uy
         self.uz_pho_list[ipatch] = photons.uz
@@ -163,19 +162,19 @@ class NonlinearComptonLCFA(RadiationBase):
 
         self.is_dead_pho_list[ipatch] = photons.is_dead
 
-        self.delta_pho_list[ipatch] = photons.delta
-
 
     def event(self, dt: float) -> None:
+        from .optical_depth_tables import _integral_photon_prob_along_delta, _photon_prob_rate_total_table
         radiation_event_patches(
             self.tau_list, self.chi_list, self.inv_gamma_list,
             self.is_dead_list,
             self.npatches, dt, 
             self.event_list, self.delta_list,
+            _integral_photon_prob_along_delta, _photon_prob_rate_total_table
         )
 
 
-    def create_particles(self) -> None:
+    def create_particles(self, extra_buff=0.25) -> None:
         # extend photons
         num_photons_extend = get_particle_extension_size_patches(
             self.event_list, self.is_dead_pho_list, self.npatches
@@ -183,14 +182,15 @@ class NonlinearComptonLCFA(RadiationBase):
         for ipatch in range(self.npatches):
             n = num_photons_extend[ipatch]
             if n > 0:
+                n += int(self.patches[ipatch].particles[self.photon_ispec].npart*extra_buff)
                 self.patches[ipatch].particles[self.photon_ispec].extend(n)
-                self.update_particle_lists[ipatch]
-
+                self.patches.update_particle_lists(ipatch)
+                self.update_particle_lists(ipatch)
         # fillin photons
         create_photon_patches(
-            self.x_list, self.y_list, self.z_list, self.ux_list, self.uy_list, self.uz_list,
-            self.x_pho_list, self.y_pho_list, self.z_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list,
-            self.inv_gamma_pho_list, self.is_dead_pho_list, self.delta_pho_list,
+            self.x_list, self.y_list, self.ux_list, self.uy_list, self.uz_list, self.is_dead_list,
+            self.x_pho_list, self.y_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list,
+            self.inv_gamma_pho_list, self.is_dead_pho_list, self.delta_list,
             self.event_list,
             self.npatches,
         )

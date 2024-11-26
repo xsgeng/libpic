@@ -12,7 +12,7 @@ from scipy.special import airy
 
 # built-in tables
 table_path = os.path.join(os.path.dirname(__file__), 'optical_depth_tables.h5')
-if os.path.exists(table_path) and __name__ == "sfparticles.qed.optical_depth_tables":
+if os.path.exists(table_path) and __name__ == "libpic.qed.optical_depth_tables":
     with h5py.File(table_path, 'r') as f:
         # 1d
         _photon_prob_rate_total_table = f['photon_prob_rate_total'][()]
@@ -87,8 +87,8 @@ def _bisect_interp(chi, table2d):
     
 
 @njit
-def integ_photon_prob_rate_from_table(chi_e):
-    return _linear_interp1d(chi_e, _photon_prob_rate_total_table)
+def integ_photon_prob_rate_from_table(chi_e, photon_prob_rate_total_table):
+    return _linear_interp1d(chi_e, photon_prob_rate_total_table)
 
 
 @njit
@@ -97,8 +97,8 @@ def integ_pair_prob_rate_from_table(chi_gamma):
 
 
 @njit
-def photon_delta_from_chi_delta_table(chi_e):
-    return _bisect_interp(chi_e, _integral_photon_prob_along_delta)
+def photon_delta_from_chi_delta_table(chi_e, integral_photon_prob_along_delta):
+    return _bisect_interp(chi_e, integral_photon_prob_along_delta)
 
 @njit
 def pair_delta_from_chi_delta_table(chi_gamma):

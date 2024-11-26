@@ -6,7 +6,7 @@ from scipy.constants import c, e, epsilon_0, mu_0
 
 from ..patch import Patches
 
-from .cpu import boris_push_patches, push_position_patches_2d
+from .cpu import boris_push_patches, push_position_patches_2d, photon_push_patches
 
 
 class PusherBase:
@@ -120,13 +120,16 @@ class BorisPusher(PusherBase):
 
 class PhotonPusher(PusherBase):
     def __call__(self, dt: float):
-        from .cpu import photon_push_patches
-        photon_push_patches(
-            self.ux_list, self.uy_list, self.uz_list,
-            self.inv_gamma_list,
-            self.is_dead_list,
-            self.npatches,
-        )
+        ...
+        # from .cpu import photon_push_patches
+        # photon_push_patches(
+        #     self.ux_list, self.uy_list, self.uz_list,
+        #     self.inv_gamma_list,
+        #     self.is_dead_list,
+        #     self.npatches,
+        # )
+    def push_position(self, dt: float):
+        pass
         
 
 class BorisTBMTPusher(PusherBase):
