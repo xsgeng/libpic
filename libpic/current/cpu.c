@@ -6,7 +6,9 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #define LIGHT_SPEED 299792458.0
 #define one_third 0.3333333333333333
-
+#define INDEX(i, j, nx, ny) \
+    ((j) >= 0 ? (j) : (j) + (ny)) + \
+    ((i) >= 0 ? (i) : (i) + (nx)) * (ny)
 #define GetPatchArrayData(list, ipatch) PyArray_DATA((PyArrayObject*)PyList_GetItem(list, ipatch))
 
 static void calculate_S(double delta, int shift, double* S) {
@@ -39,7 +41,7 @@ static void current_deposit_2d(
     
     npy_intp i, j, ipart;
     
-    int dcell_x, dcell_y, ix0, iy0, ix1, iy1, ix, iy;
+    npy_intp dcell_x, dcell_y, ix0, iy0, ix1, iy1, ix, iy;
     
     double vx, vy, vz;
     
@@ -104,10 +106,10 @@ static void current_deposit_2d(
                 jx_buff -= factor * dx * wx;
                 jy_buff[i] -= factor * dy * wy;
 
-                jx[iy + ny * ix] += jx_buff;
-                jy[iy + ny * ix] += jy_buff[i];
-                jz[iy + ny * ix] += factor * dt * wz * vz;
-                rho[iy + ny * ix] += charge_density * S1x[i] * S1y[j];
+                jx[INDEX(ix, iy, nx, ny)] += jx_buff;
+                jy[INDEX(ix, iy, nx, ny)] += jy_buff[i];
+                jz[INDEX(ix, iy, nx, ny)] += factor * dt * wz * vz;
+                rho[INDEX(ix, iy, nx, ny)] += charge_density * S1x[i] * S1y[j];
             }
         }
     }
