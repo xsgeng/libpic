@@ -156,5 +156,5 @@ class FieldInterpolation2D(FieldInterpolation):
             self.x0s, self.y0s,
             self.npatches,
             self.dx, self.dy,
-            self.nx, self.ny,
+            self.nx + 2*self.patches.n_guard, self.ny + 2*self.patches.n_guard,
         )
