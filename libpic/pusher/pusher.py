@@ -121,15 +121,6 @@ class BorisPusher(PusherBase):
 class PhotonPusher(PusherBase):
     def __call__(self, dt: float):
         ...
-        # from .cpu import photon_push_patches
-        # photon_push_patches(
-        #     self.ux_list, self.uy_list, self.uz_list,
-        #     self.inv_gamma_list,
-        #     self.is_dead_list,
-        #     self.npatches,
-        # )
-    def push_position(self, dt: float):
-        pass
         
 
 class BorisTBMTPusher(PusherBase):
