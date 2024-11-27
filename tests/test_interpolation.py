@@ -4,7 +4,7 @@ from time import perf_counter_ns
 import numpy as np
 from scipy.constants import c, e
 
-from libpic.interpolation.cpu import _interpolation_2d
+from libpic.interpolation.cpu import _interpolation_2d, interpolation_patches_2d
 
 
 class TestCurrentDeposition(unittest.TestCase):
@@ -48,4 +48,67 @@ class TestCurrentDeposition(unittest.TestCase):
         self.assertSequenceEqual(ex_part.tolist(), [2.5, 0, 2.5])
         self.assertSequenceEqual(ey_part.tolist(), [3.5, 0, 3.5])
 
-        
+    def test_list(self):
+        npatch = 128
+        nx = 100
+        ny = 100
+        npart = 100000
+
+        dx = 1e-6
+        dy = 1e-6
+        dt = dx / 2 / c
+        q = e
+
+        # Example usage
+        ex_list = [np.arange(nx*ny, dtype=float).reshape((nx, ny))*1e15 for _ in range(npatch)]
+        ey_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+        ez_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+        bx_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+        by_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+        bz_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+        x0_list = [0.0 for _ in range(npatch)]
+        y0_list = [0.0 for _ in range(npatch)]
+
+        x_list = [np.random.uniform(10*dx, (nx-10)*dx, npart) for _ in range(npatch)]
+        y_list = [np.random.uniform(10*dy, (ny-10)*dy, npart) for _ in range(npatch)]
+        ex_part_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+        ey_part_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+        ez_part_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+        bx_part_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+        by_part_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+        bz_part_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+        is_dead_list = [np.full(npart, False) for _ in range(npatch)]
+
+        interpolation_patches_2d(
+            x_list, y_list,
+            ex_part_list, ey_part_list, ez_part_list,
+            bx_part_list, by_part_list, bz_part_list,
+            is_dead_list,
+            ex_list, ey_list, ez_list,
+            bx_list, by_list, bz_list,
+            x0_list, y0_list,
+            npatch,
+            dx, dy,
+            nx, ny,
+        ) 
+        print(ex_part_list[0])
+
+        tic = perf_counter_ns()
+
+        toc = perf_counter_ns()
+
+        # import os
+        # nthreads = int(os.getenv('OMP_NUM_THREADS', os.cpu_count()))
+        # nthreads = min(nthreads, npatch)
+        # print(f"current_deposit_2d {(toc - tic)/(npart*npatch)*nthreads:.0f} ns per particle")
+
+        import matplotlib.pyplot as plt
+
+        fig, axes = plt.subplots(2, 1)
+
+        h = axes[0].imshow(ex_list[0].T)
+        fig.colorbar(h, ax=axes[0])
+        h = axes[1].scatter(x_list[0], y_list[0], c=ex_part_list[0], s=2)
+        fig.colorbar(h, ax=axes[1])
+
+        fig.savefig("test.png", dpi=300)
