@@ -116,57 +116,120 @@ static void current_deposit_2d(
 }
 
 static PyObject* current_deposition_cpu(PyObject* self, PyObject* args) {
-    PyObject *rho_list, *jx_list, *jy_list, *jz_list, *x0_list, *y0_list, *x_list, *y_list, *ux_list, *uy_list, *uz_list, *inv_gamma_list, *is_dead_list, *w_list;
-    double dx, dy, dt, q;
+    PyObject *fields_list, *particles_list;
     npy_intp npatches;
+    double dt, q;
 
-    if (!PyArg_ParseTuple(args, "OOOOOOOOOOOOOOndddd", 
-        &rho_list, &jx_list, &jy_list, &jz_list, 
-        &x0_list, &y0_list, 
-        &x_list, &y_list, 
-        &ux_list, &uy_list, &uz_list, 
-        &inv_gamma_list, 
-        &is_dead_list, 
-        &w_list, 
-        &npatches, &dx, &dy, &dt, &q)) {
+    if (!PyArg_ParseTuple(args, "OOndd", 
+        &fields_list, &particles_list,
+        &npatches, &dt, &q)) {
         return NULL;
     }
 
     if (npatches <= 0) {
         Py_RETURN_NONE;
     }
+    
+    npy_intp nx = PyLong_AsLong(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "nx"));
+    npy_intp ny = PyLong_AsLong(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "ny"));
+    double dx = PyFloat_AsDouble(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "dx"));
+    double dy = PyFloat_AsDouble(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "dy"));
 
-    npy_intp nx = PyArray_DIM((PyArrayObject*)PyList_GetItem(jx_list, 0), 0);
-    npy_intp ny = PyArray_DIM((PyArrayObject*)PyList_GetItem(jx_list, 0), 1);
+    double **rho        = (double**) malloc(npatches * sizeof(double*));
+    double **jx         = (double**) malloc(npatches * sizeof(double*));
+    double **jy         = (double**) malloc(npatches * sizeof(double*));
+    double **jz         = (double**) malloc(npatches * sizeof(double*));
+    double *x0          = (double*)  malloc(npatches * sizeof(double));
+    double *y0          = (double*)  malloc(npatches * sizeof(double));
+
+    double **x          = (double**) malloc(npatches * sizeof(double*));
+    double **y          = (double**) malloc(npatches * sizeof(double*));
+    double **ux         = (double**) malloc(npatches * sizeof(double*));
+    double **uy         = (double**) malloc(npatches * sizeof(double*));
+    double **uz         = (double**) malloc(npatches * sizeof(double*));
+    double **inv_gamma  = (double**) malloc(npatches * sizeof(double*));
+    npy_bool **is_dead  = (npy_bool**) malloc(npatches * sizeof(npy_bool*));
+    double **w          = (double**) malloc(npatches * sizeof(double*));
+    npy_intp *npart     = (npy_intp*) malloc(npatches * sizeof(npy_intp));
+
+    // prestore the data in the list
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        PyObject *fields = PyList_GetItem(fields_list, ipatch);
+        PyObject *particles = PyList_GetItem(particles_list, ipatch);
+
+        PyObject *rho_npy = PyObject_GetAttrString(fields, "rho");
+        PyObject *jx_npy  = PyObject_GetAttrString(fields, "jx");
+        PyObject *jy_npy  = PyObject_GetAttrString(fields, "jy");
+        PyObject *jz_npy  = PyObject_GetAttrString(fields, "jz");
+        x0[ipatch]        = PyFloat_AsDouble(PyObject_GetAttrString(fields, "x0"));
+        y0[ipatch]        = PyFloat_AsDouble(PyObject_GetAttrString(fields, "y0"));
+
+        PyObject *x_npy          = PyObject_GetAttrString(particles, "x");
+        PyObject *y_npy          = PyObject_GetAttrString(particles, "y");
+        PyObject *ux_npy         = PyObject_GetAttrString(particles, "ux");
+        PyObject *uy_npy         = PyObject_GetAttrString(particles, "uy");
+        PyObject *uz_npy         = PyObject_GetAttrString(particles, "uz");
+        PyObject *inv_gamma_npy  = PyObject_GetAttrString(particles, "inv_gamma");
+        PyObject *is_dead_npy    = PyObject_GetAttrString(particles, "is_dead");
+        PyObject *w_npy          = PyObject_GetAttrString(particles, "w");
+
+        rho[ipatch] = (double*) PyArray_DATA((PyArrayObject*) rho_npy);
+        jx[ipatch]  = (double*) PyArray_DATA((PyArrayObject*) jx_npy);
+        jy[ipatch]  = (double*) PyArray_DATA((PyArrayObject*) jy_npy);
+        jz[ipatch]  = (double*) PyArray_DATA((PyArrayObject*) jz_npy);
+        
+        x[ipatch]         = (double*) PyArray_DATA((PyArrayObject*) x_npy);
+        y[ipatch]         = (double*) PyArray_DATA((PyArrayObject*) y_npy);
+        ux[ipatch]        = (double*) PyArray_DATA((PyArrayObject*) ux_npy);
+        uy[ipatch]        = (double*) PyArray_DATA((PyArrayObject*) uy_npy);
+        uz[ipatch]        = (double*) PyArray_DATA((PyArrayObject*) uz_npy);
+        inv_gamma[ipatch] = (double*) PyArray_DATA((PyArrayObject*) inv_gamma_npy);
+        is_dead[ipatch]   = (npy_bool*) PyArray_DATA((PyArrayObject*) is_dead_npy);
+        w[ipatch]         = (double*) PyArray_DATA((PyArrayObject*) w_npy);
+
+        npart[ipatch]     = PyArray_DIM((PyArrayObject*) w_npy, 0);
+
+        Py_DecRef(rho_npy);
+        Py_DecRef(jx_npy);
+        Py_DecRef(jy_npy);
+        Py_DecRef(jz_npy);
+        Py_DecRef(x_npy);
+        Py_DecRef(y_npy);
+        Py_DecRef(ux_npy);
+        Py_DecRef(uy_npy);
+        Py_DecRef(uz_npy);
+        Py_DecRef(inv_gamma_npy);
+        Py_DecRef(is_dead_npy);
+        Py_DecRef(w_npy);
+    }
 
     #pragma omp parallel for
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
-        double *rho        = (double*) GetPatchArrayData(rho_list, ipatch);
-        double *jx         = (double*) GetPatchArrayData(jx_list, ipatch);
-        double *jy         = (double*) GetPatchArrayData(jy_list, ipatch);
-        double *jz         = (double*) GetPatchArrayData(jz_list, ipatch);
-        double *x          = (double*) GetPatchArrayData(x_list, ipatch);
-        double *y          = (double*) GetPatchArrayData(y_list, ipatch);
-        double *ux         = (double*) GetPatchArrayData(ux_list, ipatch);
-        double *uy         = (double*) GetPatchArrayData(uy_list, ipatch);
-        double *uz         = (double*) GetPatchArrayData(uz_list, ipatch);
-        double *inv_gamma  = (double*) GetPatchArrayData(inv_gamma_list, ipatch);
-        npy_bool *is_dead  = (npy_bool*) GetPatchArrayData(is_dead_list, ipatch);
-        double *w          = (double*) GetPatchArrayData(w_list, ipatch);
-
-        npy_intp npart = PyArray_DIM((PyArrayObject*)PyList_GetItem(w_list, ipatch), 0);
-        double    x0   = PyFloat_AsDouble(PyList_GetItem(x0_list, ipatch));
-        double    y0   = PyFloat_AsDouble(PyList_GetItem(y0_list, ipatch));
-
         current_deposit_2d(
-            rho, jx, jy, jz, 
-            x, y, ux, uy, uz, inv_gamma, 
-            is_dead, 
-            npart, nx, ny,
-            dx, dy, x0, y0, dt, w, q
+            rho[ipatch], jx[ipatch], jy[ipatch], jz[ipatch], 
+            x[ipatch], y[ipatch], ux[ipatch], uy[ipatch], uz[ipatch], inv_gamma[ipatch], 
+            is_dead[ipatch], 
+            npart[ipatch], nx, ny,
+            dx, dy, x0[ipatch], y0[ipatch], dt, w[ipatch], q
         );
     }
-
+    Py_DecRef(fields_list);
+    Py_DecRef(particles_list);
+    free(rho);
+    free(jx);
+    free(jy);
+    free(jz);
+    free(x0);
+    free(y0);
+    free(x);
+    free(y);
+    free(ux);
+    free(uy);
+    free(uz);
+    free(inv_gamma);
+    free(is_dead);
+    free(w);
+    free(npart);
     Py_RETURN_NONE;
 }
 

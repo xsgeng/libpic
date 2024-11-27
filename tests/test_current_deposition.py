@@ -5,6 +5,7 @@ import numpy as np
 from scipy.constants import c, e
 
 from libpic.current.cpu import current_deposition_cpu
+from libpic.current.deposition import CurrentDeposition2D
 
 
 class TestCurrentDeposition(unittest.TestCase):
@@ -114,45 +115,83 @@ class TestCurrentDeposition(unittest.TestCase):
         nthreads = min(nthreads, npatch)
         print(f"current_deposit_2d {(toc - tic)/(npart*npatch)*nthreads:.0f} ns per particle")
 
-    # def test_current_deposition_class(self):
-    #     from libpic.fields import Fields2D
-    #     from libpic.particles import ParticlesBase
-    #     from libpic.species import Electron
-    #     from libpic.patch import Patch2D, Patches
-
-    #     nx = 64
-    #     ny = 64
-    #     npart = 100
-    #     x0 = 0.0
-    #     y0 = 0.0
-    #     dx = 1.0e-6
-    #     dy = 1.0e-6
-    #     lx = nx * dx
-    #     ly = ny * dy
-    #     dt = dx / c / 2
-    #     q = e
-
+    def test_current_deposition_class(self):
+        from scipy.constants import c, pi
+        from libpic.fields import Fields2D
+        from libpic.patch.patch import Patch2D, Patches
+        from libpic.species import Electron, Proton
         
-    #     field = Fields2D(nx, ny, dx, dy, x0, y0, n_guard=3)
-    #     patch = Patch2D(0, 0, 0, 0, x0, y0, field)
-    #     patches = Patches()
-    #     patches.append(patch)
+        l0 = 0.8e-6
+        nc = 1.74e27
 
-    #     current_deposition = CurrentDeposition2D(patches)
+        dx = 1e-6
+        dy = 1e-6
+
+        nx = 128
+        ny = 128
+
+        npatch_x = 4
+        npatch_y = 4
+
+        nx_per_patch = nx//npatch_x
+        ny_per_patch = ny//npatch_y
+
+        Lx = nx*dx
+        Ly = ny*dy
+
+        n_guard = 3
+        patches = Patches(dimension=2)
+        for j in range(npatch_y):
+            for i in range(npatch_x):
+                index = i + j * npatch_x
+                p = Patch2D(
+                    rank=0, 
+                    index=index, 
+                    ipatch_x=i, 
+                    ipatch_y=j, 
+                    x0=i*Lx/npatch_x, 
+                    y0=j*Ly/npatch_y,
+                    nx=nx_per_patch, 
+                    ny=ny_per_patch, 
+                    dx=dx,
+                    dy=dy,
+                )
+                f = Fields2D(nx=nx_per_patch, ny=ny_per_patch, dx=dx,dy=dy, x0=i*Lx/npatch_x, y0=j*Ly/npatch_y, n_guard=n_guard)      
+                p.set_fields(f)
+
+                if i > 0:
+                    p.set_neighbor_index(xmin=(i - 1) + j * npatch_x)
+                if i < npatch_x - 1:
+                    p.set_neighbor_index(xmax=(i + 1) + j * npatch_x)
+                if j > 0:
+                    p.set_neighbor_index(ymin=i + (j - 1) * npatch_x)
+                if j < npatch_y - 1:
+                    p.set_neighbor_index(ymax=i + (j + 1) * npatch_x)
+
+                patches.append(p)
+
+        def density(x, y):
+            n0 = 2*nc
+
+            return n0
         
-    #     species = Electron(density=lambda x, y: 1.0)
-    #     particles = ParticlesBase(species=species)
-    #     patches.add_species(species)
+        ele = Electron(density=density, ppc=8)
+        ion = Proton(density=density, ppc=2)
 
-    #     particles.initialize(npart=npart)
-    #     particles.w[:]  = 1
-    #     particles.x[:]  = np.random.uniform(low=3*dx, high=lx-3*dx, size=npart)
-    #     particles.y[:]  = np.random.uniform(low=3*dy, high=ly-3*dy, size=npart)
-    #     particles.ux[:] = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    #     particles.uy[:] = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    #     particles.uz[:] = np.random.uniform(low=-1.0, high=1.0, size=npart)
-    #     particles.inv_gamma[:] = 1 / np.sqrt(1 + particles.ux**2 + particles.uy**2 + particles.uz**2)
+        self.npart_ele = patches.add_species(ele)
+        self.npart_ion = patches.add_species(ion)
 
-    #     current_deposition.update_patches()
-
-    #     current_deposition(ispec=0, dt=dt)
+        patches.fill_particles()
+        
+        for patch in patches:
+            p = patch.particles[0]
+            p.ux[:] = np.random.normal(0, 1, p.npart)
+            p.uy[:] = np.random.normal(0, 1, p.npart)
+            p.uz[:] = np.random.normal(0, 1, p.npart)
+            p.inv_gamma[:] = (1 + (p.ux**2 + p.uy**2 + p.uz**2))**-0.5
+            
+        current_deposition_cpu(
+            [patch.fields for patch in patches], 
+            [patch.particles[0] for patch in patches],
+            npatch_x*npatch_y, 1e-15, -e
+        )
