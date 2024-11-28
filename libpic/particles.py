@@ -61,6 +61,10 @@ class ParticlesBase:
         self.is_dead = self.is_dead[np.logical_not(self.is_dead)]
         self.npart = len(self.is_dead)
 
+    @property
+    def is_alive(self) -> np.ndarray:
+        return np.logical_not(self.is_dead)
+
 
 class QEDParticles(ParticlesBase):
     def __init__(self) -> None:
