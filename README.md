@@ -1,26 +1,49 @@
-# PIC Simulation library
+# PIC Simulation Library
 
-`libpic` a Particle-In-Cell (PIC) simulation framework implemented in Python.
+## Introduction
+`libpic` is a high-performance Particle-In-Cell (PIC) simulation framework implemented in Python. The core functionalities of `libpic` include electromagnetic field solvers, particle pushers, interpolators, and current depositors.
 
-**This project is under construction. Not usable yet.**
+`libpic` serves as the backend for `λPIC` (not yet released). Performance optimizations are achieved through the use of Numba JIT and Cython.
+
+**This project is under construction.**
+
+## Project Roadmap
+
+- [ ] Functionalities
+  - [x] Maxwell solver
+  - [x] Particle pusher
+  - [x] Interpolator
+  - [x] Current depositor
+  - [ ] QED
+    - [x] Photon emission
+    - [x] Pair production
+  - [x] CPML boundary
+  - [ ] Collision
+  - [ ] Nuclear physics
+- [ ] Replace Numba JIT and Cython with C extensions
+  - [x] Current depositor
+  - [ ] Patch synchronizer
+  - [ ] Maxwell solver
+  - [ ] Particle pusher
+  - [ ] Interpolator
+  - [ ] sorter
+- [ ] GPU acceleration
+- [ ] Documentation
 
 ## Installation
 
-from pypi
+From PyPI:
 
 ```bash
 pip install libpic
 ```
 
-from source
+From source:
+
 ```bash
 git clone https://github.com/xsgeng/libpic.git
 pip install -e ./libpic
 ```
-
-## Usage
-
-The project contains a simple example at `example/basic.py`.
 
 ## Acknowledgments
 
