@@ -1,6 +1,7 @@
 # print("Using optical depth method.")
 from numba import boolean, float64, int64, njit, prange, void
 from numpy import log, random
+from math import isnan
 
 from .optical_depth_tables import (_log_chi_range,
                                    integ_pair_prob_rate_from_table,
@@ -43,7 +44,7 @@ def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, is_dead, event, delta, inte
         dtau = dt * inv_gamma[ip]
 
         # reset if not set
-        if tau_e[ip] == 0.0:
+        if tau_e[ip] == 0.0 or isnan(tau_e[ip]):
             tau_e[ip] = -log(1 - random.rand())
 
         tau_e[ip] -= integ_prob_rate * dtau
@@ -57,10 +58,10 @@ def update_tau_e(tau_e, inv_gamma, chi_e, dt, npart, is_dead, event, delta, inte
             delta[ip] = 0.0
 
 @njit(
-    void(float64[:], float64[:], float64[:], float64, int64, boolean[:], boolean[:], float64[:]),
+    void(float64[:], float64[:], float64[:], float64, int64, boolean[:], boolean[:], float64[:], float64[:, :], float64[:]),
     cache=False
 )
-def update_tau_gamma(tau_gamma, inv_gamma, chi_gamma, dt, npart, is_dead, event, delta):
+def update_tau_gamma(tau_gamma, inv_gamma, chi_gamma, dt, npart, is_dead, event, delta, integral_pair_prob_along_delta, pair_prob_rate_total_table):
     '''
     update optical depth tau of gamma photon
     
@@ -88,19 +89,19 @@ def update_tau_gamma(tau_gamma, inv_gamma, chi_gamma, dt, npart, is_dead, event,
             event[ip] = False
             delta[ip] = 0.0
             continue
-        integ_prob_rate = integ_pair_prob_rate_from_table(chi_gamma[ip])
+        integ_prob_rate = integ_pair_prob_rate_from_table(chi_gamma[ip], pair_prob_rate_total_table)
         dtau = dt * inv_gamma[ip]
 
         # reset if not set
-        if tau_gamma[ip] == 0.0:
+        if tau_gamma[ip] == 0.0 or isnan(tau_gamma[ip]):
             tau_gamma[ip] = -log(1 - random.rand())
 
         tau_gamma[ip] -= integ_prob_rate * dtau
 
-        if tau_gamma[ip] < 0:
+        if tau_gamma[ip] <= 0:
             tau_gamma[ip] = -log(1 - random.rand())
             event[ip] = True
-            delta[ip] = pair_delta_from_chi_delta_table(chi_gamma[ip])
+            delta[ip] = pair_delta_from_chi_delta_table(chi_gamma[ip], integral_pair_prob_along_delta)
         else:
             event[ip] = False
             delta[ip] = 0.0

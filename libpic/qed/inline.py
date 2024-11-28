@@ -48,10 +48,9 @@ def find_event_index_inline(event, is_dead):
 
 
 def create_photon_inline(
-    event_index, 
-    x_ele, y_ele, ux_ele, uy_ele, uz_ele,
-    x_pho, y_pho, ux_pho, uy_pho, uz_pho,
-    inv_gamma_pho, is_dead_pho, delta,
+    x_ele, y_ele, ux_ele, uy_ele, uz_ele, w_ele, 
+    x_pho, y_pho, ux_pho, uy_pho, uz_pho, inv_gamma_pho, w_pho, is_dead_pho, 
+    event_index, delta,
 ):
     """
     create photon from electron to photon.
@@ -76,8 +75,44 @@ def create_photon_inline(
         ux_pho[idx_pho] = delta[idx_ele] * ux_ele[idx_ele]
         uy_pho[idx_pho] = delta[idx_ele] * uy_ele[idx_ele]
         uz_pho[idx_pho] = delta[idx_ele] * uz_ele[idx_ele]
-        
         inv_gamma_pho[idx_pho] = (ux_pho[idx_pho]**2 + uy_pho[idx_pho]**2 + uz_pho[idx_pho]**2) ** -0.5
+        w_pho[idx_pho] = w_ele[idx_ele]
+        
         # mark created photon as existing
         is_dead_pho[idx_pho] = False
         
+def create_pair_inline(
+    event_index, 
+    x_pho, y_pho, ux_pho, uy_pho, uz_pho, w_pho, delta,
+    x_ele, y_ele, ux_ele, uy_ele, uz_ele, inv_gamma_ele, w_ele, is_dead_ele, 
+    x_pos, y_pos, ux_pos, uy_pos, uz_pos, inv_gamma_pos, w_pos, is_dead_pos, 
+):
+    idx_ele = 0
+    idx_pos = 0
+    for idx_pho in event_index:
+        # electron
+        while not is_dead_ele[idx_ele]:
+            idx_ele += 1
+
+        x_ele[idx_ele] = x_pho[idx_pho]
+        y_ele[idx_ele] = y_pho[idx_pho]
+
+        ux_ele[idx_ele] = delta[idx_pho] * ux_pho[idx_pho]
+        uy_ele[idx_ele] = delta[idx_pho] * uy_pho[idx_pho]
+        uz_ele[idx_ele] = delta[idx_pho] * uz_pho[idx_pho]
+        inv_gamma_ele[idx_ele] = (1 + ux_ele[idx_ele]**2 + uy_ele[idx_ele]**2 + uz_ele[idx_ele]**2) ** -0.5
+        w_ele[idx_ele] = w_pho[idx_pho]
+        is_dead_ele[idx_ele] = False
+
+        # positron
+        while not is_dead_pos[idx_pos]:
+            idx_pos += 1
+        x_pos[idx_pos] = x_pho[idx_pho]
+        y_pos[idx_pos] = y_pho[idx_pho]
+
+        ux_pos[idx_pos] = (1 - delta[idx_pho]) * ux_pho[idx_pho]
+        uy_pos[idx_pos] = (1 - delta[idx_pho]) * uy_pho[idx_pho]
+        uz_pos[idx_pos] = (1 - delta[idx_pho]) * uz_pho[idx_pho]
+        inv_gamma_pos[idx_pos] = (1 + ux_pos[idx_pos]**2 + uy_pos[idx_pos]**2 + uz_pos[idx_pos]**2) ** -0.5
+        w_pos[idx_pos] = w_pho[idx_pho]
+        is_dead_pos[idx_pos] = False

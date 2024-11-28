@@ -92,8 +92,8 @@ def integ_photon_prob_rate_from_table(chi_e, photon_prob_rate_total_table):
 
 
 @njit
-def integ_pair_prob_rate_from_table(chi_gamma):
-    return _linear_interp1d(chi_gamma, _pair_prob_rate_total_table)
+def integ_pair_prob_rate_from_table(chi_gamma, pair_prob_rate_total_table):
+    return _linear_interp1d(chi_gamma, pair_prob_rate_total_table)
 
 
 @njit
@@ -101,8 +101,8 @@ def photon_delta_from_chi_delta_table(chi_e, integral_photon_prob_along_delta):
     return _bisect_interp(chi_e, integral_photon_prob_along_delta)
 
 @njit
-def pair_delta_from_chi_delta_table(chi_gamma):
-    return _bisect_interp(chi_gamma, _integral_pair_prob_along_delta)
+def pair_delta_from_chi_delta_table(chi_gamma, integral_pair_prob_along_delta):
+    return _bisect_interp(chi_gamma, integral_pair_prob_along_delta)
 
 '''
 table generations

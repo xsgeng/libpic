@@ -120,6 +120,7 @@ class NonlinearComptonLCFA(RadiationBase):
             self.y_list = typed.List([p.y for p in particles])
         if self.dimension == 3:
             self.z_list = typed.List([p.z for p in particles])
+        self.w_list = typed.List([p.w for p in particles])
 
         # photons
         ispec = self.photon_ispec
@@ -133,6 +134,7 @@ class NonlinearComptonLCFA(RadiationBase):
         self.uy_pho_list = typed.List([p.uy for p in particles])
         self.uz_pho_list = typed.List([p.uz for p in particles])
         self.inv_gamma_pho_list = typed.List([p.inv_gamma for p in particles])
+        self.w_pho_list = typed.List([p.w for p in particles])
 
         self.is_dead_pho_list = typed.List([p.is_dead for p in particles])
 
@@ -146,6 +148,7 @@ class NonlinearComptonLCFA(RadiationBase):
             self.y_list[ipatch] = electrons.y
         if self.dimension == 3:
             self.z_list[ipatch] = electrons.z
+        self.w_list[ipatch] = electrons.w
 
         # photons
         photons = self.patches[ipatch].particles[self.photon_ispec]
@@ -159,9 +162,16 @@ class NonlinearComptonLCFA(RadiationBase):
         self.uy_pho_list[ipatch] = photons.uy
         self.uz_pho_list[ipatch] = photons.uz
         self.inv_gamma_pho_list[ipatch] = photons.inv_gamma
+        self.w_pho_list[ipatch] = photons.w
 
         self.is_dead_pho_list[ipatch] = photons.is_dead
 
+    def _update_particle_lists(self) -> None:
+        for ipatch, p in enumerate(self.patches):
+            for ispec in [self.ispec, self.photon_ispec]:
+                if p.particles[ispec].extended:
+                    self.update_particle_lists(ipatch)
+                    break # if one species is extended, all species are updated
 
     def event(self, dt: float) -> None:
         from .optical_depth_tables import _integral_photon_prob_along_delta, _photon_prob_rate_total_table
@@ -188,10 +198,9 @@ class NonlinearComptonLCFA(RadiationBase):
                 self.update_particle_lists(ipatch)
         # fillin photons
         create_photon_patches(
-            self.x_list, self.y_list, self.ux_list, self.uy_list, self.uz_list, self.is_dead_list,
-            self.x_pho_list, self.y_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list,
-            self.inv_gamma_pho_list, self.is_dead_pho_list, self.delta_list,
-            self.event_list,
+            self.x_list, self.y_list, self.ux_list, self.uy_list, self.uz_list, self.w_list, self.is_dead_list,
+            self.x_pho_list, self.y_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list, self.inv_gamma_pho_list, self.w_pho_list, self.is_dead_pho_list, 
+            self.delta_list, self.event_list,
             self.npatches,
         )
 

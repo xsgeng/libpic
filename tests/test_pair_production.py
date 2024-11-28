@@ -5,11 +5,11 @@ from scipy.constants import c
 
 from libpic.fields import Fields2D
 from libpic.patch import Patch2D, Patches
-from libpic.qed.radiation import NonlinearComptonLCFA
-from libpic.species import Electron, Photon
+from libpic.qed.pair_production import NonlinearPairProductionLCFA
+from libpic.species import Electron, Photon, Positron
 
 
-class TestNonlinearComptonLCFA(unittest.TestCase):
+class TestNonlinearPairProductionLCFA(unittest.TestCase):
     def setUp(self) -> None:
         l0 = 0.8e-6
         nc = 1.74e27
@@ -17,8 +17,8 @@ class TestNonlinearComptonLCFA(unittest.TestCase):
         dx = 1e-6
         dy = 1e-6
 
-        nx = 128
-        ny = 128
+        nx = 32
+        ny = 32
 
         npatch_x = 2
         npatch_y = 2
@@ -64,13 +64,15 @@ class TestNonlinearComptonLCFA(unittest.TestCase):
             n0 = 0.01*nc
             return n0
         
-        ele = Electron(density=density, ppc=1, radiation="photons")
-        pho = Photon()
+        pho = Photon(density=density, ppc=1)
+        ele = Electron()
+        pos = Positron()
 
-        ele.set_photon(pho)
+        pho.set_bw_pair(electron=ele, positron=pos)
 
-        patches.add_species(ele)
         patches.add_species(pho)
+        patches.add_species(ele)
+        patches.add_species(pos)
 
         patches.fill_particles()
 
@@ -86,45 +88,47 @@ class TestNonlinearComptonLCFA(unittest.TestCase):
             
         self.patches = patches
 
-        # 创建NonlinearComptonLCFA实例
-        self.radiation = NonlinearComptonLCFA(self.patches, 0)
+        # 创建NonlinearPairProductionLCFA实例
+        self.pair_production = NonlinearPairProductionLCFA(self.patches, 0)
 
     def test_chi(self):
-        self.radiation.generate_particle_lists()
+        self.pair_production.generate_particle_lists()
         for patch in self.patches:
             p = patch.particles[0]
             p.ey_part.fill(1e12)
             p.chi.fill(0)
 
-        chi = self.radiation.chi_list[0][0]
+        chi = self.pair_production.chi_list[0][0]
         self.assertEqual(chi, 0)
 
-        self.radiation.update_chi()
+        self.pair_production.update_chi()
 
-        chi = self.radiation.chi_list[0][0]
+        chi = self.pair_production.chi_list[0][0]
         self.assertGreater(chi, 0)
 
     def test_event(self):
-        self.radiation.generate_particle_lists()
-        self.radiation.event(dt=0.1)
-        print(self.radiation.event_list[0])
+        self.pair_production.generate_particle_lists()
+        self.pair_production.event(dt=100)
+        self.assertEqual(self.pair_production.event_list[0].sum(), np.logical_not(self.pair_production.is_dead_list[0]).sum())
 
     def test_create_particles(self):
-        self.radiation.generate_particle_lists()
-        self.assertEqual(self.radiation.x_pho_list[0].size, 0)
-        self.radiation.event(dt=0.1)
-        self.radiation.create_particles()
-        self.assertGreater(self.radiation.x_pho_list[0].size, 0)
+        self.pair_production.generate_particle_lists()
+        self.assertEqual(self.pair_production.x_ele_list[0].size, 0)
+        self.assertEqual(self.pair_production.x_pos_list[0].size, 0)
+        self.pair_production.event(dt=0.1)
+        self.pair_production.create_particles()
+        self.assertGreater(self.pair_production.x_ele_list[0].size, 0)
+        self.assertGreater(self.pair_production.x_pos_list[0].size, 0)
 
     def test_reaction(self):
-        self.radiation.generate_particle_lists()
-        self.radiation.event(dt=0.1)
-        ux = self.radiation.ux_list[0][0]
-        self.assertEqual(ux, 10)
-        self.radiation.reaction()
-        ux = self.radiation.ux_list[0][0]
-        delta = self.radiation.delta_list[0][0]
-        self.assertEqual(ux, (1-delta)*10)
+        self.pair_production.generate_particle_lists()
+        self.pair_production.event(dt=0.1)
+        is_alive = self.patches[0].particles[self.pair_production.ispec].is_alive
+        self.assertGreater(is_alive.sum(), 0)
+
+        self.pair_production.reaction()
+        is_dead = self.pair_production.is_dead_list[0]
+        self.assertTrue(is_dead.all())
 
 if __name__ == '__main__':
     unittest.main()
