@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.constants import e, m_e
-
+from numpy.typing import NDArray
 
 class ParticlesBase:
     x: np.ndarray
@@ -17,6 +17,8 @@ class ParticlesBase:
     bx_part: np.ndarray
     by_part: np.ndarray
     bz_part: np.ndarray
+
+    npart: int # length of the particles, including dead
 
     def __init__(self) -> None:
         self.attrs: list[str] = [
@@ -55,11 +57,22 @@ class ParticlesBase:
         self.npart += n
         self.extended = True
 
-    def prune(self):
+    def prune(self, extra_buff=0.1):
+        n_alive = self.is_alive.sum()
+        npart = int(n_alive * (1 + extra_buff))
+        if npart >= self.npart:
+            return
+        sorted_idx = np.argsort(self.is_dead)
         for attr in self.attrs:
-            setattr(self, attr, getattr(self, attr)[~self.is_dead])
-        self.is_dead = self.is_dead[np.logical_not(self.is_dead)]
-        self.npart = len(self.is_dead)
+            arr: NDArray[np.float64] = getattr(self, attr)
+            arr[:] = arr[sorted_idx]
+            arr.resize(npart, refcheck=False)
+
+        self.is_dead[:] = self.is_dead[sorted_idx]
+        self.is_dead.resize(npart, refcheck=False)
+        self.npart = npart
+        self.extended = True
+        return sorted_idx
 
     @property
     def is_alive(self) -> np.ndarray:
@@ -80,9 +93,10 @@ class QEDParticles(ParticlesBase):
         self.event[-n:] = False
         super().extend(n)
 
-    def prune(self):
-        super().prune()
-        self.event = self.event[np.logical_not(self.is_dead)]
+    def prune(self, extra_buff=0.1):
+        sorted_idx = super().prune(extra_buff=extra_buff)
+        self.event[:] = self.event[sorted_idx]
+        self.event.resize(self.npart, refcheck=False)
 
 
 class SpinParticles(ParticlesBase):
