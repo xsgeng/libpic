@@ -27,6 +27,8 @@
   - [ ] Particle pusher
   - [ ] Interpolator
   - [ ] sorter
+- [ ] MPI
+- [ ] 3D
 - [ ] GPU acceleration
 - [ ] Documentation
 
