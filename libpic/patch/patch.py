@@ -53,6 +53,19 @@ class Patch:
 
         self.particles : list[ParticlesBase] = []
 
+    @property
+    def xmin(self):
+        return self.x0
+    @property
+    def xmax(self):
+        return self.x0 + (self.nx-1) * self.dx
+    @property
+    def ymin(self):
+        return self.y0
+    @property
+    def ymax(self):
+        return self.y0 + (self.ny-1) * self.dy
+
     def add_particles(self, particles: ParticlesBase) -> None:
         self.particles.append(particles)
 
