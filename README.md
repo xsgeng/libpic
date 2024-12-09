@@ -27,6 +27,7 @@
   - [ ] Particle pusher
   - [ ] Interpolator
   - [ ] sorter
+- [ ] Remove dependence on numba.typed.List
 - [ ] MPI
 - [ ] 3D
 - [ ] GPU acceleration
