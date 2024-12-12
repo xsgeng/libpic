@@ -385,7 +385,7 @@ class Patches:
 
 
         for ipatch in range(self.npatches):
-            particles : ParticlesBase = species.create_particles()
+            particles : ParticlesBase = species.create_particles(ipatch=ipatch)
             particles.initialize(num_macro_particles[ipatch])
             self[ipatch].add_particles(particles)
 

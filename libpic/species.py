@@ -47,7 +47,7 @@ class Species(BaseModel):
             return None
         
 
-    def create_particles(self) -> ParticlesBase:
+    def create_particles(self, ipatch: int=None, rank: int=None) -> ParticlesBase:
         """ 
         Create Particles from the species.
 
@@ -57,7 +57,7 @@ class Species(BaseModel):
 
         Then particles are created within the patch.
         """
-        return ParticlesBase()
+        return ParticlesBase(ipatch, rank)
 
 
 class Electron(Species):
@@ -72,16 +72,16 @@ class Electron(Species):
         assert isinstance(photon, Species)
         self.photon = photon
 
-    def create_particles(self) -> ParticlesBase:
+    def create_particles(self, ipatch: int=None, rank: int=None) -> ParticlesBase:
         if self.photon:
             if self.polarization is None:
-                return QEDParticles()
+                return QEDParticles(ipatch, rank)
             else:
-                return SpinQEDParticles()
+                return SpinQEDParticles(ipatch, rank)
         elif self.polarization is not None:
-            return SpinParticles()
+            return SpinParticles(ipatch, rank)
 
-        return super().create_particles()
+        return super().create_particles(ipatch, rank)
 
 
 class Positron(Electron):
@@ -111,10 +111,10 @@ class Photon(Species):
         self.electron = electron
         self.positron = positron
 
-    def create_particles(self) -> ParticlesBase:
+    def create_particles(self, ipatch: int=None, rank: int=None) -> ParticlesBase:
         if self.electron is not None:
-            return QEDParticles()
+            return QEDParticles(ipatch, rank)
         # else:
-        #     return SpinQEDParticles()
+        #     return SpinQEDParticles(ipatch, rank)
 
-        return super().create_particles()
+        return super().create_particles(ipatch, rank)
