@@ -1,7 +1,7 @@
 [project]
 name = "libpic"
 description = "Particle-in-cell library for plasma physics"
-version = "0.0.12"
+version = "0.0.12.post1"
 dependencies = [
     "numpy",
     "numba",
