@@ -137,14 +137,15 @@ class MaxwellSolver2d(MaxwellSolver):
         self.kappa_by_list = typed.List(kappa_by_list)
 
     def update_efield(self, dt: float) -> None:
-        update_efield_patches_2d(
-            self.ex_list, self.ey_list, self.ez_list,
-            self.bx_list, self.by_list, self.bz_list,
-            self.jx_list, self.jy_list, self.jz_list,
-            len(self.patches_non_boundary),
-            self.dx, self.dy, dt,
-            self.nx, self.ny, self.n_guard,
-        )
+        if self.patches_non_boundary:
+            update_efield_patches_2d(
+                self.ex_list, self.ey_list, self.ez_list,
+                self.bx_list, self.by_list, self.bz_list,
+                self.jx_list, self.jy_list, self.jz_list,
+                len(self.patches_non_boundary),
+                self.dx, self.dy, dt,
+                self.nx, self.ny, self.n_guard,
+            )
         # Maxwell equation with kappa of PML boundary
         if self.patches_pml_boundary:
             update_efield_cpml_patches_2d(
@@ -162,13 +163,14 @@ class MaxwellSolver2d(MaxwellSolver):
 
         
     def update_bfield(self, dt: float) -> None:
-        update_bfield_patches_2d(
-            self.ex_list, self.ey_list, self.ez_list,
-            self.bx_list, self.by_list, self.bz_list,
-            len(self.patches_non_boundary),
-            self.dx, self.dy, dt,
-            self.nx, self.ny, self.n_guard,
-        )
+        if self.patches_non_boundary:
+            update_bfield_patches_2d(
+                self.ex_list, self.ey_list, self.ez_list,
+                self.bx_list, self.by_list, self.bz_list,
+                len(self.patches_non_boundary),
+                self.dx, self.dy, dt,
+                self.nx, self.ny, self.n_guard,
+            )
         # Maxwell equation with kappa of PML boundary
         if self.patches_pml_boundary:
             update_bfield_cpml_patches_2d(
