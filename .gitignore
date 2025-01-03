@@ -44,3 +44,5 @@ dist/
 /*.py
 /*.ipynb
 .*/**
+.aider*
+.env
