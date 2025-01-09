@@ -47,7 +47,32 @@ From source:
 git clone https://github.com/xsgeng/libpic.git
 pip install -e ./libpic
 ```
+## Core Classes
+```mermaid
+classDiagram
+    Patches --> Patch : contains
 
+    Patch --> ParticlesBase : contains
+    Patch --> Fields : contains
+    Patch --> PML : contains
+
+    Patch <|-- Patch2D
+    Patch <|-- Patch3D
+
+    RadiationBase --> Patches : contains
+    PairProductionBase --> Patches : contains
+    CurrentDeposition --> Patches : contains
+    PusherBase --> Patches : contains
+    FieldInterpolation --> Patches : contains
+    MaxwellSolver --> Patches : contains
+
+    Pydantic.BaseModel <|-- Species
+    Species <|-- Electron
+    Electron <|-- Positron
+    Species <|-- proton
+    Species <|-- photon
+    Species --> ParticlesBase : creates
+```
 ## Acknowledgments
 
 This work was supported by the National Natural Science Foundation of China (NSFC) under Grant No. 12304384.
