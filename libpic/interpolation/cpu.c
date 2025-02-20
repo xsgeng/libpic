@@ -233,6 +233,8 @@ static PyObject* interpolation_patches_2d(PyObject* self, PyObject* args) {
         Py_RETURN_NONE;
     }
 
+    // release GIL
+    Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         double *x          = (double*) PyArray_DATA((PyArrayObject*)PyList_GetItem(x_list, ipatch));
@@ -266,6 +268,8 @@ static PyObject* interpolation_patches_2d(PyObject* self, PyObject* args) {
             dx, dy, x0, y0, 
             nx, ny);
     }
+    // reacquire GIL
+    Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;
 }
