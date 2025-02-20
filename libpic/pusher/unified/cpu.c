@@ -222,7 +222,7 @@ inline static void current_deposit_2d(
 }
 
 static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
-    PyObject *fields_list, *particles_list, *fields_old_list, *fields_last_list, *fields_temp_list;
+    PyObject *fields_list, *particles_list;
     npy_intp npatches;
     double dt, q, m;
 
@@ -365,10 +365,19 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
         Py_DecRef(w_npy);
     }
 
+    // release GIL
+    Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         for (npy_intp ip = 0; ip < npart[ipatch]; ip++) {
-            if (is_dead[ip]) continue;
+            if (is_dead[ipatch][ip]) continue;
+            if (isnan(x[ipatch][ip]) || isnan(y[ipatch][ip])) continue;
+            
+            push_position_2d(
+                &x[ipatch][ip], &y[ipatch][ip], 
+                ux[ipatch][ip], uy[ipatch][ip], inv_gamma[ipatch][ip], 
+                0.5*dt
+            );
             interpolation_2d(
                 x[ipatch][ip], y[ipatch][ip], 
                 &ex_part[ipatch][ip], &ey_part[ipatch][ip], &ez_part[ipatch][ip], 
@@ -378,16 +387,16 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
                 dx, dy, x0[ipatch], y0[ipatch], 
                 nx, ny
             );
-            push_position_2d(
-                &x[ipatch][ip], &y[ipatch][ip], 
-                ux[ipatch][ip], uy[ipatch][ip], inv_gamma[ipatch][ip], 
-                dt
-            );
             boris(
                 &ux[ipatch][ip], &uy[ipatch][ip], &uz[ipatch][ip], &inv_gamma[ipatch][ip],
                 ex_part[ipatch][ip], ey_part[ipatch][ip], ez_part[ipatch][ip], 
                 bx_part[ipatch][ip], by_part[ipatch][ip], bz_part[ipatch][ip],
                 q, m, dt
+            );
+            push_position_2d(
+                &x[ipatch][ip], &y[ipatch][ip], 
+                ux[ipatch][ip], uy[ipatch][ip], inv_gamma[ipatch][ip], 
+                0.5*dt
             );
             current_deposit_2d(
                 rho[ipatch], jx[ipatch], jy[ipatch], jz[ipatch], 
@@ -399,6 +408,9 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
         }
 
     }
+    // acquire GIL
+    Py_END_ALLOW_THREADS
+
     Py_DecRef(fields_list);
     Py_DecRef(particles_list);
     // fields
@@ -434,7 +446,7 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef CpuMethods[] = {
-    {"unified_boris_pusher_cpu", unified_boris_pusher_cpu, METH_VARARGS, "Current deposition on CPU"},
+    {"unified_boris_pusher_cpu", unified_boris_pusher_cpu, METH_VARARGS, "Unified Boris Pusher"},
     {NULL, NULL, 0, NULL}
 };
 
