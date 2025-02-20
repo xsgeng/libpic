@@ -7,6 +7,7 @@ from scipy.constants import c, e, epsilon_0, mu_0
 from ..patch import Patches
 
 from .cpu import boris_push_patches, push_position_patches_2d, photon_push_patches
+from .unified.cpu import unified_boris_pusher_cpu
 
 
 class PusherBase:
@@ -115,6 +116,14 @@ class BorisPusher(PusherBase):
             self.bx_part_list, self.by_part_list, self.bz_part_list,
             self.is_dead_list,
             self.npatches, self.q, self.m, dt
+        )
+
+class UnifiedBorisPusher(PusherBase):
+    def __call__(self, dt: float) -> None:
+        unified_boris_pusher_cpu(
+            [p.particles[self.ispec] for p in self.patches],
+            [p.fields for p in self.patches],
+            self.npatches, dt, self.q, self.m
         )
 
 
