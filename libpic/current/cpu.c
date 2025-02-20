@@ -206,6 +206,8 @@ static PyObject* current_deposition_cpu(PyObject* self, PyObject* args) {
         Py_DecRef(w_npy);
     }
 
+    // release GIL
+    Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         current_deposit_2d(
@@ -216,6 +218,9 @@ static PyObject* current_deposition_cpu(PyObject* self, PyObject* args) {
             dx, dy, x0[ipatch], y0[ipatch], dt, w[ipatch], q
         );
     }
+    // reacquire GIL
+    Py_END_ALLOW_THREADS
+    
     Py_DecRef(fields_list);
     Py_DecRef(particles_list);
     free(rho);
