@@ -109,14 +109,21 @@ class PusherBase:
     
 
 class BorisPusher(PusherBase):
-    def __call__(self, dt: float) -> None:
-        boris_push_patches(
-            self.ux_list, self.uy_list, self.uz_list, self.inv_gamma_list,
-            self.ex_part_list, self.ey_part_list, self.ez_part_list,
-            self.bx_part_list, self.by_part_list, self.bz_part_list,
-            self.is_dead_list,
-            self.npatches, self.q, self.m, dt
-        )
+    def __call__(self, dt: float, unified: bool=False) -> None:
+        if unified:
+                unified_boris_pusher_cpu(
+                [p.particles[self.ispec] for p in self.patches],
+                [p.fields for p in self.patches],
+                self.npatches, dt, self.q, self.m
+            )
+        else:
+            boris_push_patches(
+                self.ux_list, self.uy_list, self.uz_list, self.inv_gamma_list,
+                self.ex_part_list, self.ey_part_list, self.ez_part_list,
+                self.bx_part_list, self.by_part_list, self.bz_part_list,
+                self.is_dead_list,
+                self.npatches, self.q, self.m, dt
+            )
 
 class UnifiedBorisPusher(PusherBase):
     def __call__(self, dt: float) -> None:
