@@ -536,6 +536,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
                         for (npy_intp izg = 0; izg < ng; izg++) {
                             field[ipatch][INDEX3(ix, ny-ng+iyg, izg)] += field[ymaxzmin_ipatch][INDEX3(ix, -iyg, nz+izg)];
                             field[ymaxzmin_ipatch][INDEX3(ix, -iyg, nz+izg)] = 0.0;
+                        }
                     }
                 }
             }
