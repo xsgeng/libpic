@@ -23,10 +23,10 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
     double **rho = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "rho");
 
     // Get boundary index arrays
-    npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
-    npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);
-    npy_intp* ymin_index = (npy_intp*)PyArray_DATA(ymin_index_arr);
-    npy_intp* ymax_index = (npy_intp*)PyArray_DATA(ymax_index_arr);
+    const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
+    const npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);
+    const npy_intp* ymin_index = (npy_intp*)PyArray_DATA(ymin_index_arr);
+    const npy_intp* ymax_index = (npy_intp*)PyArray_DATA(ymax_index_arr);
 
     // Release GIL
     Py_BEGIN_ALLOW_THREADS
