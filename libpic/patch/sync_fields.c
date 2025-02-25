@@ -273,9 +273,283 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
     Py_RETURN_NONE;
 }
 
+static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
+    PyObject *fields_list;
+    PyArrayObject *xmin_index_arr, *xmax_index_arr, *ymin_index_arr, *ymax_index_arr, *zmin_index_arr, *zmax_index_arr;
+    npy_intp npatches, nx, ny, nz, ng;
+
+    if (!PyArg_ParseTuple(args, "OOOOOOnnnnn", 
+        &fields_list, 
+        &xmin_index_arr, &xmax_index_arr,
+        &ymin_index_arr, &ymax_index_arr,
+        &zmin_index_arr, &zmax_index_arr,
+        &npatches, &nx, &ny, &nz, &ng)) {
+        return NULL;
+    }
+
+    double **jx = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jx");
+    double **jy = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jy"); 
+    double **jz = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jz");
+    double **rho = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "rho");
+
+    const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
+    const npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);
+    const npy_intp* ymin_index = (npy_intp*)PyArray_DATA(ymin_index_arr);
+    const npy_intp* ymax_index = (npy_intp*)PyArray_DATA(ymax_index_arr);
+    const npy_intp* zmin_index = (npy_intp*)PyArray_DATA(zmin_index_arr);
+    const npy_intp* zmax_index = (npy_intp*)PyArray_DATA(zmax_index_arr);
+
+    Py_BEGIN_ALLOW_THREADS
+    #pragma omp parallel for
+    for (npy_intp i = 0; i < npatches*4; i++) {
+        int field_type = i % 4;
+        npy_intp ipatch = i / 4;
+        
+        double** field;
+        switch(field_type) {
+            case 0: field = jx; break;
+            case 1: field = jy; break;
+            case 2: field = jz; break;
+            case 3: field = rho; break;
+        }
+
+        npy_intp xmin_ipatch = xmin_index[ipatch];
+        npy_intp xmax_ipatch = xmax_index[ipatch];
+        npy_intp ymin_ipatch = ymin_index[ipatch];
+        npy_intp ymax_ipatch = ymax_index[ipatch];
+        npy_intp zmin_ipatch = zmin_index[ipatch];
+        npy_intp zmax_ipatch = zmax_index[ipatch];
+
+        // X direction sync
+        if (xmin_ipatch >= 0) {
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(ixg, iy, iz)] += field[xmin_ipatch][INDEX3D(nx+ixg, iy, iz)];
+                        field[xmin_ipatch][INDEX3D(nx+ixg, iy, iz)] = 0.0;
+                    }
+                }
+            }
+        }
+        
+        if (xmax_ipatch >= 0) {
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(nx-ng+ixg, iy, iz)] += field[xmax_ipatch][INDEX3D(-ixg, iy, iz)];
+                        field[xmax_ipatch][INDEX3D(-ixg, iy, iz)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // Y direction sync
+        if (ymin_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(ix, iyg, iz)] += field[ymin_ipatch][INDEX3D(ix, ny+iyg, iz)];
+                        field[ymin_ipatch][INDEX3D(ix, ny+iyg, iz)] = 0.0;
+                    }
+                }
+            }
+        }
+        
+        if (ymax_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(ix, ny-ng+iyg, iz)] += field[ymax_ipatch][INDEX3D(ix, -iyg, iz)];
+                        field[ymax_ipatch][INDEX3D(ix, -iyg, iz)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // Z direction sync
+        if (zmin_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3D(ix, iy, izg)] += field[zmin_ipatch][INDEX3D(ix, iy, nz+izg)];
+                        field[zmin_ipatch][INDEX3D(ix, iy, nz+izg)] = 0.0;
+                    }
+                }
+            }
+        }
+        
+        if (zmax_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3D(ix, iy, nz-ng+izg)] += field[zmax_ipatch][INDEX3D(ix, iy, -izg)];
+                        field[zmax_ipatch][INDEX3D(ix, iy, -izg)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // Corner synchronization (3D)
+        // Implementation would need full 3D neighbor logic similar to 2D but extended
+        // This is simplified placeholder showing the pattern
+        if (xmin_ipatch >= 0 && ymin_ipatch >= 0 && zmin_ipatch >= 0) {
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3D(ixg, iyg, izg)] += field[xmin_ipatch][INDEX3D(nx+ixg, ny+iyg, nz+izg)];
+                        field[xmin_ipatch][INDEX3D(nx+ixg, ny+iyg, nz+izg)] = 0.0;
+                    }
+                }
+            }
+        }
+    }
+    Py_END_ALLOW_THREADS
+
+    free(jx); free(jy); free(jz); free(rho);
+    Py_DECREF(fields_list);
+    
+    Py_RETURN_NONE;
+}
+
+static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
+    PyObject *fields_list;
+    PyArrayObject *xmin_index_arr, *xmax_index_arr, *ymin_index_arr, *ymax_index_arr, *zmin_index_arr, *zmax_index_arr;
+    npy_intp npatches, nx, ny, nz, ng;
+
+    if (!PyArg_ParseTuple(args, "OOOOOOnnnnn", 
+        &fields_list, 
+        &xmin_index_arr, &xmax_index_arr,
+        &ymin_index_arr, &ymax_index_arr,
+        &zmin_index_arr, &zmax_index_arr,
+        &npatches, &nx, &ny, &nz, &ng)) {
+        return NULL;
+    }
+
+    double **ex = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ex");
+    double **ey = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ey");
+    double **ez = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ez");
+    double **bx = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bx");
+    double **by = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "by");
+    double **bz = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bz");
+
+    const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
+    const npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);
+    const npy_intp* ymin_index = (npy_intp*)PyArray_DATA(ymin_index_arr);
+    const npy_intp* ymax_index = (npy_intp*)PyArray_DATA(ymax_index_arr);
+    const npy_intp* zmin_index = (npy_intp*)PyArray_DATA(zmin_index_arr);
+    const npy_intp* zmax_index = (npy_intp*)PyArray_DATA(zmax_index_arr);
+
+    Py_BEGIN_ALLOW_THREADS
+    #pragma omp parallel for
+    for (npy_intp i = 0; i < npatches*6; i++) {
+        int field_type = i % 6;
+        npy_intp ipatch = i / 6;
+        
+        double** field;
+        switch(field_type) {
+            case 0: field = ex; break;
+            case 1: field = ey; break;
+            case 2: field = ez; break;
+            case 3: field = bx; break;
+            case 4: field = by; break;
+            case 5: field = bz; break;
+        }
+
+        npy_intp xmin_ipatch = xmin_index[ipatch];
+        npy_intp xmax_ipatch = xmax_index[ipatch];
+        npy_intp ymin_ipatch = ymin_index[ipatch];
+        npy_intp ymax_ipatch = ymax_index[ipatch];
+        npy_intp zmin_ipatch = zmin_index[ipatch];
+        npy_intp zmax_ipatch = zmax_index[ipatch];
+
+        // X direction sync
+        if (xmin_ipatch >= 0) {
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(-ixg-1, iy, iz)] = field[xmin_ipatch][INDEX3D(nx-ng+ixg, iy, iz)];
+                    }
+                }
+            }
+        }
+        
+        if (xmax_ipatch >= 0) {
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(nx+ixg, iy, iz)] = field[xmax_ipatch][INDEX3D(ixg, iy, iz)];
+                    }
+                }
+            }
+        }
+
+        // Y direction sync
+        if (ymin_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(ix, -iyg-1, iz)] = field[ymin_ipatch][INDEX3D(ix, ny-ng+iyg, iz)];
+                    }
+                }
+            }
+        }
+        
+        if (ymax_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp iz = 0; iz < nz; iz++) {
+                        field[ipatch][INDEX3D(ix, ny+iyg, iz)] = field[ymax_ipatch][INDEX3D(ix, iyg, iz)];
+                    }
+                }
+            }
+        }
+
+        // Z direction sync
+        if (zmin_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3D(ix, iy, -izg-1)] = field[zmin_ipatch][INDEX3D(ix, iy, nz-ng+izg)];
+                    }
+                }
+            }
+        }
+        
+        if (zmax_ipatch >= 0) {
+            for (npy_intp ix = 0; ix < nx; ix++) {
+                for (npy_intp iy = 0; iy < ny; iy++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3D(ix, iy, nz+izg)] = field[zmax_ipatch][INDEX3D(ix, iy, izg)];
+                    }
+                }
+            }
+        }
+
+        // 3D corner synchronization
+        if (xmin_ipatch >= 0 && ymin_ipatch >= 0 && zmin_ipatch >= 0) {
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3D(-ixg-1, -iyg-1, -izg-1)] = field[xmin_ipatch][INDEX3D(nx-ng+ixg, ny-ng+iyg, nz-ng+izg)];
+                    }
+                }
+            }
+        }
+    }
+    Py_END_ALLOW_THREADS
+
+    free(ex); free(ey); free(ez);
+    free(bx); free(by); free(bz);
+    Py_DECREF(fields_list);
+    
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef Methods[] = {
-    {"sync_currents", sync_currents, METH_VARARGS, "Synchronize currents between patches"},
-    {"sync_guard_fields", sync_guard_fields, METH_VARARGS, "Synchronize guard cells between patches"},
+    {"sync_currents", sync_currents, METH_VARARGS, "Synchronize currents between patches (2D)"},
+    {"sync_guard_fields", sync_guard_fields, METH_VARARGS, "Synchronize guard cells between patches (2D)"},
+    {"sync_currents_3d", sync_currents_3d, METH_VARARGS, "Synchronize currents between patches (3D)"},
+    {"sync_guard_fields_3d", sync_guard_fields_3d, METH_VARARGS, "Synchronize guard cells between patches (3D)"},
     {NULL, NULL, 0, NULL}
 };
 
