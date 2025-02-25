@@ -7,12 +7,6 @@ dist/
 **/__pycache__
 **/*.pyc
 
-# Cython generated files
-**/*.c
-**/*.cpp
-**/*.h
-**/*.hpp
-
 # Compiled binary files
 **/*.so
 **/*.pyd
