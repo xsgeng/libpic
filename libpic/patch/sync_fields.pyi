@@ -44,4 +44,28 @@ def sync_guard_fields(
     ymax_index_list: np.ndarray,
     npatches: int, nx: int, ny: int, ng: int
 ):
+    """
+    Synchronize guard cells between patches for E and B fields.
+    
+    Parameters
+    ----------
+    fields_list : List[Fields]
+        List of fields of all patches containing E and B fields
+    xmin_index_list : np.ndarray
+        Array of indices of patches at the minimum x boundary
+    xmax_index_list : np.ndarray
+        Array of indices of patches at the maximum x boundary
+    ymin_index_list : np.ndarray
+        Array of indices of patches at the minimum y boundary
+    ymax_index_list : np.ndarray
+        Array of indices of patches at the maximum y boundary
+    npatches : int
+        Number of patches
+    nx : int
+        Number of cells in x direction (excluding guards)
+    ny : int
+        Number of cells in y direction (excluding guards)
+    ng : int
+        Number of guard cells
+    """
     pass
