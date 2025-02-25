@@ -50,8 +50,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
 
         // X direction sync
         if (xmin_ipatch >= 0) {
-            for (npy_intp y = 0; y < ny; y++) {
-                for (npy_intp g = 0; g < ng; g++) {
+            for (npy_intp g = 0; g < ng; g++) {
+                for (npy_intp y = 0; y < ny; y++) {
                     field[ipatch][INDEX(g, y)] += field[xmin_ipatch][INDEX(nx+g, y)];
                     field[xmin_ipatch][INDEX(nx+g, y)] = 0.0;
                 }
@@ -59,8 +59,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
         }
         
         if (xmax_ipatch >= 0) {
-            for (npy_intp y = 0; y < ny; y++) {
-                for (npy_intp g = 0; g < ng; g++) {
+            for (npy_intp g = 0; g < ng; g++) {
+                for (npy_intp y = 0; y < ny; y++) {
                     field[ipatch][INDEX(nx-ng+g, y)] += field[xmax_ipatch][INDEX(g, y)];
                     field[xmax_ipatch][INDEX(g, y)] = 0.0;
                 }
