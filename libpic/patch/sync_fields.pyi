@@ -2,7 +2,7 @@ from typing import List
 import numpy as np
 from ...fields import Fields
 
-def sync_currents(
+def sync_currents_2d(
     fields_list: List[Fields],
     xmin_index_list: np.ndarray,
     xmax_index_list: np.ndarray,
@@ -36,7 +36,7 @@ def sync_currents(
     """
     pass
 
-def sync_guard_fields(
+def sync_guard_fields_2d(
     fields_list: List[Fields],
     xmin_index_list: np.ndarray,
     xmax_index_list: np.ndarray,
