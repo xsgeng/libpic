@@ -393,12 +393,57 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         if (xmin_ipatch >= 0) {
             npy_intp xminymin_ipatch = xmin_index[ymin_ipatch];
             if (xminymin_ipatch >= 0) {
-                // complete the rest AI!
+                // Handle x-min y-min edge
+                for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                        for (npy_intp izg = 0; izg < ng; izg++) {
+                            field[ipatch][INDEX3D(ixg, iyg, izg)] += field[xminymin_ipatch][INDEX3D(nx+ixg, ny+iyg, izg)];
+                            field[xminymin_ipatch][INDEX3D(nx+ixg, ny+iyg, izg)] = 0.0;
+                        }
+                    }
+                }
+            }
+            
+            // Handle x-min y-max edge
+            npy_intp xminymax_ipatch = xmin_index[ymax_ipatch];
+            if (xminymax_ipatch >= 0) {
+                for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                        for (npy_intp izg = 0; izg < ng; izg++) {
+                            field[ipatch][INDEX3D(ixg, ny-ng+iyg, izg)] += field[xminymax_ipatch][INDEX3D(nx+ixg, -iyg, izg)];
+                            field[xminymax_ipatch][INDEX3D(nx+ixg, -iyg, izg)] = 0.0;
+                        }
+                    }
+                }
+            }
 
+            // Handle x-min z-min edge
+            npy_intp xminzmin_ipatch = zmin_index[xmin_ipatch];
+            if (xminzmin_ipatch >= 0) {
+                for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                            field[ipatch][INDEX3D(ixg, iyg, izg)] += field[xminzmin_ipatch][INDEX3D(nx+ixg, iyg, nz+izg)];
+                            field[xminzmin_ipatch][INDEX3D(nx+ixg, iyg, nz+izg)] = 0.0;
+                        }
+                    }
+                }
+            }
+
+            // Handle x-min z-max edge
+            npy_intp xminzmax_ipatch = zmax_index[xmin_ipatch];
+            if (xminzmax_ipatch >= 0) {
+                for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                            field[ipatch][INDEX3D(ixg, iyg, nz-ng+izg)] += field[xminzmax_ipatch][INDEX3D(nx+ixg, iyg, -izg)];
+                            field[xminzmax_ipatch][INDEX3D(nx+ixg, iyg, -izg)] = 0.0;
+                        }
+                    }
+                }
+            }
 
         // Corner synchronization (3D)
-        // Implementation would need full 3D neighbor logic similar to 2D but extended
-        // This is simplified placeholder showing the pattern
         if (xmin_ipatch >= 0 && ymin_ipatch >= 0 && zmin_ipatch >= 0) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
