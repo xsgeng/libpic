@@ -431,53 +431,41 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             // Handle xmax y-min edge
             npy_intp xmaxymin_ipatch = ymin_index[xmax_ipatch];
             if (xmaxymin_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        for (npy_intp iz = 0; iz < nz; iz++) {
-                            field[ipatch][INDEX3(nx-ng+ixg, iyg, iz)] += field[xmaxymin_ipatch][INDEX3(-ng+ixg, ny+iyg, iz)];
-                            field[xmaxymin_ipatch][INDEX3(-ng+ixg, ny+iyg, iz)] = 0.0;
-                        }
-                    }
-                }
+                SYNC_BOUNDARY_3D(xmaxymin_ipatch,
+                    nx-ng, -ng, ng,
+                    0, ny, ng,
+                    0, 0, nz
+                )
             }
             
             // Handle xmax y-max edge
             npy_intp xmaxymax_ipatch = ymax_index[xmax_ipatch];
             if (xmaxymax_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        for (npy_intp iz = 0; iz < nz; iz++) {
-                            field[ipatch][INDEX3(nx-ng+ixg, ny-ng+iyg, iz)] += field[xmaxymax_ipatch][INDEX3(-ng+ixg, -ng+iyg, iz)];
-                            field[xmaxymax_ipatch][INDEX3(-ng+ixg, -ng+iyg, iz)] = 0.0;
-                        }
-                    }
-                }
+                SYNC_BOUNDARY_3D(xmaxymax_ipatch,
+                    nx-ng, -ng, ng,
+                    ny-ng, -ng, ng,
+                    0, 0, nz
+                )
             }
 
             // Handle xmax z-min edge
             npy_intp xmaxzmin_ipatch = zmin_index[xmax_ipatch];
             if (xmaxzmin_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iy = 0; iy < ny; iy++) {
-                        for (npy_intp izg = 0; izg < ng; izg++) {
-                            field[ipatch][INDEX3(nx-ng+ixg, iy, izg)] += field[xmaxzmin_ipatch][INDEX3(-ng+ixg, iy, nz+izg)];
-                            field[xmaxzmin_ipatch][INDEX3(-ng+ixg, iy, nz+izg)] = 0.0;
-                        }
-                    }
-                }
+                SYNC_BOUNDARY_3D(xmaxzmin_ipatch,
+                    nx-ng, -ng, ng,
+                    0, 0, ny,
+                    0, nz, ng
+                )
             }
 
             // Handle xmax z-max edge
             npy_intp xmaxzmax_ipatch = zmax_index[xmax_ipatch];
             if (xmaxzmax_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iy = 0; iy < ny; iy++) {
-                        for (npy_intp izg = 0; izg < ng; izg++) {
-                            field[ipatch][INDEX3(nx-ng+ixg, iy, nz-ng+izg)] += field[xmaxzmax_ipatch][INDEX3(-ng+ixg, iy, -ng+izg)];
-                            field[xmaxzmax_ipatch][INDEX3(-ng+ixg, iy, -ng+izg)] = 0.0;
-                        }
-                    }
-                }
+                SYNC_BOUNDARY_3D(xmaxzmax_ipatch,
+                    nx-ng, -ng, ng,
+                    0, 0, ny,
+                    nz-ng, -ng, ng
+                )
             }
         }
 
