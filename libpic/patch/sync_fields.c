@@ -555,6 +555,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         }
 
         // Corner synchronization (3D)
+        // xmin ymin zmin
         if (xmin_ipatch >= 0 && ymin_index[xmin_ipatch] >= 0 && zmin_index[ymin_index[xmin_ipatch]] >= 0) {
             npy_intp xminyminzmin_ipatch = zmin_index[ymin_index[xmin_ipatch]];
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
@@ -566,7 +567,97 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
                 }
             }
         }
-        // rest 7 corners AI!
+
+        // xmin ymin zmax
+        if (xmin_ipatch >= 0 && ymin_index[xmin_ipatch] >= 0 && zmax_index[ymin_index[xmin_ipatch]] >= 0) {
+            npy_intp xminyminzmax_ipatch = zmax_index[ymin_index[xmin_ipatch]];
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3(ixg, iyg, nz-ng+izg)] += field[xminyminzmax_ipatch][INDEX3(nx+ixg, ny+iyg, -izg)];
+                        field[xminyminzmax_ipatch][INDEX3(nx+ixg, ny+iyg, -izg)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // xmin ymax zmin
+        if (xmin_ipatch >= 0 && ymax_index[xmin_ipatch] >= 0 && zmin_index[ymax_index[xmin_ipatch]] >= 0) {
+            npy_intp xminymaxzmin_ipatch = zmin_index[ymax_index[xmin_ipatch]];
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3(ixg, ny-ng+iyg, izg)] += field[xminymaxzmin_ipatch][INDEX3(nx+ixg, -iyg, nz+izg)];
+                        field[xminymaxzmin_ipatch][INDEX3(nx+ixg, -iyg, nz+izg)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // xmin ymax zmax
+        if (xmin_ipatch >= 0 && ymax_index[xmin_ipatch] >= 0 && zmax_index[ymax_index[xmin_ipatch]] >= 0) {
+            npy_intp xminymaxzmax_ipatch = zmax_index[ymax_index[xmin_ipatch]];
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3(ixg, ny-ng+iyg, nz-ng+izg)] += field[xminymaxzmax_ipatch][INDEX3(nx+ixg, -iyg, -izg)];
+                        field[xminymaxzmax_ipatch][INDEX3(nx+ixg, -iyg, -izg)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // xmax ymin zmin
+        if (xmax_ipatch >= 0 && ymin_index[xmax_ipatch] >= 0 && zmin_index[ymin_index[xmax_ipatch]] >= 0) {
+            npy_intp xmaxyminzmin_ipatch = zmin_index[ymin_index[xmax_ipatch]];
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3(nx-ng+ixg, iyg, izg)] += field[xmaxyminzmin_ipatch][INDEX3(-ixg, ny+iyg, nz+izg)];
+                        field[xmaxyminzmin_ipatch][INDEX3(-ixg, ny+iyg, nz+izg)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // xmax ymin zmax
+        if (xmax_ipatch >= 0 && ymin_index[xmax_ipatch] >= 0 && zmax_index[ymin_index[xmax_ipatch]] >= 0) {
+            npy_intp xmaxyminzmax_ipatch = zmax_index[ymin_index[xmax_ipatch]];
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3(nx-ng+ixg, iyg, nz-ng+izg)] += field[xmaxyminzmax_ipatch][INDEX3(-ixg, ny+iyg, -izg)];
+                        field[xmaxyminzmax_ipatch][INDEX3(-ixg, ny+iyg, -izg)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // xmax ymax zmin
+        if (xmax_ipatch >= 0 && ymax_index[xmax_ipatch] >= 0 && zmin_index[ymax_index[xmax_ipatch]] >= 0) {
+            npy_intp xmaxymaxzmin_ipatch = zmin_index[ymax_index[xmax_ipatch]];
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3(nx-ng+ixg, ny-ng+iyg, izg)] += field[xmaxymaxzmin_ipatch][INDEX3(-ixg, -iyg, nz+izg)];
+                        field[xmaxymaxzmin_ipatch][INDEX3(-ixg, -iyg, nz+izg)] = 0.0;
+                    }
+                }
+            }
+        }
+
+        // xmax ymax zmax
+        if (xmax_ipatch >= 0 && ymax_index[xmax_ipatch] >= 0 && zmax_index[ymax_index[xmax_ipatch]] >= 0) {
+            npy_intp xmaxymaxzmax_ipatch = zmax_index[ymax_index[xmax_ipatch]];
+            for (npy_intp ixg = 0; ixg < ng; ixg++) {
+                for (npy_intp iyg = 0; iyg < ng; iyg++) {
+                    for (npy_intp izg = 0; izg < ng; izg++) {
+                        field[ipatch][INDEX3(nx-ng+ixg, ny-ng+iyg, nz-ng+izg)] += field[xmaxymaxzmax_ipatch][INDEX3(-ixg, -iyg, -izg)];
+                        field[xmaxymaxzmax_ipatch][INDEX3(-ixg, -iyg, -izg)] = 0.0;
+                    }
+                }
+            }
+        }
 
     }
     Py_END_ALLOW_THREADS
