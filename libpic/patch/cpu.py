@@ -129,7 +129,7 @@ def fill_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc
             for y_grid in yaxis:
                 dens = density_func(x_grid, y_grid)
                 if dens > dens_min:
-                    x[ipart:ipart+ppc] = np.random.uniform(-dx/2, dx/2) + x_grid
-                    y[ipart:ipart+ppc] = np.random.uniform(-dy/2, dy/2) + y_grid
+                    x[ipart:ipart+ppc] = np.random.uniform(-dx/2, dx/2, ppc) + x_grid
+                    y[ipart:ipart+ppc] = np.random.uniform(-dy/2, dy/2, ppc) + y_grid
                     w[ipart:ipart+ppc] = dens*dx*dy / ppc
                     ipart += ppc
