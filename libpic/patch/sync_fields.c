@@ -52,8 +52,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
         if (xmin_ipatch >= 0) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
-                    field[ipatch][INDEX(ixg, iy)] += field[xmin_ipatch][INDEX(nx+ixg, iy)];
-                    field[xmin_ipatch][INDEX(nx+ixg, iy)] = 0.0;
+                    field[ipatch][INDEX2(ixg, iy)] += field[xmin_ipatch][INDEX2(nx+ixg, iy)];
+                    field[xmin_ipatch][INDEX2(nx+ixg, iy)] = 0.0;
                 }
             }
         }
@@ -61,8 +61,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
         if (xmax_ipatch >= 0) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
-                    field[ipatch][INDEX(nx-ng+ixg, iy)] += field[xmax_ipatch][INDEX(-ixg, iy)];
-                    field[xmax_ipatch][INDEX(-ixg, iy)] = 0.0;
+                    field[ipatch][INDEX2(nx-ng+ixg, iy)] += field[xmax_ipatch][INDEX2(-ixg, iy)];
+                    field[xmax_ipatch][INDEX2(-ixg, iy)] = 0.0;
                 }
             }
         }
@@ -71,8 +71,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
         if (ymin_ipatch >= 0) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                    field[ipatch][INDEX(ix, iyg)] += field[ymin_ipatch][INDEX(ix, ny+iyg)];
-                    field[ymin_ipatch][INDEX(ix, ny+iyg)] = 0.0;
+                    field[ipatch][INDEX2(ix, iyg)] += field[ymin_ipatch][INDEX2(ix, ny+iyg)];
+                    field[ymin_ipatch][INDEX2(ix, ny+iyg)] = 0.0;
                 }
             }
         }
@@ -80,8 +80,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
         if (ymax_ipatch >= 0) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                    field[ipatch][INDEX(ix, ny-ng+iyg)] += field[ymax_ipatch][INDEX(ix, -iyg)];
-                    field[ymax_ipatch][INDEX(ix, -iyg)] = 0.0;
+                    field[ipatch][INDEX2(ix, ny-ng+iyg)] += field[ymax_ipatch][INDEX2(ix, -iyg)];
+                    field[ymax_ipatch][INDEX2(ix, -iyg)] = 0.0;
                 }
             }
         }
@@ -92,8 +92,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
             if (xminymin_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(ixg, iyg)] += field[xminymin_ipatch][INDEX(nx+ixg, ny+iyg)];
-                        field[xminymin_ipatch][INDEX(nx+ixg, ny+iyg)] = 0.0;
+                        field[ipatch][INDEX2(ixg, iyg)] += field[xminymin_ipatch][INDEX2(nx+ixg, ny+iyg)];
+                        field[xminymin_ipatch][INDEX2(nx+ixg, ny+iyg)] = 0.0;
                     }
                 }
             }
@@ -102,8 +102,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
             if (xmaxymin_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(nx-ng+ixg, iyg)] += field[xmaxymin_ipatch][INDEX(-ixg, ny+iyg)];
-                        field[xmaxymin_ipatch][INDEX(-ixg, ny+iyg)] = 0.0;
+                        field[ipatch][INDEX2(nx-ng+ixg, iyg)] += field[xmaxymin_ipatch][INDEX2(-ixg, ny+iyg)];
+                        field[xmaxymin_ipatch][INDEX2(-ixg, ny+iyg)] = 0.0;
                     }
                 }
             }
@@ -114,8 +114,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
             if (xminymax_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(ixg, ny-ng+iyg)] += field[xminymax_ipatch][INDEX(nx+ixg, -iyg)];
-                        field[xminymax_ipatch][INDEX(nx+ixg, -iyg)] = 0.0;
+                        field[ipatch][INDEX2(ixg, ny-ng+iyg)] += field[xminymax_ipatch][INDEX2(nx+ixg, -iyg)];
+                        field[xminymax_ipatch][INDEX2(nx+ixg, -iyg)] = 0.0;
                     }
                 }
             }
@@ -124,8 +124,8 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
             if (xmaxymax_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(nx-ng+ixg, ny-ng+iyg)] += field[xmaxymax_ipatch][INDEX(-ixg, -iyg)];
-                        field[xmaxymax_ipatch][INDEX(-ixg, -iyg)] = 0.0;
+                        field[ipatch][INDEX2(nx-ng+ixg, ny-ng+iyg)] += field[xmaxymax_ipatch][INDEX2(-ixg, -iyg)];
+                        field[xmaxymax_ipatch][INDEX2(-ixg, -iyg)] = 0.0;
                     }
                 }
             }
@@ -192,7 +192,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
         if (xmin_ipatch >= 0) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
-                    field[ipatch][INDEX(-ixg-1, iy)] = field[xmin_ipatch][INDEX(nx-ng+ixg, iy)];
+                    field[ipatch][INDEX2(-ixg-1, iy)] = field[xmin_ipatch][INDEX2(nx-ng+ixg, iy)];
                 }
             }
         }
@@ -200,7 +200,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
         if (xmax_ipatch >= 0) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
-                    field[ipatch][INDEX(nx+ixg, iy)] = field[xmax_ipatch][INDEX(ixg, iy)];
+                    field[ipatch][INDEX2(nx+ixg, iy)] = field[xmax_ipatch][INDEX2(ixg, iy)];
                 }
             }
         }
@@ -209,7 +209,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
         if (ymin_ipatch >= 0) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                    field[ipatch][INDEX(ix, -iyg-1)] = field[ymin_ipatch][INDEX(ix, ny-ng+iyg)];
+                    field[ipatch][INDEX2(ix, -iyg-1)] = field[ymin_ipatch][INDEX2(ix, ny-ng+iyg)];
                 }
             }
         }
@@ -217,7 +217,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
         if (ymax_ipatch >= 0) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                    field[ipatch][INDEX(ix, ny+iyg)] = field[ymax_ipatch][INDEX(ix, iyg)];
+                    field[ipatch][INDEX2(ix, ny+iyg)] = field[ymax_ipatch][INDEX2(ix, iyg)];
                 }
             }
         }
@@ -228,7 +228,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
             if (xminymin_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(-ixg-1, -iyg-1)] = field[xminymin_ipatch][INDEX(nx-ng+ixg, ny-ng+iyg)];
+                        field[ipatch][INDEX2(-ixg-1, -iyg-1)] = field[xminymin_ipatch][INDEX2(nx-ng+ixg, ny-ng+iyg)];
                     }
                 }
             }
@@ -237,7 +237,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
             if (xmaxymin_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(nx+ixg, -iyg-1)] = field[xmaxymin_ipatch][INDEX(ixg, ny-ng+iyg)];
+                        field[ipatch][INDEX2(nx+ixg, -iyg-1)] = field[xmaxymin_ipatch][INDEX2(ixg, ny-ng+iyg)];
                     }
                 }
             }
@@ -248,7 +248,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
             if (xminymax_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(-ixg-1, ny+iyg)] = field[xminymax_ipatch][INDEX(nx-ng+ixg, iyg)];
+                        field[ipatch][INDEX2(-ixg-1, ny+iyg)] = field[xminymax_ipatch][INDEX2(nx-ng+ixg, iyg)];
                     }
                 }
             }
@@ -257,7 +257,7 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
             if (xmaxymax_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX(nx+ixg, ny+iyg)] = field[xmaxymax_ipatch][INDEX(ixg, iyg)];
+                        field[ipatch][INDEX2(nx+ixg, ny+iyg)] = field[xmaxymax_ipatch][INDEX2(ixg, iyg)];
                     }
                 }
             }
@@ -325,8 +325,8 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(ixg, iy, iz)] += field[xmin_ipatch][INDEX3D(nx+ixg, iy, iz)];
-                        field[xmin_ipatch][INDEX3D(nx+ixg, iy, iz)] = 0.0;
+                        field[ipatch][INDEX3(ixg, iy, iz)] += field[xmin_ipatch][INDEX3(nx+ixg, iy, iz)];
+                        field[xmin_ipatch][INDEX3(nx+ixg, iy, iz)] = 0.0;
                     }
                 }
             }
@@ -336,8 +336,8 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(nx-ng+ixg, iy, iz)] += field[xmax_ipatch][INDEX3D(-ixg, iy, iz)];
-                        field[xmax_ipatch][INDEX3D(-ixg, iy, iz)] = 0.0;
+                        field[ipatch][INDEX3(nx-ng+ixg, iy, iz)] += field[xmax_ipatch][INDEX3(-ixg, iy, iz)];
+                        field[xmax_ipatch][INDEX3(-ixg, iy, iz)] = 0.0;
                     }
                 }
             }
@@ -348,8 +348,8 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(ix, iyg, iz)] += field[ymin_ipatch][INDEX3D(ix, ny+iyg, iz)];
-                        field[ymin_ipatch][INDEX3D(ix, ny+iyg, iz)] = 0.0;
+                        field[ipatch][INDEX3(ix, iyg, iz)] += field[ymin_ipatch][INDEX3(ix, ny+iyg, iz)];
+                        field[ymin_ipatch][INDEX3(ix, ny+iyg, iz)] = 0.0;
                     }
                 }
             }
@@ -359,8 +359,8 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(ix, ny-ng+iyg, iz)] += field[ymax_ipatch][INDEX3D(ix, -iyg, iz)];
-                        field[ymax_ipatch][INDEX3D(ix, -iyg, iz)] = 0.0;
+                        field[ipatch][INDEX3(ix, ny-ng+iyg, iz)] += field[ymax_ipatch][INDEX3(ix, -iyg, iz)];
+                        field[ymax_ipatch][INDEX3(ix, -iyg, iz)] = 0.0;
                     }
                 }
             }
@@ -371,8 +371,8 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp izg = 0; izg < ng; izg++) {
-                        field[ipatch][INDEX3D(ix, iy, izg)] += field[zmin_ipatch][INDEX3D(ix, iy, nz+izg)];
-                        field[zmin_ipatch][INDEX3D(ix, iy, nz+izg)] = 0.0;
+                        field[ipatch][INDEX3(ix, iy, izg)] += field[zmin_ipatch][INDEX3(ix, iy, nz+izg)];
+                        field[zmin_ipatch][INDEX3(ix, iy, nz+izg)] = 0.0;
                     }
                 }
             }
@@ -382,8 +382,8 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp izg = 0; izg < ng; izg++) {
-                        field[ipatch][INDEX3D(ix, iy, nz-ng+izg)] += field[zmax_ipatch][INDEX3D(ix, iy, -izg)];
-                        field[zmax_ipatch][INDEX3D(ix, iy, -izg)] = 0.0;
+                        field[ipatch][INDEX3(ix, iy, nz-ng+izg)] += field[zmax_ipatch][INDEX3(ix, iy, -izg)];
+                        field[zmax_ipatch][INDEX3(ix, iy, -izg)] = 0.0;
                     }
                 }
             }
@@ -391,14 +391,15 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
 
         // Edge synchronization (3D)
         if (xmin_ipatch >= 0) {
+            // Handle x-min y-min edge
             npy_intp xminymin_ipatch = xmin_index[ymin_ipatch];
             if (xminymin_ipatch >= 0) {
                 // Handle x-min y-min edge
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        for (npy_intp izg = 0; izg < ng; izg++) {
-                            field[ipatch][INDEX3D(ixg, iyg, izg)] += field[xminymin_ipatch][INDEX3D(nx+ixg, ny+iyg, izg)];
-                            field[xminymin_ipatch][INDEX3D(nx+ixg, ny+iyg, izg)] = 0.0;
+                        for (npy_intp iz = 0; iz < nz; iz++) {
+                            field[ipatch][INDEX3(ixg, iyg, iz)] += field[xminymin_ipatch][INDEX3(nx+ixg, ny+iyg, iz)];
+                            field[xminymin_ipatch][INDEX3(nx+ixg, ny+iyg, iz)] = 0.0;
                         }
                     }
                 }
@@ -409,51 +410,47 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             if (xminymax_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
                     for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        for (npy_intp izg = 0; izg < ng; izg++) {
-                            field[ipatch][INDEX3D(ixg, ny-ng+iyg, izg)] += field[xminymax_ipatch][INDEX3D(nx+ixg, -iyg, izg)];
-                            field[xminymax_ipatch][INDEX3D(nx+ixg, -iyg, izg)] = 0.0;
+                        for (npy_intp iz = 0; iz < nz; iz++) {
+                            field[ipatch][INDEX3(ixg, ny-ng+iyg, iz)] += field[xminymax_ipatch][INDEX3(nx+ixg, -iyg, iz)];
+                            field[xminymax_ipatch][INDEX3(nx+ixg, -iyg, iz)] = 0.0;
                         }
                     }
                 }
             }
 
             // Handle x-min z-min edge
-            npy_intp xminzmin_ipatch = zmin_index[xmin_ipatch];
+            npy_intp xminzmin_ipatch = xmin_index[zmin_ipatch];
             if (xminzmin_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp izg = 0; izg < ng; izg++) {
-                        for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                            field[ipatch][INDEX3D(ixg, iyg, izg)] += field[xminzmin_ipatch][INDEX3D(nx+ixg, iyg, nz+izg)];
-                            field[xminzmin_ipatch][INDEX3D(nx+ixg, iyg, nz+izg)] = 0.0;
+                    for (npy_intp iy = 0; iy < ny; iy++) {
+                        for (npy_intp izg = 0; izg < ng; izg++) {
+                            field[ipatch][INDEX3(ixg, iy, izg)] += field[xminzmin_ipatch][INDEX3(nx+ixg, iy, nz+izg)];
+                            field[xminzmin_ipatch][INDEX3(nx+ixg, iy, nz+izg)] = 0.0;
                         }
                     }
                 }
             }
 
             // Handle x-min z-max edge
-            npy_intp xminzmax_ipatch = zmax_index[xmin_ipatch];
+            npy_intp xminzmax_ipatch = xmin_index[zmax_ipatch];
             if (xminzmax_ipatch >= 0) {
                 for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp izg = 0; izg < ng; izg++) {
-                        for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                            field[ipatch][INDEX3D(ixg, iyg, nz-ng+izg)] += field[xminzmax_ipatch][INDEX3D(nx+ixg, iyg, -izg)];
-                            field[xminzmax_ipatch][INDEX3D(nx+ixg, iyg, -izg)] = 0.0;
+                    for (npy_intp iy = 0; iy < ny; iy++) {
+                        for (npy_intp izg = 0; izg < ng; izg++) {
+                            field[ipatch][INDEX3(ixg, iy, nz-ng+izg)] += field[xminzmax_ipatch][INDEX3(nx+ixg, iy, -izg)];
+                            field[xminzmax_ipatch][INDEX3(nx+ixg, iy, -izg)] = 0.0;
                         }
                     }
                 }
             }
+        }
+
+        if (xmax_ipatch >= 0) {
+            // xmax edges, AI!
+        }
 
         // Corner synchronization (3D)
-        if (xmin_ipatch >= 0 && ymin_ipatch >= 0 && zmin_ipatch >= 0) {
-            for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                    for (npy_intp izg = 0; izg < ng; izg++) {
-                        field[ipatch][INDEX3D(ixg, iyg, izg)] += field[xmin_ipatch][INDEX3D(nx+ixg, ny+iyg, nz+izg)];
-                        field[xmin_ipatch][INDEX3D(nx+ixg, ny+iyg, nz+izg)] = 0.0;
-                    }
-                }
-            }
-        }
+        
     }
     Py_END_ALLOW_THREADS
 
@@ -519,7 +516,7 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(-ixg-1, iy, iz)] = field[xmin_ipatch][INDEX3D(nx-ng+ixg, iy, iz)];
+                        field[ipatch][INDEX3(-ixg-1, iy, iz)] = field[xmin_ipatch][INDEX3(nx-ng+ixg, iy, iz)];
                     }
                 }
             }
@@ -529,7 +526,7 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(nx+ixg, iy, iz)] = field[xmax_ipatch][INDEX3D(ixg, iy, iz)];
+                        field[ipatch][INDEX3(nx+ixg, iy, iz)] = field[xmax_ipatch][INDEX3(ixg, iy, iz)];
                     }
                 }
             }
@@ -540,7 +537,7 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(ix, -iyg-1, iz)] = field[ymin_ipatch][INDEX3D(ix, ny-ng+iyg, iz)];
+                        field[ipatch][INDEX3(ix, -iyg-1, iz)] = field[ymin_ipatch][INDEX3(ix, ny-ng+iyg, iz)];
                     }
                 }
             }
@@ -550,7 +547,7 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
                     for (npy_intp iz = 0; iz < nz; iz++) {
-                        field[ipatch][INDEX3D(ix, ny+iyg, iz)] = field[ymax_ipatch][INDEX3D(ix, iyg, iz)];
+                        field[ipatch][INDEX3(ix, ny+iyg, iz)] = field[ymax_ipatch][INDEX3(ix, iyg, iz)];
                     }
                 }
             }
@@ -561,7 +558,7 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp izg = 0; izg < ng; izg++) {
-                        field[ipatch][INDEX3D(ix, iy, -izg-1)] = field[zmin_ipatch][INDEX3D(ix, iy, nz-ng+izg)];
+                        field[ipatch][INDEX3(ix, iy, -izg-1)] = field[zmin_ipatch][INDEX3(ix, iy, nz-ng+izg)];
                     }
                 }
             }
@@ -571,7 +568,7 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
             for (npy_intp ix = 0; ix < nx; ix++) {
                 for (npy_intp iy = 0; iy < ny; iy++) {
                     for (npy_intp izg = 0; izg < ng; izg++) {
-                        field[ipatch][INDEX3D(ix, iy, nz+izg)] = field[zmax_ipatch][INDEX3D(ix, iy, izg)];
+                        field[ipatch][INDEX3(ix, iy, nz+izg)] = field[zmax_ipatch][INDEX3(ix, iy, izg)];
                     }
                 }
             }
@@ -582,7 +579,7 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
             for (npy_intp ixg = 0; ixg < ng; ixg++) {
                 for (npy_intp iyg = 0; iyg < ng; iyg++) {
                     for (npy_intp izg = 0; izg < ng; izg++) {
-                        field[ipatch][INDEX3D(-ixg-1, -iyg-1, -izg-1)] = field[xmin_ipatch][INDEX3D(nx-ng+ixg, ny-ng+iyg, nz-ng+izg)];
+                        field[ipatch][INDEX3(-ixg-1, -iyg-1, -izg-1)] = field[xmin_ipatch][INDEX3(nx-ng+ixg, ny-ng+iyg, nz-ng+izg)];
                     }
                 }
             }
