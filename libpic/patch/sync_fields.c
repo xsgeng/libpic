@@ -389,6 +389,13 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             }
         }
 
+        // Edge synchronization (3D)
+        if (xmin_ipatch >= 0) {
+            npy_intp xminymin_ipatch = xmin_index[ymin_ipatch];
+            if (xminymin_ipatch >= 0) {
+                // complete the rest AI!
+
+
         // Corner synchronization (3D)
         // Implementation would need full 3D neighbor logic similar to 2D but extended
         // This is simplified placeholder showing the pattern
