@@ -12,6 +12,10 @@
     ((j) >= 0 ? (j) : (j) + (ny)) + \
     ((i) >= 0 ? (i) : (i) + (nx)) * (ny)
 
+#define INDEX3(i, j, k) \
+    ((k) >= 0 ? (k) : (k) + (nz)) + \
+    ((j) >= 0 ? (j) : (j) + (ny)) * (nz) + \
+    ((i) >= 0 ? (i) : (i) + (nx)) * (ny) * (nz)
 
 /*
     Get attribute from a list of objects.
