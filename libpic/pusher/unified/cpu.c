@@ -67,15 +67,15 @@ inline static void get_gx(double delta, double* gx) {
 
 inline static double interp_field(double* field, double* fac1, double* fac2, npy_intp ix, npy_intp iy, npy_intp nx, npy_intp ny) {
     double field_part = 
-          fac2[0] * (fac1[0] * field[INDEX(ix-1, iy-1)] 
-        +            fac1[1] * field[INDEX(ix,   iy-1)] 
-        +            fac1[2] * field[INDEX(ix+1, iy-1)])
-        + fac2[1] * (fac1[0] * field[INDEX(ix-1, iy  )] 
-        +            fac1[1] * field[INDEX(ix,   iy  )] 
-        +            fac1[2] * field[INDEX(ix+1, iy  )]) 
-        + fac2[2] * (fac1[0] * field[INDEX(ix-1, iy+1)] 
-        +            fac1[1] * field[INDEX(ix,   iy+1)] 
-        +            fac1[2] * field[INDEX(ix+1, iy+1)]);
+          fac2[0] * (fac1[0] * field[INDEX2(ix-1, iy-1)] 
+        +            fac1[1] * field[INDEX2(ix,   iy-1)] 
+        +            fac1[2] * field[INDEX2(ix+1, iy-1)])
+        + fac2[1] * (fac1[0] * field[INDEX2(ix-1, iy  )] 
+        +            fac1[1] * field[INDEX2(ix,   iy  )] 
+        +            fac1[2] * field[INDEX2(ix+1, iy  )]) 
+        + fac2[2] * (fac1[0] * field[INDEX2(ix-1, iy+1)] 
+        +            fac1[1] * field[INDEX2(ix,   iy+1)] 
+        +            fac1[2] * field[INDEX2(ix+1, iy+1)]);
     return field_part;
 }
 
@@ -208,10 +208,10 @@ inline static void current_deposit_2d(
             jx_buff -= factor * dx * wx;
             jy_buff[i] -= factor * dy * wy;
 
-            jx[INDEX(ix, iy)] += jx_buff;
-            jy[INDEX(ix, iy)] += jy_buff[i];
-            jz[INDEX(ix, iy)] += factor * dt * wz * vz;
-            rho[INDEX(ix, iy)] += charge_density * S1x[i] * S1y[j];
+            jx[INDEX2(ix, iy)] += jx_buff;
+            jy[INDEX2(ix, iy)] += jy_buff[i];
+            jz[INDEX2(ix, iy)] += factor * dt * wz * vz;
+            rho[INDEX2(ix, iy)] += charge_density * S1x[i] * S1y[j];
         }
     }
 }
