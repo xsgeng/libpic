@@ -4,14 +4,11 @@
 #include "../utils/cutils.h"
 
 static PyObject* sync_currents(PyObject* self, PyObject* args) {
-    PyObject *fields_list;
-    PyArrayObject *xmin_index_arr, *xmax_index_arr, *ymin_index_arr, *ymax_index_arr;
+    PyObject *fields_list, *patches_list;
     npy_intp npatches, nx, ny, ng;
 
-    if (!PyArg_ParseTuple(args, "OOOOOnnnn", 
-        &fields_list, 
-        &xmin_index_arr, &xmax_index_arr,
-        &ymin_index_arr, &ymax_index_arr,
+    if (!PyArg_ParseTuple(args, "OOnnnn", 
+        &fields_list, &patches_list,
         &npatches, &nx, &ny, &ng)) {
         return NULL;
     }
