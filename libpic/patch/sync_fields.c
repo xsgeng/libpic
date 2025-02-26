@@ -17,10 +17,10 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
     }
 
     // Get field data pointers
-    double **jx = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jx");
-    double **jy = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jy"); 
-    double **jz = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jz");
-    double **rho = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "rho");
+    double **jx = get_attr_array_double(fields_list, npatches, "jx");
+    double **jy = get_attr_array_double(fields_list, npatches, "jy"); 
+    double **jz = get_attr_array_double(fields_list, npatches, "jz");
+    double **rho = get_attr_array_double(fields_list, npatches, "rho");
 
     // Get boundary index arrays
     const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
@@ -155,12 +155,12 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
     }
 
     // Get field data pointers for E and B fields
-    double **ex = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ex");
-    double **ey = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ey");
-    double **ez = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ez");
-    double **bx = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bx");
-    double **by = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "by");
-    double **bz = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bz");
+    double **ex = get_attr_array_double(fields_list, npatches, "ex");
+    double **ey = get_attr_array_double(fields_list, npatches, "ey");
+    double **ez = get_attr_array_double(fields_list, npatches, "ez");
+    double **bx = get_attr_array_double(fields_list, npatches, "bx");
+    double **by = get_attr_array_double(fields_list, npatches, "by");
+    double **bz = get_attr_array_double(fields_list, npatches, "bz");
 
     const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
     const npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);
@@ -274,30 +274,50 @@ static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
 }
 
 static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
-    PyObject *fields_list;
-    PyArrayObject *xmin_index_arr, *xmax_index_arr, *ymin_index_arr, *ymax_index_arr, *zmin_index_arr, *zmax_index_arr;
+    PyObject *fields_list, *patches_list;
     npy_intp npatches, nx, ny, nz, ng;
 
-    if (!PyArg_ParseTuple(args, "OOOOOOnnnnn", 
-        &fields_list, 
-        &xmin_index_arr, &xmax_index_arr,
-        &ymin_index_arr, &ymax_index_arr,
-        &zmin_index_arr, &zmax_index_arr,
+    if (!PyArg_ParseTuple(args, "OOnnnnn", 
+        &fields_list, &patches_list,
         &npatches, &nx, &ny, &nz, &ng)) {
         return NULL;
     }
 
-    double **jx = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jx");
-    double **jy = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jy"); 
-    double **jz = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jz");
-    double **rho = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "rho");
+    double **jx = get_attr_array_double(fields_list, npatches, "jx");
+    double **jy = get_attr_array_double(fields_list, npatches, "jy"); 
+    double **jz = get_attr_array_double(fields_list, npatches, "jz");
+    double **rho = get_attr_array_double(fields_list, npatches, "rho");
 
-    const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
-    const npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);
-    const npy_intp* ymin_index = (npy_intp*)PyArray_DATA(ymin_index_arr);
-    const npy_intp* ymax_index = (npy_intp*)PyArray_DATA(ymax_index_arr);
-    const npy_intp* zmin_index = (npy_intp*)PyArray_DATA(zmin_index_arr);
-    const npy_intp* zmax_index = (npy_intp*)PyArray_DATA(zmax_index_arr);
+    // faces
+    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_index");
+    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_index");
+    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_index");
+    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_index");
+    npy_intp *zmin_index = get_attr_int(patches_list, npatches, "zmin_index");
+    npy_intp *zmax_index = get_attr_int(patches_list, npatches, "zmax_index");
+    // edges
+    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_index");
+    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_index");
+    npy_intp *xminzmin_index = get_attr_int(patches_list, npatches, "xminymax_index");
+    npy_intp *xminzmax_index = get_attr_int(patches_list, npatches, "xminymax_index");
+    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_index");
+    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_index");
+    npy_intp *xmaxzmin_index = get_attr_int(patches_list, npatches, "xmaxzmin_index");
+    npy_intp *xmaxzmax_index = get_attr_int(patches_list, npatches, "xmaxzmax_index");
+    npy_intp *yminzmin_index = get_attr_int(patches_list, npatches, "yminzmin_index");
+    npy_intp *yminzmax_index = get_attr_int(patches_list, npatches, "yminzmax_index");
+    npy_intp *ymaxzmin_index = get_attr_int(patches_list, npatches, "ymaxzmin_index");
+    npy_intp *ymaxzmax_index = get_attr_int(patches_list, npatches, "ymaxzmax_index");
+    // corners
+    npy_intp *xminyminzmin_index = get_attr_int(patches_list, npatches, "xminyminzmin_index");
+    npy_intp *xminyminzmax_index = get_attr_int(patches_list, npatches, "xminyminzmax_index");
+    npy_intp *xminymaxzmin_index = get_attr_int(patches_list, npatches, "xminymaxzmin_index");
+    npy_intp *xminymaxzmax_index = get_attr_int(patches_list, npatches, "xminymaxzmax_index");
+    npy_intp *xmaxyminzmin_index = get_attr_int(patches_list, npatches, "xmaxyminzmin_index");
+    npy_intp *xmaxyminzmax_index = get_attr_int(patches_list, npatches, "xmaxyminzmax_index");
+    npy_intp *xmaxymaxzmin_index = get_attr_int(patches_list, npatches, "xmaxymaxzmin_index");
+    npy_intp *xmaxymaxzmax_index = get_attr_int(patches_list, npatches, "xmaxymaxzmax_index");
+
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
@@ -313,13 +333,6 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             case 3: field = rho; break;
         }
 
-        npy_intp xmin_ipatch = xmin_index[ipatch];
-        npy_intp xmax_ipatch = xmax_index[ipatch];
-        npy_intp ymin_ipatch = ymin_index[ipatch];
-        npy_intp ymax_ipatch = ymax_index[ipatch];
-        npy_intp zmin_ipatch = zmin_index[ipatch];
-        npy_intp zmax_ipatch = zmax_index[ipatch];
-
         #define SYNC_BOUNDARY_3D(src_patch, \
             ix_dst, ix_src, NX, \
             iy_dst, iy_src, NY, \
@@ -334,16 +347,16 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         }
 
         // X direction sync
-        if (xmin_ipatch >= 0) {
-            SYNC_BOUNDARY_3D(xmin_ipatch, 
+        if (xmin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xmin_index[ipatch], 
                 0, nx, ng, 
                 0, 0, ny, 
                 0, 0, nz
             )
         }
         
-        if (xmax_ipatch >= 0) {
-            SYNC_BOUNDARY_3D(xmax_ipatch, 
+        if (xmax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xmax_index[ipatch], 
                 nx-ng, -ng, ng, 
                 0, 0, ny, 
                 0, 0, nz
@@ -351,16 +364,16 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         }
 
         // Y direction sync
-        if (ymin_ipatch >= 0) {
-            SYNC_BOUNDARY_3D(ymin_ipatch, 
+        if (ymin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(ymin_index[ipatch], 
                 0, 0, nx, 
                 0, ny, ng, 
                 0, 0, nz
             )
         }
         
-        if (ymax_ipatch >= 0) {
-            SYNC_BOUNDARY_3D(ymax_ipatch, 
+        if (ymax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(ymax_index[ipatch], 
                 0, 0, nx, 
                 ny-ng, -ng, ng, 
                 0, 0, nz
@@ -368,16 +381,16 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         }
 
         // Z direction sync
-        if (zmin_ipatch >= 0) {
-            SYNC_BOUNDARY_3D(zmin_ipatch, 
+        if (zmin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(zmin_index[ipatch], 
                 0, 0, nx, 
                 0, 0, ny, 
                 0, nz, ng
             )
         }
         
-        if (zmax_ipatch >= 0) {
-            SYNC_BOUNDARY_3D(zmax_ipatch, 
+        if (zmax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(zmax_index[ipatch], 
                 0, 0, nx, 
                 0, 0, ny, 
                 nz-ng, -ng, ng
@@ -385,209 +398,161 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         }
 
         // Edge synchronization (3D)
-        if (xmin_ipatch >= 0) {
-            // Handle x-min y-min edge
-            npy_intp xminymin_ipatch = ymin_index[xmin_ipatch];
-            if (xminymin_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xminymin_ipatch, 
-                    0, nx, ng, 
-                    0, ny, ng, 
-                    0, 0, nz
-                )
-            }
-            
-            // Handle x-min y-max edge
-            npy_intp xminymax_ipatch = ymax_index[xmin_ipatch];
-            if (xminymax_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xminymax_ipatch, 
-                    0, nx, ng, 
-                    ny-ng, -ng, ng, 
-                    0, 0, nz
-                )
-            }
-
-            // Handle x-min z-min edge
-            npy_intp xminzmin_ipatch = zmin_index[xmin_ipatch];
-            if (xminzmin_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xminzmin_ipatch, 
-                    0, nx, ng, 
-                    0, 0, ny, 
-                    0, nz, ng
-                )
-            }
-
-            // Handle x-min z-max edge
-            npy_intp xminzmax_ipatch = zmax_index[xmin_ipatch];
-            if (xminzmax_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xminzmax_ipatch, 
-                    0, nx, ng, 
-                    0, 0, ny, 
-                    nz-ng, -ng, ng
-                )
-            }
+        if (xminymin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xminymin_index[ipatch], 
+                0, nx, ng, 
+                0, ny, ng, 
+                0, 0, nz
+            )
+        }
+        
+        if (xminymax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xminymax_index[ipatch], 
+                0, nx, ng, 
+                ny-ng, -ng, ng, 
+                0, 0, nz
+            )
         }
 
-        if (xmax_ipatch >= 0) {
-            // Handle xmax y-min edge
-            npy_intp xmaxymin_ipatch = ymin_index[xmax_ipatch];
-            if (xmaxymin_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xmaxymin_ipatch,
-                    nx-ng, -ng, ng,
-                    0, ny, ng,
-                    0, 0, nz
-                )
-            }
-            
-            // Handle xmax y-max edge
-            npy_intp xmaxymax_ipatch = ymax_index[xmax_ipatch];
-            if (xmaxymax_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xmaxymax_ipatch,
-                    nx-ng, -ng, ng,
-                    ny-ng, -ng, ng,
-                    0, 0, nz
-                )
-            }
-
-            // Handle xmax z-min edge
-            npy_intp xmaxzmin_ipatch = zmin_index[xmax_ipatch];
-            if (xmaxzmin_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xmaxzmin_ipatch,
-                    nx-ng, -ng, ng,
-                    0, 0, ny,
-                    0, nz, ng
-                )
-            }
-
-            // Handle xmax z-max edge
-            npy_intp xmaxzmax_ipatch = zmax_index[xmax_ipatch];
-            if (xmaxzmax_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(xmaxzmax_ipatch,
-                    nx-ng, -ng, ng,
-                    0, 0, ny,
-                    nz-ng, -ng, ng
-                )
-            }
+        if (xminzmin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xminzmin_index[ipatch], 
+                0, nx, ng, 
+                0, 0, ny, 
+                0, nz, ng
+            )
         }
 
-        if (ymin_ipatch >= 0) {
-            // Handle y-min z-min edge
-            npy_intp yminzmin_ipatch = zmin_index[ymin_ipatch];
-            if (yminzmin_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(yminzmin_ipatch,
-                    0, 0, nx,
-                    0, ny, ng,
-                    0, nz, ng
-                )
-            }
-
-            // Handle y-min z-max edge
-            npy_intp yminzmax_ipatch = zmax_index[ymin_ipatch];
-            if (yminzmax_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(yminzmax_ipatch,
-                    0, 0, nx,
-                    0, ny, ng,
-                    nz-ng, -ng, ng
-                )
-            }
+        if (xminzmax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xminzmax_index[ipatch], 
+                0, nx, ng, 
+                0, 0, ny, 
+                nz-ng, -ng, ng
+            )
         }
 
-        if (ymax_ipatch >= 0) {
-            // Handle y-max z-min edge
-            npy_intp ymaxzmin_ipatch = zmin_index[ymax_ipatch];
-            if (ymaxzmin_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(ymaxzmin_ipatch,
-                    0, 0, nx,
-                    ny-ng, -ng, ng,
-                    0, nz, ng
-                )
-            }
+        if (xmaxymin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xmaxymin_index[ipatch],
+                nx-ng, -ng, ng,
+                0, ny, ng,
+                0, 0, nz
+            )
+        }
+        
+        if (xmaxymax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xmaxymax_index[ipatch],
+                nx-ng, -ng, ng,
+                ny-ng, -ng, ng,
+                0, 0, nz
+            )
+        }
 
-            // Handle y-max z-max edge
-            npy_intp ymaxzmax_ipatch = zmax_index[ymax_ipatch];
-            if (ymaxzmax_ipatch >= 0) {
-                SYNC_BOUNDARY_3D(ymaxzmax_ipatch,
-                    0, 0, nx,
-                    ny-ng, -ng, ng,
-                    nz-ng, -ng, ng
-                )
-            }
+        if (xmaxzmin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xmaxzmin_index[ipatch],
+                nx-ng, -ng, ng,
+                0, 0, ny,
+                0, nz, ng
+            )
+        }
+
+        if (xmaxzmax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(xmaxzmax_index[ipatch],
+                nx-ng, -ng, ng,
+                0, 0, ny,
+                nz-ng, -ng, ng
+            )
+        }
+
+        if (yminzmin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(yminzmin_index[ipatch],
+                0, 0, nx,
+                0, ny, ng,
+                0, nz, ng
+            )
+        }
+
+        if (yminzmax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(yminzmax_index[ipatch],
+                0, 0, nx,
+                0, ny, ng,
+                nz-ng, -ng, ng
+            )
+        }
+
+        if (ymaxzmin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(ymaxzmin_index[ipatch],
+                0, 0, nx,
+                ny-ng, -ng, ng,
+                0, nz, ng
+            )
+        }
+
+        if (ymaxzmax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_3D(ymaxzmax_index[ipatch],
+                0, 0, nx,
+                ny-ng, -ng, ng,
+                nz-ng, -ng, ng
+            )
         }
 
         // Corner synchronization (3D)
-        // xmin ymin zmin
-        if (xmin_ipatch >= 0 && ymin_index[xmin_ipatch] >= 0 && zmin_index[ymin_index[xmin_ipatch]] >= 0) {
-            npy_intp xminyminzmin_ipatch = zmin_index[ymin_index[xmin_ipatch]];
-            SYNC_BOUNDARY_3D(xminyminzmin_ipatch,
+        if (xminyminzmin_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xminyminzmin_index[ipatch],
                 0, nx, ng,
                 0, ny, ng,
                 0, nz, ng
             )
         }
 
-        // xmin ymin zmax
-        if (xmin_ipatch >= 0 && ymin_index[xmin_ipatch] >= 0 && zmax_index[ymin_index[xmin_ipatch]] >= 0) {
-            npy_intp xminyminzmax_ipatch = zmax_index[ymin_index[xmin_ipatch]];
-            SYNC_BOUNDARY_3D(xminyminzmax_ipatch,
+        if (xminyminzmax_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xminyminzmax_index[ipatch],
                 0, nx, ng,
                 0, ny, ng,
                 nz-ng, -ng, ng
             )
         }
 
-        // xmin ymax zmin
-        if (xmin_ipatch >= 0 && ymax_index[xmin_ipatch] >= 0 && zmin_index[ymax_index[xmin_ipatch]] >= 0) {
-            npy_intp xminymaxzmin_ipatch = zmin_index[ymax_index[xmin_ipatch]];
-            SYNC_BOUNDARY_3D(xminymaxzmin_ipatch,
+        if (xminymaxzmin_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xminymaxzmin_index[ipatch],
                 0, nx, ng,
                 ny-ng, -ng, ng,
                 0, nz, ng
             )
         }
 
-        // xmin ymax zmax
-        if (xmin_ipatch >= 0 && ymax_index[xmin_ipatch] >= 0 && zmax_index[ymax_index[xmin_ipatch]] >= 0) {
-            npy_intp xminymaxzmax_ipatch = zmax_index[ymax_index[xmin_ipatch]];
-            SYNC_BOUNDARY_3D(xminymaxzmax_ipatch,
+        if (xminymaxzmax_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xminymaxzmax_index[ipatch],
                 0, nx, ng,
                 ny-ng, -ng, ng,
                 nz-ng, -ng, ng
             )
         }
 
-        // xmax ymin zmin
-        if (xmax_ipatch >= 0 && ymin_index[xmax_ipatch] >= 0 && zmin_index[ymin_index[xmax_ipatch]] >= 0) {
-            npy_intp xmaxyminzmin_ipatch = zmin_index[ymin_index[xmax_ipatch]];
-            SYNC_BOUNDARY_3D(xmaxyminzmin_ipatch,
+        if (xmaxyminzmin_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xmaxyminzmin_index[ipatch],
                 nx-ng, -ng, ng,
                 0, ny, ng,
                 0, nz, ng
             )
         }
 
-        // xmax ymin zmax
-        if (xmax_ipatch >= 0 && ymin_index[xmax_ipatch] >= 0 && zmax_index[ymin_index[xmax_ipatch]] >= 0) {
-            npy_intp xmaxyminzmax_ipatch = zmax_index[ymin_index[xmax_ipatch]];
-            SYNC_BOUNDARY_3D(xmaxyminzmax_ipatch,
+        if (xmaxyminzmax_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xmaxyminzmax_index[ipatch],
                 nx-ng, -ng, ng,
                 0, ny, ng,
                 nz-ng, -ng, ng
             )
         }
 
-        // xmax ymax zmin
-        if (xmax_ipatch >= 0 && ymax_index[xmax_ipatch] >= 0 && zmin_index[ymax_index[xmax_ipatch]] >= 0) {
-            npy_intp xmaxymaxzmin_ipatch = zmin_index[ymax_index[xmax_ipatch]];
-            SYNC_BOUNDARY_3D(xmaxymaxzmin_ipatch,
+        if (xmaxymaxzmin_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xmaxymaxzmin_index[ipatch],
                 nx-ng, -ng, ng,
                 ny-ng, -ng, ng,
                 0, nz, ng
             )
         }
 
-        // xmax ymax zmax
-        if (xmax_ipatch >= 0 && ymax_index[xmax_ipatch] >= 0 && zmax_index[ymax_index[xmax_ipatch]] >= 0) {
-            npy_intp xmaxymaxzmax_ipatch = zmax_index[ymax_index[xmax_ipatch]];
-            SYNC_BOUNDARY_3D(xmaxymaxzmax_ipatch,
+        if (xmaxymaxzmax_index[ipatch]) {
+            SYNC_BOUNDARY_3D(xmaxymaxzmax_index[ipatch],
                 nx-ng, -ng, ng,
                 ny-ng, -ng, ng,
                 nz-ng, -ng, ng
@@ -598,7 +563,17 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
     Py_END_ALLOW_THREADS
 
     free(jx); free(jy); free(jz); free(rho);
+    
+    free(xmin_index); free(xmax_index); free(ymin_index); free(ymax_index); free(zmin_index); free(zmax_index);
+
+    free(xminymin_index); free(xminymax_index); free(xminzmin_index); free(xminzmax_index); 
+    free(xmaxymin_index); free(xmaxymax_index); free(xmaxzmin_index); free(xmaxzmax_index); 
+    free(yminzmin_index); free(yminzmax_index); free(ymaxzmin_index); free(ymaxzmax_index);
+
+    free(xminyminzmin_index); free(xminyminzmax_index); free(xminymaxzmin_index); free(xminymaxzmax_index);
+    free(xmaxyminzmin_index); free(xmaxyminzmax_index); free(xmaxymaxzmin_index); free(xmaxymaxzmax_index);
     Py_DECREF(fields_list);
+    Py_DECREF(patches_list);
     
     Py_RETURN_NONE;
 }
@@ -617,12 +592,12 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    double **ex = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ex");
-    double **ey = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ey");
-    double **ez = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ez");
-    double **bx = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bx");
-    double **by = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "by");
-    double **bz = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bz");
+    double **ex = get_attr_array_double(fields_list, npatches, "ex");
+    double **ey = get_attr_array_double(fields_list, npatches, "ey");
+    double **ez = get_attr_array_double(fields_list, npatches, "ez");
+    double **bx = get_attr_array_double(fields_list, npatches, "bx");
+    double **by = get_attr_array_double(fields_list, npatches, "by");
+    double **bz = get_attr_array_double(fields_list, npatches, "bz");
 
     const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
     const npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);

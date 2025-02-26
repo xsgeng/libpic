@@ -31,12 +31,35 @@ class Patch:
     yaxis: np.ndarray
 
     # neighbors
+    # 6 faces
     xmin_neighbor_index: int
     xmax_neighbor_index: int
     ymin_neighbor_index: int
     ymax_neighbor_index: int
     zmin_neighbor_index: int
     zmax_neighbor_index: int
+    # 12 edges
+    xminymin_neighbor_index: int
+    xminymax_neighbor_index: int
+    xminzmin_neighbor_index: int
+    xminzmax_neighbor_index: int
+    xmaxymin_neighbor_index: int
+    xmaxymax_neighbor_index: int
+    xmaxzmin_neighbor_index: int
+    xmaxzmax_neighbor_index: int
+    yminzmin_neighbor_index: int
+    yminzmax_neighbor_index: int
+    ymaxzmin_neighbor_index: int
+    ymaxzmax_neighbor_index: int
+    # 8 corners
+    xminyminzmin_neighbor_index: int
+    xminyminzmax_neighbor_index: int
+    xminymaxzmin_neighbor_index: int
+    xminymaxzmax_neighbor_index: int
+    xmaxyminzmin_neighbor_index: int
+    xmaxyminzmax_neighbor_index: int
+    xmaxymaxzmin_neighbor_index: int
+    xmaxymaxzmax_neighbor_index: int
 
     # MPI neighbors
     xmin_neighbor_rank: int
@@ -144,15 +167,15 @@ class Patch2D(Patch):
         self.ymin_neighbor_rank: int = -1
         self.ymax_neighbor_rank: int = -1
 
-    def set_neighbor_index(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
-        if xmin >= 0:
-            self.xmin_neighbor_index = xmin
-        if xmax >= 0:
-            self.xmax_neighbor_index = xmax
-        if ymin >= 0:
-            self.ymin_neighbor_index = ymin
-        if ymax >= 0:
-            self.ymax_neighbor_index = ymax
+    def set_neighbor_index(self, **kwargs):
+        self.xmin_neighbor_index = kwargs.get("xmin", -1)
+        self.xmax_neighbor_index = kwargs.get("xmax", -1)
+        self.ymin_neighbor_index = kwargs.get("ymin", -1)
+        self.ymax_neighbor_index = kwargs.get("ymax", -1)
+        self.xminymin_neighbor_index = kwargs.get("xminymin", -1)
+        self.xminymax_neighbor_index = kwargs.get("xminymax", -1)
+        self.xmaxymin_neighbor_index = kwargs.get("xmaxymin", -1)
+        self.xmaxymax_neighbor_index = kwargs.get("xmaxymax", -1)
 
     def set_neighbor_rank(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
         if xmin >= 0:
