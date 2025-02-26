@@ -3,7 +3,7 @@
 #include <omp.h>
 #include "../utils/cutils.h"
 
-static PyObject* sync_currents(PyObject* self, PyObject* args) {
+static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *patches_list;
     npy_intp npatches, nx, ny, ng;
 
@@ -123,7 +123,7 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
     Py_RETURN_NONE;
 }
 
-static PyObject* sync_guard_fields(PyObject* self, PyObject* args) {
+static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *patches_list;
     npy_intp npatches, nx, ny, ng;
 
@@ -677,8 +677,8 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef Methods[] = {
-    {"sync_currents", sync_currents, METH_VARARGS, "Synchronize currents between patches (2D)"},
-    {"sync_guard_fields", sync_guard_fields, METH_VARARGS, "Synchronize guard cells between patches (2D)"},
+    {"sync_currents_2d", sync_currents_2d, METH_VARARGS, "Synchronize currents between patches (2D)"},
+    {"sync_guard_fields_2d", sync_guard_fields_2d, METH_VARARGS, "Synchronize guard cells between patches (2D)"},
     {"sync_currents_3d", sync_currents_3d, METH_VARARGS, "Synchronize currents between patches (3D)"},
     {"sync_guard_fields_3d", sync_guard_fields_3d, METH_VARARGS, "Synchronize guard cells between patches (3D)"},
     {NULL, NULL, 0, NULL}
