@@ -8,7 +8,7 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #define LIGHT_SPEED 299792458.0
 #define one_third 0.3333333333333333
-#define INDEX(i, j) \
+#define INDEX2(i, j) \
     ((j) >= 0 ? (j) : (j) + (ny)) + \
     ((i) >= 0 ? (i) : (i) + (nx)) * (ny)
 
@@ -21,22 +21,58 @@
     Get attribute from a list of objects.
     Returns a pointer to an array of pointers to the attribute of each patch
 */
-static inline void** get_attr(
+static inline double** get_attr_array_double(
     PyObject* list, 
     npy_intp npatches, 
-    size_t type_size, 
     const char* attr
 ) {
-    void **data = malloc(npatches * sizeof(void*));
+    double **data = malloc(npatches * sizeof(double*));
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         PyObject *npy = PyObject_GetAttrString(PyList_GET_ITEM(list, ipatch), attr);
-        data[ipatch] = PyArray_DATA((PyArrayObject*) npy);
+        data[ipatch] = (double*) PyArray_DATA((PyArrayObject*) npy);
         Py_DecRef(npy);
     }
     return data;
 }
 
-#define GET_ATTR_DOUBLEARRAY(list, npatches, attr) (double**) get_attr(list, npatches, sizeof(double*), attr)
-#define GET_ATTR_BOOLARRAY(list, npatches, attr) (npy_bool**) get_attr(list, npatches, sizeof(npy_bool*), attr)
-#define GET_ATTR_DOUBLE(list, npatches, attr) (double*) get_attr(list, npatches, sizeof(double), attr)
-#define GET_ATTR_INTP(list, npatches, attr) (npy_intp*) get_attr(list, npatches, sizeof(npy_intp), attr)
+static inline npy_bool** get_attr_array_bool(
+    PyObject* list, 
+    npy_intp npatches, 
+    const char* attr
+) {
+    npy_bool **data = malloc(npatches * sizeof(npy_bool*));
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        PyObject *npy = PyObject_GetAttrString(PyList_GET_ITEM(list, ipatch), attr);
+        data[ipatch] = (npy_bool*) PyArray_DATA((PyArrayObject*) npy);
+        Py_DecRef(npy);
+    }
+    return data;
+}
+
+static inline double* get_attr_double(
+    PyObject* list, 
+    npy_intp npatches, 
+    const char* attr
+) {
+    double *data = malloc(npatches * sizeof(double));
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        PyObject *npy = PyObject_GetAttrString(PyList_GET_ITEM(list, ipatch), attr);
+        data[ipatch] = PyFloat_AS_DOUBLE(npy);
+        Py_DecRef(npy);
+    }
+    return data;
+}
+
+static inline npy_intp* get_attr_int(
+    PyObject* list, 
+    npy_intp npatches, 
+    const char* attr
+) {
+    npy_intp *data = malloc(npatches * sizeof(npy_intp));
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        PyObject *npy = PyObject_GetAttrString(PyList_GET_ITEM(list, ipatch), attr);
+        data[ipatch] = PyLong_AS_LONG(npy);
+        Py_DecRef(npy);
+    }
+    return data;
+}

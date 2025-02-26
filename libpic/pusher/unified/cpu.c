@@ -240,35 +240,35 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
     double dy = PyFloat_AsDouble(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "dy"));
 
     // fields
-    double **ex         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ex");
-    double **ey         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ey");
-    double **ez         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "ez");
-    double **bx         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bx");
-    double **by         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "by");
-    double **bz         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "bz");
-    double **rho        = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "rho");
-    double **jx         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jx");
-    double **jy         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jy");
-    double **jz         = GET_ATTR_DOUBLEARRAY(fields_list, npatches, "jz");
-    double *x0          = GET_ATTR_DOUBLE(fields_list, npatches, "x0");
-    double *y0          = GET_ATTR_DOUBLE(fields_list, npatches, "y0");
+    double **ex         = get_attr_array_double(fields_list, npatches, "ex");
+    double **ey         = get_attr_array_double(fields_list, npatches, "ey");
+    double **ez         = get_attr_array_double(fields_list, npatches, "ez");
+    double **bx         = get_attr_array_double(fields_list, npatches, "bx");
+    double **by         = get_attr_array_double(fields_list, npatches, "by");
+    double **bz         = get_attr_array_double(fields_list, npatches, "bz");
+    double **rho        = get_attr_array_double(fields_list, npatches, "rho");
+    double **jx         = get_attr_array_double(fields_list, npatches, "jx");
+    double **jy         = get_attr_array_double(fields_list, npatches, "jy");
+    double **jz         = get_attr_array_double(fields_list, npatches, "jz");
+    double *x0          = get_attr_double(fields_list, npatches, "x0");
+    double *y0          = get_attr_double(fields_list, npatches, "y0");
 
     // particles
-    double **x          = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "x");
-    double **y          = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "y");
-    double **ux         = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "ux");
-    double **uy         = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "uy");
-    double **uz         = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "uz");
-    double **inv_gamma  = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "inv_gamma");
-    double **ex_part    = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "ex_part");
-    double **ey_part    = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "ey_part");
-    double **ez_part    = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "ez_part");
-    double **bx_part    = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "bx_part");
-    double **by_part    = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "by_part");
-    double **bz_part    = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "bz_part");
-    npy_bool **is_dead  = GET_ATTR_BOOLARRAY(particles_list, npatches, "is_dead");
-    double **w          = GET_ATTR_DOUBLEARRAY(particles_list, npatches, "w");
-    npy_intp *npart     = GET_ATTR_INTP(particles_list, npatches, "npart");
+    double **x          = get_attr_array_double(particles_list, npatches, "x");
+    double **y          = get_attr_array_double(particles_list, npatches, "y");
+    double **ux         = get_attr_array_double(particles_list, npatches, "ux");
+    double **uy         = get_attr_array_double(particles_list, npatches, "uy");
+    double **uz         = get_attr_array_double(particles_list, npatches, "uz");
+    double **inv_gamma  = get_attr_array_double(particles_list, npatches, "inv_gamma");
+    double **ex_part    = get_attr_array_double(particles_list, npatches, "ex_part");
+    double **ey_part    = get_attr_array_double(particles_list, npatches, "ey_part");
+    double **ez_part    = get_attr_array_double(particles_list, npatches, "ez_part");
+    double **bx_part    = get_attr_array_double(particles_list, npatches, "bx_part");
+    double **by_part    = get_attr_array_double(particles_list, npatches, "by_part");
+    double **bz_part    = get_attr_array_double(particles_list, npatches, "bz_part");
+    npy_bool **is_dead  = get_attr_array_bool(particles_list, npatches, "is_dead");
+    double **w          = get_attr_array_double(particles_list, npatches, "w");
+    npy_intp *npart     = get_attr_int(particles_list, npatches, "npart");
 
     // release GIL
     Py_BEGIN_ALLOW_THREADS
@@ -319,31 +319,14 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
     Py_DecRef(fields_list);
     Py_DecRef(particles_list);
     // fields
-    free(ex);
-    free(ey);
-    free(ez);
-    free(bx);
-    free(by);
-    free(bz);
-    free(rho);
-    free(jx);
-    free(jy);
-    free(jz);
-    free(x0);
-    free(y0);
+    free(ex); free(ey); free(ez);
+    free(bx); free(by); free(bz);
+    free(rho); free(jx); free(jy); free(jz);
+    free(x0); free(y0);
     // particles
-    free(x);
-    free(y);
-    free(ux);
-    free(uy);
-    free(uz);
-    free(inv_gamma);
-    free(ex_part);
-    free(ey_part);
-    free(ez_part);
-    free(bx_part);
-    free(by_part);
-    free(bz_part);
+    free(x); free(y); free(ux); free(uy); free(uz); free(inv_gamma);
+    free(ex_part); free(ey_part); free(ez_part);
+    free(bx_part); free(by_part); free(bz_part);
     free(is_dead);
     free(w);
     free(npart);
