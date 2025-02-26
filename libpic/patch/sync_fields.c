@@ -13,19 +13,21 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    // Get field data pointers
     double **jx = get_attr_array_double(fields_list, npatches, "jx");
     double **jy = get_attr_array_double(fields_list, npatches, "jy"); 
     double **jz = get_attr_array_double(fields_list, npatches, "jz");
     double **rho = get_attr_array_double(fields_list, npatches, "rho");
 
     // Get boundary index arrays
-    const npy_intp* xmin_index = (npy_intp*)PyArray_DATA(xmin_index_arr);
-    const npy_intp* xmax_index = (npy_intp*)PyArray_DATA(xmax_index_arr);
-    const npy_intp* ymin_index = (npy_intp*)PyArray_DATA(ymin_index_arr);
-    const npy_intp* ymax_index = (npy_intp*)PyArray_DATA(ymax_index_arr);
+    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_index");
+    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_index");
+    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_index");
+    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_index");
+    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_index");
+    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_index");
+    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_index");
+    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_index");
 
-    // Release GIL
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
     for (npy_intp i = 0; i < npatches*4; i++) {
@@ -40,100 +42,83 @@ static PyObject* sync_currents(PyObject* self, PyObject* args) {
             case 3: field = rho; break;
         }
 
-        npy_intp xmin_ipatch = xmin_index[ipatch];
-        npy_intp xmax_ipatch = xmax_index[ipatch];
-        npy_intp ymin_ipatch = ymin_index[ipatch];
-        npy_intp ymax_ipatch = ymax_index[ipatch];
+        #define SYNC_BOUNDARY_2D(src_patch, \
+            ix_dst, ix_src, NX, \
+            iy_dst, iy_src, NY) \
+        for (npy_intp ix = 0; ix < NX; ix++) { \
+            for (npy_intp iy = 0; iy < NY; iy++) { \
+                field[ipatch][INDEX2(ix_dst+ix, iy_dst+iy)] += field[src_patch][INDEX2(ix_src+ix, iy_src+iy)]; \
+                field[src_patch][INDEX2(ix_src+ix, iy_src+iy)] = 0.0; \
+            } \
+        }
 
         // X direction sync
-        if (xmin_ipatch >= 0) {
-            for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                for (npy_intp iy = 0; iy < ny; iy++) {
-                    field[ipatch][INDEX2(ixg, iy)] += field[xmin_ipatch][INDEX2(nx+ixg, iy)];
-                    field[xmin_ipatch][INDEX2(nx+ixg, iy)] = 0.0;
-                }
-            }
+        if (xmin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(xmin_index[ipatch], 
+                0, nx, ng, 
+                0, 0, ny
+            )
         }
         
-        if (xmax_ipatch >= 0) {
-            for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                for (npy_intp iy = 0; iy < ny; iy++) {
-                    field[ipatch][INDEX2(nx-ng+ixg, iy)] += field[xmax_ipatch][INDEX2(-ng+ixg, iy)];
-                    field[xmax_ipatch][INDEX2(-ng+ixg, iy)] = 0.0;
-                }
-            }
+        if (xmax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(xmax_index[ipatch], 
+                nx-ng, -ng, ng, 
+                0, 0, ny
+            )
         }
 
         // Y direction sync
-        if (ymin_ipatch >= 0) {
-            for (npy_intp ix = 0; ix < nx; ix++) {
-                for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                    field[ipatch][INDEX2(ix, iyg)] += field[ymin_ipatch][INDEX2(ix, ny+iyg)];
-                    field[ymin_ipatch][INDEX2(ix, ny+iyg)] = 0.0;
-                }
-            }
+        if (ymin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(ymin_index[ipatch], 
+                0, 0, nx, 
+                0, ny, ng
+            )
         }
         
-        if (ymax_ipatch >= 0) {
-            for (npy_intp ix = 0; ix < nx; ix++) {
-                for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                    field[ipatch][INDEX2(ix, ny-ng+iyg)] += field[ymax_ipatch][INDEX2(ix, -ng+iyg)];
-                    field[ymax_ipatch][INDEX2(ix, -ng+iyg)] = 0.0;
-                }
-            }
+        if (ymax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(ymax_index[ipatch], 
+                0, 0, nx, 
+                ny-ng, -ng, ng
+            )
         }
 
         // Corner synchronization
-        if (ymin_ipatch >= 0) {
-            npy_intp xminymin_ipatch = xmin_index[ymin_ipatch];
-            if (xminymin_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX2(ixg, iyg)] += field[xminymin_ipatch][INDEX2(nx+ixg, ny+iyg)];
-                        field[xminymin_ipatch][INDEX2(nx+ixg, ny+iyg)] = 0.0;
-                    }
-                }
-            }
-            
-            npy_intp xmaxymin_ipatch = xmax_index[ymin_ipatch];
-            if (xmaxymin_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX2(nx-ng+ixg, iyg)] += field[xmaxymin_ipatch][INDEX2(-ng+ixg, ny+iyg)];
-                        field[xmaxymin_ipatch][INDEX2(-ng+ixg, ny+iyg)] = 0.0;
-                    }
-                }
-            }
+        if (xminymin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(xminymin_index[ipatch], 
+                0, nx, ng, 
+                0, ny, ng
+            )
         }
         
-        if (ymax_ipatch >= 0) {
-            npy_intp xminymax_ipatch = xmin_index[ymax_ipatch];
-            if (xminymax_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX2(ixg, ny-ng+iyg)] += field[xminymax_ipatch][INDEX2(nx+ixg, -ng+iyg)];
-                        field[xminymax_ipatch][INDEX2(nx+ixg, -ng+iyg)] = 0.0;
-                    }
-                }
-            }
-            
-            npy_intp xmaxymax_ipatch = xmax_index[ymax_ipatch];
-            if (xmaxymax_ipatch >= 0) {
-                for (npy_intp ixg = 0; ixg < ng; ixg++) {
-                    for (npy_intp iyg = 0; iyg < ng; iyg++) {
-                        field[ipatch][INDEX2(nx-ng+ixg, ny-ng+iyg)] += field[xmaxymax_ipatch][INDEX2(-ng+ixg, -ng+iyg)];
-                        field[xmaxymax_ipatch][INDEX2(-ng+ixg, -ng+iyg)] = 0.0;
-                    }
-                }
-            }
+        if (xmaxymin_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(xmaxymin_index[ipatch], 
+                nx-ng, -ng, ng, 
+                0, ny, ng
+            )
+        }
+        
+        if (xminymax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(xminymax_index[ipatch], 
+                0, nx, ng, 
+                ny-ng, -ng, ng
+            )
+        }
+        
+        if (xmaxymax_index[ipatch] >= 0) {
+            SYNC_BOUNDARY_2D(xmaxymax_index[ipatch], 
+                nx-ng, -ng, ng, 
+                ny-ng, -ng, ng
+            )
         }
     }
-    // Acquire GIL
     Py_END_ALLOW_THREADS
 
     // Clean up resources
     free(jx); free(jy); free(jz); free(rho);
+    free(xmin_index); free(xmax_index); free(ymin_index); free(ymax_index);
+    free(xminymin_index); free(xminymax_index); free(xmaxymin_index); free(xmaxymax_index);
     Py_DECREF(fields_list);
+    Py_DECREF(patches_list);
     
     Py_RETURN_NONE;
 }
