@@ -4,14 +4,21 @@ import numpy as np
 from numba import njit, typed
 
 from ..boundary.cpml import PML, PMLX, PMLY
-from ..boundary.particles import (fill_particles_from_boundary,
-                                       get_npart_to_extend,
-                                       mark_out_of_bound_as_dead)
+from ..boundary.particles import (
+    fill_particles_from_boundary,
+    get_npart_to_extend,
+    mark_out_of_bound_as_dead,
+)
 from ..fields import Fields, Fields2D
 from ..particles import ParticlesBase
-from ..patch.cpu import (fill_particles, get_num_macro_particles,
-                              sync_currents, sync_guard_fields)
+from ..patch.cpu import (
+    fill_particles,
+    get_num_macro_particles,
+    sync_currents,
+    sync_guard_fields,
+)
 from ..species import Species
+from .sync_fields import sync_currents_2d, sync_guard_fields_2d
 
 
 class Patch:
@@ -160,6 +167,10 @@ class Patch2D(Patch):
         self.xmax_neighbor_index: int = -1
         self.ymin_neighbor_index: int = -1
         self.ymax_neighbor_index: int = -1
+        self.xminymin_neighbor_index: int = -1
+        self.xmaxymin_neighbor_index: int = -1
+        self.xminymax_neighbor_index: int = -1
+        self.xmaxymax_neighbor_index: int = -1
 
         # MPI neighbors
         self.xmin_neighbor_rank: int = -1
@@ -168,14 +179,10 @@ class Patch2D(Patch):
         self.ymax_neighbor_rank: int = -1
 
     def set_neighbor_index(self, **kwargs):
-        self.xmin_neighbor_index = kwargs.get("xmin", -1)
-        self.xmax_neighbor_index = kwargs.get("xmax", -1)
-        self.ymin_neighbor_index = kwargs.get("ymin", -1)
-        self.ymax_neighbor_index = kwargs.get("ymax", -1)
-        self.xminymin_neighbor_index = kwargs.get("xminymin", -1)
-        self.xminymax_neighbor_index = kwargs.get("xminymax", -1)
-        self.xmaxymin_neighbor_index = kwargs.get("xmaxymin", -1)
-        self.xmaxymax_neighbor_index = kwargs.get("xmaxymax", -1)
+        for neighbor in kwargs.keys():
+            assert neighbor in ["xmin", "xmax", "ymin", "ymax", "xminymin", "xmaxymin", "xminymax", "xmaxymax"], \
+                f"neighbor {neighbor} not found in kwargs, must be one of ['xmin', 'xmax', 'ymin', 'ymax', 'xminymin', 'xmaxymin', 'xminymax', 'xmaxymax']"
+            setattr(self, f"{neighbor}_neighbor_index", kwargs[neighbor])
 
     def set_neighbor_rank(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
         if xmin >= 0:
@@ -292,19 +299,10 @@ class Patches:
                 plists[ispec][attr][ipatch] = getattr(patch.particles[ispec], attr)
 
     def sync_guard_fields(self):
-        lists = self.grid_lists
-        sync_guard_fields(
-            lists['ex'], lists['ey'], lists['ez'],
-            lists['bx'], lists['by'], lists['bz'],
-            lists['jx'], lists['jy'], lists['jz'],
-            lists['xmin_neighbor_index'], 
-            lists['xmax_neighbor_index'], 
-            lists['ymin_neighbor_index'], 
-            lists['ymax_neighbor_index'], 
-            self.npatches, 
-            self.nx,
-            self.ny,
-            self.n_guard,
+        sync_guard_fields_2d(
+            [p.fields for p in self.patches],
+            self.patches,
+            self.npatches, self.nx, self.ny, self.n_guard,
         )
 
 

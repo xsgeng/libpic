@@ -3,6 +3,15 @@
 #include <omp.h>
 #include "../utils/cutils.h"
 
+#define INDEX2(i, j) \
+    ((j) >= 0 ? (j) : (j) + (NY)) + \
+    ((i) >= 0 ? (i) : (i) + (NX)) * (NY)
+
+#define INDEX3(i, j, k) \
+    ((k) >= 0 ? (k) : (k) + (NZ)) + \
+    ((j) >= 0 ? (j) : (j) + (NY)) * (NZ) + \
+    ((i) >= 0 ? (i) : (i) + (NX)) * (NY) * (NZ)
+    
 static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *patches_list;
     npy_intp npatches, nx, ny, ng;
@@ -12,21 +21,22 @@ static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
         &npatches, &nx, &ny, &ng)) {
         return NULL;
     }
-
+    npy_intp NX = nx+2*ng;
+    npy_intp NY = ny+2*ng;
     double **jx = get_attr_array_double(fields_list, npatches, "jx");
     double **jy = get_attr_array_double(fields_list, npatches, "jy"); 
     double **jz = get_attr_array_double(fields_list, npatches, "jz");
     double **rho = get_attr_array_double(fields_list, npatches, "rho");
 
     // Get boundary index arrays
-    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_index");
-    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_index");
-    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_index");
-    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_index");
-    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_index");
-    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_index");
-    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_index");
-    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_index");
+    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_neighbor_index");
+    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_neighbor_index");
+    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_neighbor_index");
+    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_neighbor_index");
+    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_neighbor_index");
+    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_neighbor_index");
+    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_neighbor_index");
+    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_neighbor_index");
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
@@ -133,6 +143,9 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
         return NULL;
     }
 
+    npy_intp NX = nx+2*ng;
+    npy_intp NY = ny+2*ng;
+
     double **ex = get_attr_array_double(fields_list, npatches, "ex");
     double **ey = get_attr_array_double(fields_list, npatches, "ey");
     double **ez = get_attr_array_double(fields_list, npatches, "ez");
@@ -141,14 +154,14 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
     double **bz = get_attr_array_double(fields_list, npatches, "bz");
 
     // Get boundary index arrays
-    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_index");
-    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_index");
-    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_index");
-    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_index");
-    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_index");
-    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_index");
-    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_index");
-    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_index");
+    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_neighbor_index");
+    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_neighbor_index");
+    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_neighbor_index");
+    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_neighbor_index");
+    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_neighbor_index");
+    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_neighbor_index");
+    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_neighbor_index");
+    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_neighbor_index");
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
@@ -179,7 +192,7 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
         if (xmin_index[ipatch] >= 0) {
             SYNC_GUARD_2D(xmin_index[ipatch], 
                 -ng, nx-ng, ng, 
-                0, 0, ny
+                0, 0, NY
             )
         }
         
@@ -241,8 +254,8 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
     free(bx); free(by); free(bz);
     free(xmin_index); free(xmax_index); free(ymin_index); free(ymax_index);
     free(xminymin_index); free(xminymax_index); free(xmaxymin_index); free(xmaxymax_index);
-    Py_DECREF(fields_list);
-    Py_DECREF(patches_list);
+    // Py_DECREF(fields_list);
+    // Py_DECREF(patches_list);
     
     Py_RETURN_NONE;
 }
@@ -256,7 +269,9 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         &npatches, &nx, &ny, &nz, &ng)) {
         return NULL;
     }
-
+    npy_intp NX = nx+2*ng;
+    npy_intp NY = ny+2*ng;
+    npy_intp NZ = nz+2*ng;
     double **jx = get_attr_array_double(fields_list, npatches, "jx");
     double **jy = get_attr_array_double(fields_list, npatches, "jy"); 
     double **jz = get_attr_array_double(fields_list, npatches, "jz");
@@ -565,7 +580,9 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
         &npatches, &nx, &ny, &nz, &ng)) {
         return NULL;
     }
-
+    npy_intp NX = nx+2*ng;
+    npy_intp NY = ny+2*ng;
+    npy_intp NZ = nz+2*ng;
     double **ex = get_attr_array_double(fields_list, npatches, "ex");
     double **ey = get_attr_array_double(fields_list, npatches, "ey");
     double **ez = get_attr_array_double(fields_list, npatches, "ez");

@@ -57,7 +57,7 @@ static inline double* get_attr_double(
     double *data = malloc(npatches * sizeof(double));
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         PyObject *npy = PyObject_GetAttrString(PyList_GET_ITEM(list, ipatch), attr);
-        data[ipatch] = PyFloat_AS_DOUBLE(npy);
+        data[ipatch] = PyFloat_AsDouble(npy);
         Py_DecRef(npy);
     }
     return data;
@@ -71,7 +71,7 @@ static inline npy_intp* get_attr_int(
     npy_intp *data = malloc(npatches * sizeof(npy_intp));
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         PyObject *npy = PyObject_GetAttrString(PyList_GET_ITEM(list, ipatch), attr);
-        data[ipatch] = PyLong_AS_LONG(npy);
+        data[ipatch] = PyLong_AsLong(npy);
         Py_DecRef(npy);
     }
     return data;
