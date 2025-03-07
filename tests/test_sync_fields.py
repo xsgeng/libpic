@@ -161,6 +161,8 @@ class TestPatches(unittest.TestCase):
         jx = patches[4].fields.jx
         print('\n', jx)
         
+        self.assertEqual((jx > 0).sum(), 16)
+
         #                          4+3+5+1+7+0+2+6+8
         self.assertEqual(jx[0, 0], 4+3+0+1+0+0+0+0+0)
         self.assertEqual(jx[0, 1], 4+3+0+1+7+0+0+6+0)
