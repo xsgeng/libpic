@@ -307,17 +307,10 @@ class Patches:
 
 
     def sync_currents(self):
-        lists = self.grid_lists
-        sync_currents(
-            lists['jx'], lists['jy'], lists['jz'], lists["rho"],
-            lists['xmin_neighbor_index'], 
-            lists['xmax_neighbor_index'], 
-            lists['ymin_neighbor_index'], 
-            lists['ymax_neighbor_index'], 
-            self.npatches, 
-            self.nx,
-            self.ny,
-            self.n_guard,
+        sync_currents_2d(
+            [p.fields for p in self.patches],
+            self.patches,
+            self.npatches, self.nx, self.ny, self.n_guard,
         )
 
     def sync_particles(self) -> None:

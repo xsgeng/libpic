@@ -127,8 +127,8 @@ static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
     free(jx); free(jy); free(jz); free(rho);
     free(xmin_index); free(xmax_index); free(ymin_index); free(ymax_index);
     free(xminymin_index); free(xminymax_index); free(xmaxymin_index); free(xmaxymax_index);
-    Py_DECREF(fields_list);
-    Py_DECREF(patches_list);
+    // Py_DECREF(fields_list);
+    // Py_DECREF(patches_list);
     
     Py_RETURN_NONE;
 }
