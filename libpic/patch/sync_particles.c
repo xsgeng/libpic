@@ -711,7 +711,10 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         );
         
         // Allocate buffer for incoming particles with cleanup attribute
-        AUTOFREE double* buffer = malloc(nattrs*npart_new * sizeof(double));
+        double* buffer AUTOFREE = NULL;                                                                                                                                                                                                                                          
+        if (npart_new > 0) {                                                                                                                                                                                                                                                     
+            buffer = malloc(nattrs*npart_new * sizeof(double));                                                                                                                                                                                                                  
+        }
         // Fill buffer with boundary particles
         fill_boundary_particles_to_buffer(
             attrs_list, nattrs,
