@@ -319,7 +319,6 @@ static void fill_boundary_particles_to_buffer(
             double* attr = attrs_list[ymin_index*nattrs + iattr];
             for (npy_intp i = 0; i < npart_ymin; i++) {
                 npy_intp idx = ymin_indices[i];
-                if (idx == 0 && i > 0) break; // Assuming 0 is a sentinel value
                 buffer[ibuff*nattrs+iattr] = attr[idx];
                 ibuff++;
             }
@@ -330,7 +329,6 @@ static void fill_boundary_particles_to_buffer(
             double* attr = attrs_list[ymax_index*nattrs + iattr];
             for (npy_intp i = 0; i < npart_ymax; i++) {
                 npy_intp idx = ymax_indices[i];
-                if (idx == 0 && i > 0) break; // Assuming 0 is a sentinel value
                 buffer[ibuff*nattrs+iattr] = attr[idx];
                 ibuff++;
             }
@@ -342,7 +340,6 @@ static void fill_boundary_particles_to_buffer(
             double* attr = attrs_list[xminymin_index*nattrs + iattr];
             for (npy_intp i = 0; i < npart_xminymin; i++) {
                 npy_intp idx = xminymin_indices[i];
-                if (idx == 0 && i > 0) break; // Assuming 0 is a sentinel value
                 buffer[ibuff*nattrs+iattr] = attr[idx];
                 ibuff++;
             }
@@ -353,7 +350,6 @@ static void fill_boundary_particles_to_buffer(
             double* attr = attrs_list[xmaxymin_index*nattrs + iattr];
             for (npy_intp i = 0; i < npart_xmaxymin; i++) {
                 npy_intp idx = xmaxymin_indices[i];
-                if (idx == 0 && i > 0) break; // Assuming 0 is a sentinel value
                 buffer[ibuff*nattrs+iattr] = attr[idx];
                 ibuff++;
             }
@@ -364,7 +360,6 @@ static void fill_boundary_particles_to_buffer(
             double* attr = attrs_list[xminymax_index*nattrs + iattr];
             for (npy_intp i = 0; i < npart_xminymax; i++) {
                 npy_intp idx = xminymax_indices[i];
-                if (idx == 0 && i > 0) break; // Assuming 0 is a sentinel value
                 buffer[ibuff*nattrs+iattr] = attr[idx];
                 ibuff++;
             }
@@ -375,7 +370,6 @@ static void fill_boundary_particles_to_buffer(
             double* attr = attrs_list[xmaxymax_index*nattrs + iattr];
             for (npy_intp i = 0; i < npart_xmaxymax; i++) {
                 npy_intp idx = xmaxymax_indices[i];
-                if (idx == 0 && i > 0) break; // Assuming 0 is a sentinel value
                 buffer[ibuff*nattrs+iattr] = attr[idx];
                 ibuff++;
             }
@@ -517,30 +511,30 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
         npy_intp npart_new = 0;
         
         if (xmax_index >= 0) {
-            npart_new += npart_outgoing[0 * npatches + xmax_index];
+            npart_new += npart_outgoing[xmax_index*8 + 0];
         }
         if (xmin_index >= 0) {
-            npart_new += npart_outgoing[1 * npatches + xmin_index];
+            npart_new += npart_outgoing[xmin_index*8 + 1];
         }
         if (ymax_index >= 0) {
-            npart_new += npart_outgoing[2 * npatches + ymax_index];
+            npart_new += npart_outgoing[ymax_index*8 + 2];
         }
         if (ymin_index >= 0) {
-            npart_new += npart_outgoing[3 * npatches + ymin_index];
+            npart_new += npart_outgoing[ymin_index*8 + 3];
         }
         
         // Corners
         if (xmaxymax_index >= 0) {
-            npart_new += npart_outgoing[4 * npatches + xmaxymax_index];
+            npart_new += npart_outgoing[xmaxymax_index*8 + 4];
         }
         if (xminymax_index >= 0) {
-            npart_new += npart_outgoing[5 * npatches + xminymax_index];
+            npart_new += npart_outgoing[xminymax_index*8 + 5];
         }
         if (xmaxymin_index >= 0) {
-            npart_new += npart_outgoing[6 * npatches + xmaxymin_index];
+            npart_new += npart_outgoing[xmaxymin_index*8 + 6];
         }
         if (xminymin_index >= 0) {
-            npart_new += npart_outgoing[7 * npatches + xminymin_index];
+            npart_new += npart_outgoing[xminymin_index*8 + 7];
         }
         
         // Count dead particles
@@ -560,11 +554,6 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
         npart_incoming[ipatch] = npart_new;
     }
     Py_END_ALLOW_THREADS
-
-
-
-
-
     
     PyObject *ret = PyTuple_Pack(3, npart_to_extend_array, npart_incoming_array, npart_outgoing_array);
     return ret;
@@ -629,7 +618,7 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         }
     }
 
-    NPY_BEGIN_ALLOW_THREADS
+    Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         npy_intp npart_new = npart_incoming[ipatch];
@@ -762,7 +751,7 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         );
         
     }
-    NPY_END_ALLOW_THREADS
+    Py_END_ALLOW_THREADS
 
     Py_RETURN_NONE;
 }
