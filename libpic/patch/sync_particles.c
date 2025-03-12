@@ -94,7 +94,7 @@ static void get_incoming_index(
     npy_intp* xminymax_indices, npy_intp* xmaxymax_indices
 ) {
     // On xmin boundary
-    if (xmin_index >= 0) {
+    if ((xmin_index >= 0) && (xmin_indices != NULL)) {
         double* x_on_xmin = x_list[xmin_index];
         double* y_on_xmin = y_list[xmin_index];
         
@@ -117,7 +117,7 @@ static void get_incoming_index(
     }
     
     // On xmax boundary
-    if (xmax_index >= 0) {
+    if ((xmax_index >= 0) && (xmax_indices != NULL)) {
         double* x_on_xmax = x_list[xmax_index];
         double* y_on_xmax = y_list[xmax_index];
         
@@ -140,7 +140,7 @@ static void get_incoming_index(
     }
     
     // On ymin boundary
-    if (ymin_index >= 0) {
+    if ((ymin_index >= 0) && (ymin_indices != NULL)) {
         double* x_on_ymin = x_list[ymin_index];
         double* y_on_ymin = y_list[ymin_index];
         
@@ -163,7 +163,7 @@ static void get_incoming_index(
     }
     
     // On ymax boundary
-    if (ymax_index >= 0) {
+    if ((ymax_index >= 0) && (ymax_indices != NULL)) {
         double* x_on_ymax = x_list[ymax_index];
         double* y_on_ymax = y_list[ymax_index];
         
@@ -186,7 +186,7 @@ static void get_incoming_index(
     }
     
     // On xminymin boundary
-    if (xminymin_index >= 0) {
+    if ((xminymin_index >= 0) && (xminymin_indices != NULL)) {
         double* x_on_xminymin = x_list[xminymin_index];
         double* y_on_xminymin = y_list[xminymin_index];
         
@@ -208,7 +208,7 @@ static void get_incoming_index(
     }
     
     // On xmaxymin boundary
-    if (xmaxymin_index >= 0) {
+    if ((xmaxymin_index >= 0) && (xmaxymin_indices != NULL)) {
         double* x_on_xmaxymin = x_list[xmaxymin_index];
         double* y_on_xmaxymin = y_list[xmaxymin_index];
         
@@ -230,7 +230,7 @@ static void get_incoming_index(
     }
     
     // On xminymax boundary
-    if (xminymax_index >= 0) {
+    if ((xminymax_index >= 0) && (xminymax_indices != NULL)) {
         double* x_on_xminymax = x_list[xminymax_index];
         double* y_on_xminymax = y_list[xminymax_index];
         
@@ -252,7 +252,7 @@ static void get_incoming_index(
     }
     
     // On xmaxymax boundary
-    if (xmaxymax_index >= 0) {
+    if ((xmaxymax_index >= 0) && (xmaxymax_indices != NULL)) {
         double* x_on_xmaxymax = x_list[xmaxymax_index];
         double* y_on_xmaxymax = y_list[xmaxymax_index];
         
@@ -383,8 +383,7 @@ static void fill_boundary_particles_to_buffer(
 static void mark_out_of_bound_as_dead(
     double *x, double *y, npy_bool *is_dead, npy_intp npart, 
     double xmin, double xmax, 
-    double ymin, double ymax,
-    npy_intp npatches
+    double ymin, double ymax
 ) {
     for (npy_intp ipart = 0; ipart < npart; ipart++) {
         if (is_dead[ipart]) {
@@ -392,7 +391,7 @@ static void mark_out_of_bound_as_dead(
             y[ipart] = NAN;
             continue;
         }
-        if (x[ipart] < xmin || x[ipart] > xmax || y[ipart] < ymin || y[ipart] > ymax) {
+        if ((x[ipart] < xmin) || (x[ipart] > xmax) || (y[ipart] < ymin) || (y[ipart] > ymax)) {
             is_dead[ipart] = 1;
             x[ipart] = NAN;
             y[ipart] = NAN;
@@ -448,9 +447,9 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
 
     // Allocate arrays for particle counts with cleanup attributes
     npy_intp dims = 8*npatches;
-    PyArrayObject *npart_to_extend_array = (PyArrayObject*) PyArray_Zeros(1, &npatches, NPY_INT64, NPY_CARRAY);
-    PyArrayObject *npart_incoming_array = (PyArrayObject*) PyArray_Zeros(1, &npatches, NPY_INT64, NPY_CARRAY);
-    PyArrayObject *npart_outgoing_array = (PyArrayObject*) PyArray_Zeros(1, &dims, NPY_INT64, NPY_CARRAY);
+    PyArrayObject *npart_to_extend_array = (PyArrayObject*) PyArray_ZEROS(1, &npatches, NPY_INT64, 0);
+    PyArrayObject *npart_incoming_array = (PyArrayObject*) PyArray_ZEROS(1, &npatches, NPY_INT64, 0);
+    PyArrayObject *npart_outgoing_array = (PyArrayObject*) PyArray_ZEROS(1, &dims, NPY_INT64, 0);
 
     npy_intp *npart_to_extend = (npy_intp*) PyArray_DATA(npart_to_extend_array);
     npy_intp *npart_incoming = (npy_intp*) PyArray_DATA(npart_incoming_array);
@@ -562,8 +561,8 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
 // Fill particles from boundary
 PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
     // Parse input arguments
-    AUTOFREE PyObject *particles_list, *patch_list, *attrs;
-    AUTOFREE PyArrayObject *npart_incoming_array, *npart_outgoing_array;
+    PyObject *particles_list, *patch_list, *attrs;
+    PyArrayObject *npart_incoming_array, *npart_outgoing_array;
     double dx, dy;
     npy_intp npatches;
 
@@ -604,6 +603,14 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
     AUTOFREE npy_intp *npart_outgoing = PyArray_DATA(npart_outgoing_array);
 
     npy_intp nattrs = PyList_Size(attrs);
+
+    // Adjust particle boundaries
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        xmin_list[ipatch] -= 0.5 * dx;
+        xmax_list[ipatch] += 0.5 * dx;
+        ymin_list[ipatch] -= 0.5 * dy;
+        ymax_list[ipatch] += 0.5 * dy;
+    }
     
     // Create array of attribute arrays
     AUTOFREE double **attrs_list = malloc(nattrs * npatches * sizeof(double*));
@@ -641,16 +648,16 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         npy_intp xmaxymax_index = xmaxymax_index_list[ipatch];
         
         // Number of particles coming from each boundary
-        npy_intp npart_incoming_xmax = (xmax_index >= 0) ? npart_outgoing[0 * npatches + xmax_index] : 0;
-        npy_intp npart_incoming_xmin = (xmin_index >= 0) ? npart_outgoing[1 * npatches + xmin_index] : 0;
-        npy_intp npart_incoming_ymax = (ymax_index >= 0) ? npart_outgoing[2 * npatches + ymax_index] : 0;
-        npy_intp npart_incoming_ymin = (ymin_index >= 0) ? npart_outgoing[3 * npatches + ymin_index] : 0;
+        npy_intp npart_incoming_xmax = (xmax_index >= 0) ? npart_outgoing[xmax_index*8 + 0] : 0;
+        npy_intp npart_incoming_xmin = (xmin_index >= 0) ? npart_outgoing[xmin_index*8 + 1] : 0;
+        npy_intp npart_incoming_ymax = (ymax_index >= 0) ? npart_outgoing[ymax_index*8 + 2] : 0;
+        npy_intp npart_incoming_ymin = (ymin_index >= 0) ? npart_outgoing[ymin_index*8 + 3] : 0;
         
         // Corners
-        npy_intp npart_incoming_xmaxymax = (xmaxymax_index >= 0) ? npart_outgoing[4 * npatches + xmaxymax_index] : 0;
-        npy_intp npart_incoming_xminymax = (xminymax_index >= 0) ? npart_outgoing[5 * npatches + xminymax_index] : 0;
-        npy_intp npart_incoming_xmaxymin = (xmaxymin_index >= 0) ? npart_outgoing[6 * npatches + xmaxymin_index] : 0;
-        npy_intp npart_incoming_xminymin = (xminymin_index >= 0) ? npart_outgoing[7 * npatches + xminymin_index] : 0;
+        npy_intp npart_incoming_xmaxymax = (xmaxymax_index >= 0) ? npart_outgoing[xmaxymax_index*8 + 4] : 0;
+        npy_intp npart_incoming_xminymax = (xminymax_index >= 0) ? npart_outgoing[xminymax_index*8 + 5] : 0;
+        npy_intp npart_incoming_xmaxymin = (xmaxymin_index >= 0) ? npart_outgoing[xmaxymin_index*8 + 6] : 0;
+        npy_intp npart_incoming_xminymin = (xminymin_index >= 0) ? npart_outgoing[xminymin_index*8 + 7] : 0;
         
         // Indices of particles coming from boundary
         AUTOFREE npy_intp* xmin_incoming_indices = NULL;
@@ -714,45 +721,46 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         double* buffer AUTOFREE = NULL;                                                                                                                                                                                                                                          
         if (npart_new > 0) {                                                                                                                                                                                                                                                     
             buffer = malloc(nattrs*npart_new * sizeof(double));                                                                                                                                                                                                                  
-        }
-        // Fill buffer with boundary particles
-        fill_boundary_particles_to_buffer(
-            attrs_list, nattrs,
-            xmin_incoming_indices, xmax_incoming_indices,
-            ymin_incoming_indices, ymax_incoming_indices,
-            xminymin_incoming_indices, xmaxymin_incoming_indices,
-            xminymax_incoming_indices, xmaxymax_incoming_indices,
-            npart_incoming_xmin, npart_incoming_xmax,
-            npart_incoming_ymin, npart_incoming_ymax,
-            npart_incoming_xminymin, npart_incoming_xmaxymin,
-            npart_incoming_xminymax, npart_incoming_xmaxymax,
-            xmin_index, xmax_index, ymin_index, ymax_index,
-            xminymin_index, xmaxymin_index, xminymax_index, xmaxymax_index,
-            buffer
-        );
-        
-        // Fill particles from buffer
-        npy_intp ibuff = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if (ibuff >= npart_new) {
-                break;
-            }
-            if (is_dead[ipart]) {
-                for (npy_intp iattr = 0; iattr < nattrs; iattr++) {
-                    attrs_list[ipatch*nattrs + iattr][ipart] = buffer[ibuff*nattrs+iattr];
+            // Fill buffer with boundary particles
+            fill_boundary_particles_to_buffer(
+                attrs_list, nattrs,
+                xmin_incoming_indices, xmax_incoming_indices,
+                ymin_incoming_indices, ymax_incoming_indices,
+                xminymin_incoming_indices, xmaxymin_incoming_indices,
+                xminymax_incoming_indices, xmaxymax_incoming_indices,
+                npart_incoming_xmin, npart_incoming_xmax,
+                npart_incoming_ymin, npart_incoming_ymax,
+                npart_incoming_xminymin, npart_incoming_xmaxymin,
+                npart_incoming_xminymax, npart_incoming_xmaxymax,
+                xmin_index, xmax_index, ymin_index, ymax_index,
+                xminymin_index, xmaxymin_index, xminymax_index, xmaxymax_index,
+                buffer
+            );
+            
+            // Fill particles from buffer
+            npy_intp ibuff = 0;
+            for (npy_intp ipart = 0; ipart < npart; ipart++) {
+                if (ibuff >= npart_new) {
+                    break;
                 }
-                is_dead[ipart] = 0; // Mark as alive
-                ibuff++;
+                if (is_dead[ipart]) {
+                    for (npy_intp iattr = 0; iattr < nattrs; iattr++) {
+                        attrs_list[ipatch*nattrs + iattr][ipart] = buffer[ibuff*nattrs+iattr];
+                    }
+                    is_dead[ipart] = 0; // Mark as alive
+                    ibuff++;
+                }
             }
         }
-
+        
+    }
+    #pragma omp parallel for
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         mark_out_of_bound_as_dead(
             x_list[ipatch], y_list[ipatch], is_dead_list[ipatch], npart_list[ipatch],
             xmin_list[ipatch], xmax_list[ipatch],
-            ymin_list[ipatch], ymax_list[ipatch],
-            npatches
+            ymin_list[ipatch], ymax_list[ipatch]
         );
-        
     }
     Py_END_ALLOW_THREADS
 
