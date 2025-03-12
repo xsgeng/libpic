@@ -4,18 +4,12 @@ import numpy as np
 from numba import njit, typed
 
 from ..boundary.cpml import PML, PMLX, PMLY
-from ..boundary.particles import (
-    fill_particles_from_boundary,
-    get_npart_to_extend,
-    mark_out_of_bound_as_dead,
-)
+from .sync_particles import get_npart_to_extend, fill_particles_from_boundary
 from ..fields import Fields, Fields2D
 from ..particles import ParticlesBase
 from ..patch.cpu import (
     fill_particles,
     get_num_macro_particles,
-    sync_currents,
-    sync_guard_fields,
 )
 from ..species import Species
 from .sync_fields import sync_currents_2d, sync_guard_fields_2d
@@ -314,16 +308,11 @@ class Patches:
         )
 
     def sync_particles(self) -> None:
-        lists = self.grid_lists
-        plists = self.particle_lists
         for ispec, s in enumerate(self.species):
 
             npart_to_extend, npart_incoming, npart_outgoing = get_npart_to_extend(
-                plists[ispec]["x"], plists[ispec]["y"],
-                plists[ispec]["npart"], plists[ispec]["is_dead"],
-                lists["xaxis"], lists["yaxis"],
-                lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], 
-                lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
+                [p.particles[ispec] for p in self],
+                [p for p in self],
                 self.npatches, self.dx, self.dy,
             )
 
@@ -337,21 +326,12 @@ class Patches:
                     p.extend(npart_to_extend[ipatches])
                     p.extended = True
                     self.update_particle_lists(ipatches)
-
             fill_particles_from_boundary(
-                plists[ispec]["is_dead"],
-                lists["xaxis"], lists["yaxis"],
-                lists["xmin_neighbor_index"], lists["xmax_neighbor_index"], lists["ymin_neighbor_index"], lists["ymax_neighbor_index"],
+                [p.particles[ispec] for p in self],
+                [p for p in self],
                 npart_incoming, npart_outgoing,
                 self.npatches, self.dx, self.dy,
-                *[plists[ispec][attr] for attr in self[ipatches].particles[ispec].attrs],
-            )
-
-            mark_out_of_bound_as_dead(
-                plists[ispec]["x"], plists[ispec]["y"],
-                plists[ispec]["npart"], plists[ispec]["is_dead"],
-                lists["xaxis"], lists["yaxis"],
-                self.npatches, self.dx, self.dy,
+                self[ipatches].particles[ispec].attrs
             )
 
         
