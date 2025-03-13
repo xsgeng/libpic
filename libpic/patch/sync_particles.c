@@ -18,6 +18,18 @@ static void cleanup_ptr(void* p) {
 }
 #define AUTOFREE __attribute__((cleanup(cleanup_ptr)))
 
+enum Boundary2D {
+    XMIN = 0,
+    XMAX = 1,
+    YMIN = 2,
+    YMAX = 3,
+    XMINYMIN = 4,
+    XMAXYMIN = 5,
+    XMINYMAX = 6,
+    XMAXYMAX = 7,
+    NUM_BOUNDARIES = 8
+};
+
 // Implementation of count_outgoing_particles function
 static void count_outgoing_particles(
     double* x, double* y, 
@@ -479,14 +491,14 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
         
         // Store results in the outgoing array
         
-        npart_outgoing[ipatch * 8 + 0] = npart_xmin;
-        npart_outgoing[ipatch * 8 + 1] = npart_xmax;
-        npart_outgoing[ipatch * 8 + 2] = npart_ymin;
-        npart_outgoing[ipatch * 8 + 3] = npart_ymax;
-        npart_outgoing[ipatch * 8 + 4] = npart_xminymin;
-        npart_outgoing[ipatch * 8 + 5] = npart_xmaxymin;
-        npart_outgoing[ipatch * 8 + 6] = npart_xminymax;
-        npart_outgoing[ipatch * 8 + 7] = npart_xmaxymax;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + XMIN] = npart_xmin;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + XMAX] = npart_xmax;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + YMIN] = npart_ymin;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + YMAX] = npart_ymax;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + XMINYMIN] = npart_xminymin;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + XMAXYMIN] = npart_xmaxymin;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + XMINYMAX] = npart_xminymax;
+        npart_outgoing[ipatch * NUM_BOUNDARIES + XMAXYMAX] = npart_xmaxymax;
     }
     
     // Calculate incoming particles for each patch
@@ -510,30 +522,30 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
         npy_intp npart_new = 0;
         
         if (xmax_index >= 0) {
-            npart_new += npart_outgoing[xmax_index*8 + 0];
+            npart_new += npart_outgoing[xmax_index*NUM_BOUNDARIES + XMIN];
         }
         if (xmin_index >= 0) {
-            npart_new += npart_outgoing[xmin_index*8 + 1];
+            npart_new += npart_outgoing[xmin_index*NUM_BOUNDARIES + XMAX];
         }
         if (ymax_index >= 0) {
-            npart_new += npart_outgoing[ymax_index*8 + 2];
+            npart_new += npart_outgoing[ymax_index*NUM_BOUNDARIES + YMIN];
         }
         if (ymin_index >= 0) {
-            npart_new += npart_outgoing[ymin_index*8 + 3];
+            npart_new += npart_outgoing[ymin_index*NUM_BOUNDARIES + YMAX];
         }
         
         // Corners
         if (xmaxymax_index >= 0) {
-            npart_new += npart_outgoing[xmaxymax_index*8 + 4];
+            npart_new += npart_outgoing[xmaxymax_index*NUM_BOUNDARIES + XMINYMIN];
         }
         if (xminymax_index >= 0) {
-            npart_new += npart_outgoing[xminymax_index*8 + 5];
+            npart_new += npart_outgoing[xminymax_index*NUM_BOUNDARIES + XMAXYMIN];
         }
         if (xmaxymin_index >= 0) {
-            npart_new += npart_outgoing[xmaxymin_index*8 + 6];
+            npart_new += npart_outgoing[xmaxymin_index*NUM_BOUNDARIES + XMINYMAX];
         }
         if (xminymin_index >= 0) {
-            npart_new += npart_outgoing[xminymin_index*8 + 7];
+            npart_new += npart_outgoing[xminymin_index*NUM_BOUNDARIES + XMAXYMAX];
         }
         
         // Count dead particles
@@ -648,16 +660,16 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         npy_intp xmaxymax_index = xmaxymax_index_list[ipatch];
         
         // Number of particles coming from each boundary
-        npy_intp npart_incoming_xmax = (xmax_index >= 0) ? npart_outgoing[xmax_index*8 + 0] : 0;
-        npy_intp npart_incoming_xmin = (xmin_index >= 0) ? npart_outgoing[xmin_index*8 + 1] : 0;
-        npy_intp npart_incoming_ymax = (ymax_index >= 0) ? npart_outgoing[ymax_index*8 + 2] : 0;
-        npy_intp npart_incoming_ymin = (ymin_index >= 0) ? npart_outgoing[ymin_index*8 + 3] : 0;
+        npy_intp npart_incoming_xmax = (xmax_index >= 0) ? npart_outgoing[xmax_index*NUM_BOUNDARIES + XMIN] : 0;
+        npy_intp npart_incoming_xmin = (xmin_index >= 0) ? npart_outgoing[xmin_index*NUM_BOUNDARIES + XMAX] : 0;
+        npy_intp npart_incoming_ymax = (ymax_index >= 0) ? npart_outgoing[ymax_index*NUM_BOUNDARIES + YMIN] : 0;
+        npy_intp npart_incoming_ymin = (ymin_index >= 0) ? npart_outgoing[ymin_index*NUM_BOUNDARIES + YMAX] : 0;
         
         // Corners
-        npy_intp npart_incoming_xmaxymax = (xmaxymax_index >= 0) ? npart_outgoing[xmaxymax_index*8 + 4] : 0;
-        npy_intp npart_incoming_xminymax = (xminymax_index >= 0) ? npart_outgoing[xminymax_index*8 + 5] : 0;
-        npy_intp npart_incoming_xmaxymin = (xmaxymin_index >= 0) ? npart_outgoing[xmaxymin_index*8 + 6] : 0;
-        npy_intp npart_incoming_xminymin = (xminymin_index >= 0) ? npart_outgoing[xminymin_index*8 + 7] : 0;
+        npy_intp npart_incoming_xmaxymax = (xmaxymax_index >= 0) ? npart_outgoing[xmaxymax_index*NUM_BOUNDARIES + XMINYMIN] : 0;
+        npy_intp npart_incoming_xminymax = (xminymax_index >= 0) ? npart_outgoing[xminymax_index*NUM_BOUNDARIES + XMAXYMIN] : 0;
+        npy_intp npart_incoming_xmaxymin = (xmaxymin_index >= 0) ? npart_outgoing[xmaxymin_index*NUM_BOUNDARIES + XMINYMAX] : 0;
+        npy_intp npart_incoming_xminymin = (xminymin_index >= 0) ? npart_outgoing[xminymin_index*NUM_BOUNDARIES + XMAXYMAX] : 0;
         
         // Indices of particles coming from boundary
         AUTOFREE npy_intp* xmin_incoming_indices = NULL;

@@ -3,6 +3,9 @@
 #include <omp.h>
 #include "../utils/cutils.h"
 
+#undef INDEX2
+#undef INDEX3
+
 #define INDEX2(i, j) \
     ((j) >= 0 ? (j) : (j) + (NY)) + \
     ((i) >= 0 ? (i) : (i) + (NX)) * (NY)
