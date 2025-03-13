@@ -35,56 +35,44 @@ static void count_outgoing_particles(
     double* x, double* y, 
     double xmin, double xmax, double ymin, double ymax,
     npy_intp npart,
-    npy_intp* npart_xmin, npy_intp* npart_xmax, 
-    npy_intp* npart_ymin, npy_intp* npart_ymax,
-    npy_intp* npart_xminymin, npy_intp* npart_xmaxymin, 
-    npy_intp* npart_xminymax, npy_intp* npart_xmaxymax
+    npy_intp* npart_out
 ) {
-    *npart_xmin = 0;
-    *npart_xmax = 0;
-    *npart_ymin = 0;
-    *npart_ymax = 0;
-    *npart_xminymin = 0;
-    *npart_xmaxymin = 0;
-    *npart_xminymax = 0;
-    *npart_xmaxymax = 0;
-
     for (npy_intp ip = 0; ip < npart; ip++) {
         if (y[ip] < ymin) {
             if (x[ip] < xmin) {
-                (*npart_xminymin)++;
+                (npart_out[XMINYMIN])++;
                 continue;
             }
             else if (x[ip] > xmax) {
-                (*npart_xmaxymin)++;
+                (npart_out[XMAXYMIN])++;
                 continue;
             }
             else {
-                (*npart_ymin)++;
+                (npart_out[YMIN])++;
                 continue;
             }
         }
         else if (y[ip] > ymax) {
             if (x[ip] < xmin) {
-                (*npart_xminymax)++;
+                (npart_out[XMINYMAX])++;
                 continue;
             }
             else if (x[ip] > xmax) {
-                (*npart_xmaxymax)++;
+                (npart_out[XMAXYMAX])++;
                 continue;
             }
             else {
-                (*npart_ymax)++;
+                (npart_out[YMAX])++;
                 continue;
             }
         }
         else {
             if (x[ip] < xmin) {
-                (*npart_xmin)++;
+                (npart_out[XMIN])++;
                 continue;
             }
             else if (x[ip] > xmax) {
-                (*npart_xmax)++;
+                (npart_out[XMAX])++;
                 continue;
             }
         }
@@ -480,25 +468,17 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
         npy_intp npart = npart_list[ipatch];
         
         // Count particles going out of bounds
-        npy_intp npart_xmin, npart_xmax, npart_ymin, npart_ymax;
-        npy_intp npart_xminymin, npart_xmaxymin, npart_xminymax, npart_xmaxymax;
+        npy_intp npart_out[NUM_BOUNDARIES] = {0};
         
         count_outgoing_particles(
             x, y, xmin, xmax, ymin, ymax, npart,
-            &npart_xmin, &npart_xmax, &npart_ymin, &npart_ymax,
-            &npart_xminymin, &npart_xmaxymin, &npart_xminymax, &npart_xmaxymax
+            npart_out
         );
         
         // Store results in the outgoing array
-        
-        npart_outgoing[ipatch * NUM_BOUNDARIES + XMIN] = npart_xmin;
-        npart_outgoing[ipatch * NUM_BOUNDARIES + XMAX] = npart_xmax;
-        npart_outgoing[ipatch * NUM_BOUNDARIES + YMIN] = npart_ymin;
-        npart_outgoing[ipatch * NUM_BOUNDARIES + YMAX] = npart_ymax;
-        npart_outgoing[ipatch * NUM_BOUNDARIES + XMINYMIN] = npart_xminymin;
-        npart_outgoing[ipatch * NUM_BOUNDARIES + XMAXYMIN] = npart_xmaxymin;
-        npart_outgoing[ipatch * NUM_BOUNDARIES + XMINYMAX] = npart_xminymax;
-        npart_outgoing[ipatch * NUM_BOUNDARIES + XMAXYMAX] = npart_xmaxymax;
+        for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
+            npart_outgoing[ipatch * NUM_BOUNDARIES + ibound] = npart_out[ibound];
+        }
     }
     
     // Calculate incoming particles for each patch
@@ -506,46 +486,46 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         npy_bool *is_dead = is_dead_list[ipatch];
         npy_intp npart = npart_list[ipatch];
-        
-        npy_intp xmin_index = xmin_index_list[ipatch];
-        npy_intp xmax_index = xmax_index_list[ipatch];
-        npy_intp ymin_index = ymin_index_list[ipatch];
-        npy_intp ymax_index = ymax_index_list[ipatch];
-        
-        // Calculate corner indices
-        npy_intp xminymin_index = xminymin_index_list[ipatch];
-        npy_intp xmaxymin_index = xmaxymin_index_list[ipatch];
-        npy_intp xminymax_index = xminymax_index_list[ipatch];
-        npy_intp xmaxymax_index = xmaxymax_index_list[ipatch];
+
+        npy_intp boundary_index[NUM_BOUNDARIES] = {
+            xmin_index_list[ipatch],
+            xmax_index_list[ipatch],
+            ymin_index_list[ipatch],
+            ymax_index_list[ipatch],
+            xminymin_index_list[ipatch],
+            xmaxymin_index_list[ipatch],
+            xminymax_index_list[ipatch],
+            xmaxymax_index_list[ipatch]
+        };
         
         // Count incoming particles
         npy_intp npart_new = 0;
         
-        if (xmax_index >= 0) {
-            npart_new += npart_outgoing[xmax_index*NUM_BOUNDARIES + XMIN];
+        if (boundary_index[XMAX] >= 0) {
+            npart_new += npart_outgoing[boundary_index[XMAX]*NUM_BOUNDARIES + XMIN];
         }
-        if (xmin_index >= 0) {
-            npart_new += npart_outgoing[xmin_index*NUM_BOUNDARIES + XMAX];
+        if (boundary_index[XMIN] >= 0) {
+            npart_new += npart_outgoing[boundary_index[XMIN]*NUM_BOUNDARIES + XMAX];
         }
-        if (ymax_index >= 0) {
-            npart_new += npart_outgoing[ymax_index*NUM_BOUNDARIES + YMIN];
+        if (boundary_index[YMAX] >= 0) {
+            npart_new += npart_outgoing[boundary_index[YMAX]*NUM_BOUNDARIES + YMIN];
         }
-        if (ymin_index >= 0) {
-            npart_new += npart_outgoing[ymin_index*NUM_BOUNDARIES + YMAX];
+        if (boundary_index[YMIN] >= 0) {
+            npart_new += npart_outgoing[boundary_index[YMIN]*NUM_BOUNDARIES + YMAX];
         }
         
         // Corners
-        if (xmaxymax_index >= 0) {
-            npart_new += npart_outgoing[xmaxymax_index*NUM_BOUNDARIES + XMINYMIN];
+        if (boundary_index[XMAXYMAX] >= 0) {
+            npart_new += npart_outgoing[boundary_index[XMAXYMAX]*NUM_BOUNDARIES + XMINYMIN];
         }
-        if (xminymax_index >= 0) {
-            npart_new += npart_outgoing[xminymax_index*NUM_BOUNDARIES + XMAXYMIN];
+        if (boundary_index[XMINYMAX] >= 0) {
+            npart_new += npart_outgoing[boundary_index[XMINYMAX]*NUM_BOUNDARIES + XMAXYMIN];
         }
-        if (xmaxymin_index >= 0) {
-            npart_new += npart_outgoing[xmaxymin_index*NUM_BOUNDARIES + XMINYMAX];
+        if (boundary_index[XMAXYMIN] >= 0) {
+            npart_new += npart_outgoing[boundary_index[XMAXYMIN]*NUM_BOUNDARIES + XMINYMAX];
         }
-        if (xminymin_index >= 0) {
-            npart_new += npart_outgoing[xminymin_index*NUM_BOUNDARIES + XMAXYMAX];
+        if (boundary_index[XMINYMIN] >= 0) {
+            npart_new += npart_outgoing[boundary_index[XMINYMIN]*NUM_BOUNDARIES + XMAXYMAX];
         }
         
         // Count dead particles
