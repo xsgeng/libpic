@@ -22,11 +22,12 @@
   - [ ] Nuclear physics
 - [ ] Replace Numba JIT and Cython with C extensions
   - [x] Current depositor
-  - [ ] Patch synchronizer
+  - [x] Patch synchronizer
   - [ ] Maxwell solver
   - [ ] Particle pusher
-  - [ ] Interpolator
-  - [ ] sorter
+    - [x] unified pusher
+  - [x] Interpolator
+  - [x] sorter
 - [ ] Remove dependence on numba.typed.List
 - [ ] MPI
 - [ ] 3D
@@ -56,8 +57,8 @@ classDiagram
     Patch --> Fields : contains
     Patch --> PML : contains
 
-    Patch <|-- Patch2D
-    Patch <|-- Patch3D
+    Patch <|-- Patch2D~Patch~
+    Patch <|-- Patch3D~Patch~
 
     RadiationBase --> Patches : contains
     PairProductionBase --> Patches : contains
@@ -67,11 +68,34 @@ classDiagram
     MaxwellSolver --> Patches : contains
 
     Pydantic.BaseModel <|-- Species
-    Species <|-- Electron
-    Electron <|-- Positron
-    Species <|-- proton
-    Species <|-- photon
+    Species <|-- XXX~Species~
+    Species <|-- Electron~Species~
     Species --> ParticlesBase : creates
+
+    class Patch {
+        index: int
+        *_neighbor_index: int
+    }
+
+    class Patches {
+        sync_particles()
+        sync_guard_fields()
+        sync_currents()
+    }
+
+    class ParticlesBase {
+        x,y,z ...: NDArray[float]
+        is_dead: NDArray[bool]
+    }
+
+    class Fields {
+        ex, ey, ...: NDArray[float]
+    }
+
+    class Species {
+        name, q, m, ...
+        density: Callable
+    }
 ```
 ## Acknowledgments
 
