@@ -545,13 +545,13 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         };
         
         // Number of particles coming from each boundary
-        npy_intp npart_incoming[NUM_BOUNDARIES];
+        npy_intp npart_incoming_boundary[NUM_BOUNDARIES];
         for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
             npy_intp i = boundary_index[ibound];
             if (i >= 0) {
-                npart_incoming[ibound] = npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
+                npart_incoming_boundary[ibound] = npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
             } else {
-                npart_incoming[ibound] = 0;
+                npart_incoming_boundary[ibound] = 0;
             }
         }
 
@@ -560,9 +560,9 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         
         // Allocate memory for indices
         for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
-            if (npart_incoming[ibound] > 0) {
-                incoming_indices[ibound] = (npy_intp*)malloc(npart_incoming[ibound] * sizeof(npy_intp));
-                for (npy_intp i = 0; i < npart_incoming[ibound]; i++) incoming_indices[ibound][i] = 0;
+            if (npart_incoming_boundary[ibound] > 0) {
+                incoming_indices[ibound] = (npy_intp*)malloc(npart_incoming_boundary[ibound] * sizeof(npy_intp));
+                for (npy_intp i = 0; i < npart_incoming_boundary[ibound]; i++) incoming_indices[ibound][i] = 0;
             }
         }
         
@@ -584,7 +584,7 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
             fill_boundary_particles_to_buffer(
                 attrs_list, nattrs,
                 incoming_indices,
-                npart_incoming,
+                npart_incoming_boundary,
                 boundary_index,
                 buffer
             );
