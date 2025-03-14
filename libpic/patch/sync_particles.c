@@ -20,14 +20,25 @@ static void cleanup_ptr(void* p) {
 
 enum Boundary2D {
     XMIN = 0,
-    XMAX = 1,
-    YMIN = 2,
-    YMAX = 3,
-    XMINYMIN = 4,
-    XMAXYMIN = 5,
-    XMINYMAX = 6,
-    XMAXYMAX = 7,
-    NUM_BOUNDARIES = 8
+    XMAX,
+    YMIN,
+    YMAX,
+    XMINYMIN,
+    XMAXYMIN,
+    XMINYMAX,
+    XMAXYMAX,
+    NUM_BOUNDARIES
+};
+
+static const enum Boundary2D OPPOSITE_BOUNDARY[NUM_BOUNDARIES] = {
+    XMAX,
+    XMIN,
+    YMAX,
+    YMIN,
+    XMAXYMAX,
+    XMINYMAX,
+    XMAXYMIN,
+    XMINYMIN
 };
 
 // Implementation of count_outgoing_particles function
@@ -415,32 +426,11 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
         
         // Count incoming particles
         npy_intp npart_new = 0;
-        
-        if (boundary_index[XMAX] >= 0) {
-            npart_new += npart_outgoing[boundary_index[XMAX]*NUM_BOUNDARIES + XMIN];
-        }
-        if (boundary_index[XMIN] >= 0) {
-            npart_new += npart_outgoing[boundary_index[XMIN]*NUM_BOUNDARIES + XMAX];
-        }
-        if (boundary_index[YMAX] >= 0) {
-            npart_new += npart_outgoing[boundary_index[YMAX]*NUM_BOUNDARIES + YMIN];
-        }
-        if (boundary_index[YMIN] >= 0) {
-            npart_new += npart_outgoing[boundary_index[YMIN]*NUM_BOUNDARIES + YMAX];
-        }
-        
-        // Corners
-        if (boundary_index[XMAXYMAX] >= 0) {
-            npart_new += npart_outgoing[boundary_index[XMAXYMAX]*NUM_BOUNDARIES + XMINYMIN];
-        }
-        if (boundary_index[XMINYMAX] >= 0) {
-            npart_new += npart_outgoing[boundary_index[XMINYMAX]*NUM_BOUNDARIES + XMAXYMIN];
-        }
-        if (boundary_index[XMAXYMIN] >= 0) {
-            npart_new += npart_outgoing[boundary_index[XMAXYMIN]*NUM_BOUNDARIES + XMINYMAX];
-        }
-        if (boundary_index[XMINYMIN] >= 0) {
-            npart_new += npart_outgoing[boundary_index[XMINYMIN]*NUM_BOUNDARIES + XMAXYMAX];
+        for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
+            npy_intp i = boundary_index[ibound];
+            if (i >= 0) {
+                npart_new += npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
+            }
         }
         
         // Count dead particles
@@ -556,16 +546,15 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
         
         // Number of particles coming from each boundary
         npy_intp npart_incoming[NUM_BOUNDARIES];
-        npart_incoming[XMAX] = (boundary_index[XMAX] >= 0) ? npart_outgoing[boundary_index[XMAX]*NUM_BOUNDARIES + XMIN] : 0;
-        npart_incoming[XMIN] = (boundary_index[XMIN] >= 0) ? npart_outgoing[boundary_index[XMIN]*NUM_BOUNDARIES + XMAX] : 0;
-        npart_incoming[YMAX] = (boundary_index[YMAX] >= 0) ? npart_outgoing[boundary_index[YMAX]*NUM_BOUNDARIES + YMIN] : 0;
-        npart_incoming[YMIN] = (boundary_index[YMIN] >= 0) ? npart_outgoing[boundary_index[YMIN]*NUM_BOUNDARIES + YMAX] : 0;
-        // Corners
-        npart_incoming[XMAXYMAX] = (boundary_index[XMAXYMAX] >= 0) ? npart_outgoing[boundary_index[XMAXYMAX]*NUM_BOUNDARIES + XMINYMIN] : 0;
-        npart_incoming[XMINYMAX] = (boundary_index[XMINYMAX] >= 0) ? npart_outgoing[boundary_index[XMINYMAX]*NUM_BOUNDARIES + XMAXYMIN] : 0;
-        npart_incoming[XMAXYMIN] = (boundary_index[XMAXYMIN] >= 0) ? npart_outgoing[boundary_index[XMAXYMIN]*NUM_BOUNDARIES + XMINYMAX] : 0;
-        npart_incoming[XMINYMIN] = (boundary_index[XMINYMIN] >= 0) ? npart_outgoing[boundary_index[XMINYMIN]*NUM_BOUNDARIES + XMAXYMAX] : 0;
-        
+        for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
+            npy_intp i = boundary_index[ibound];
+            if (i >= 0) {
+                npart_incoming[ibound] = npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
+            } else {
+                npart_incoming[ibound] = 0;
+            }
+        }
+
         // Indices of particles coming from boundary
         npy_intp* incoming_indices[NUM_BOUNDARIES] = {NULL};
         
