@@ -90,190 +90,57 @@ static void count_outgoing_particles(
     }
 }
 
+#define SET_INCOMING_INDEX(BOUND) \
+    ipatch = boundary_index[BOUND]; \
+    if (ipatch < 0) continue; \
+    ibound = OPPOSITE_BOUNDARY[BOUND]; \
+    incoming_indices_list[ipatch][ibound][ibuff[BOUND]] = ip; \
+    (ibuff[BOUND])++; \
+    continue;
+
 // Get indices of incoming particles from neighboring patches
 static void get_incoming_index(
-    double** x_list, double** y_list, npy_intp* npart_list,
-    double* xmin_list, double* xmax_list, double* ymin_list, double* ymax_list,
-    npy_intp* boundary_index,
-    // out
-    npy_intp** incoming_indices
+double* x, double* y, npy_intp npart,
+double xmin, double xmax, 
+double ymin, double ymax, 
+npy_intp* boundary_index,
+// out
+npy_intp*** incoming_indices_list
 ) {
-    // On xmin boundary
-    if ((boundary_index[XMIN] >= 0) && (incoming_indices[XMIN] != NULL)) {
-        double* x_on_xmin = x_list[boundary_index[XMIN]];
-        double* y_on_xmin = y_list[boundary_index[XMIN]];
-        
-        double xmax = xmax_list[boundary_index[XMIN]];
-        double ymin = ymin_list[boundary_index[XMIN]];
-        double ymax = ymax_list[boundary_index[XMIN]];
-
-        npy_intp npart = npart_list[boundary_index[XMIN]];
-        
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_xmin[ipart] > xmax) && (y_on_xmin[ipart] >= ymin) && (y_on_xmin[ipart] <= ymax)) {
-                incoming_indices[XMIN][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
+    AUTOFREE npy_intp* ibuff = (npy_intp*)malloc(NUM_BOUNDARIES * sizeof(npy_intp));
+    for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
+        ibuff[ibound] = 0;
+    }
+    npy_intp ipatch, ibound;
+    for (npy_intp ip = 0; ip < npart; ip++) {
+        if (y[ip] < ymin) {
+            if (x[ip] < xmin) {
+                SET_INCOMING_INDEX(XMINYMIN)
+            }
+            else if (x[ip] > xmax) {
+                SET_INCOMING_INDEX(XMAXYMIN)
+            }
+            else {
+                SET_INCOMING_INDEX(YMIN)
             }
         }
-    }
-    
-    // On xmax boundary
-    if ((boundary_index[XMAX] >= 0) && (incoming_indices[XMAX] != NULL)) {
-        double* x_on_xmax = x_list[boundary_index[XMAX]];
-        double* y_on_xmax = y_list[boundary_index[XMAX]];
-        
-        double xmin = xmin_list[boundary_index[XMAX]];
-        double ymin = ymin_list[boundary_index[XMAX]];
-        double ymax = ymax_list[boundary_index[XMAX]];
-
-        npy_intp npart = npart_list[boundary_index[XMAX]];
-        
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_xmax[ipart] < xmin) && (y_on_xmax[ipart] >= ymin) && (y_on_xmax[ipart] <= ymax)) {
-                incoming_indices[XMAX][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
+        else if (y[ip] > ymax) {
+            if (x[ip] < xmin) {
+                SET_INCOMING_INDEX(XMINYMAX)
+            }
+            else if (x[ip] > xmax) {
+                SET_INCOMING_INDEX(XMAXYMAX)
+            }
+            else {
+                SET_INCOMING_INDEX(YMAX)
             }
         }
-    }
-    
-    // On ymin boundary
-    if ((boundary_index[YMIN] >= 0) && (incoming_indices[YMIN] != NULL)) {
-        double* x_on_ymin = x_list[boundary_index[YMIN]];
-        double* y_on_ymin = y_list[boundary_index[YMIN]];
-        
-        double xmin = xmin_list[boundary_index[YMIN]];
-        double xmax = xmax_list[boundary_index[YMIN]];
-        double ymax = ymax_list[boundary_index[YMIN]];
-
-        npy_intp npart = npart_list[boundary_index[YMIN]];
-        
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_ymin[ipart] >= xmin) && (x_on_ymin[ipart] <= xmax) && (y_on_ymin[ipart] > ymax)) {
-                incoming_indices[YMIN][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
+        else {
+            if (x[ip] < xmin) {
+                SET_INCOMING_INDEX(XMIN)
             }
-        }
-    }
-    
-    // On ymax boundary
-    if ((boundary_index[YMAX] >= 0) && (incoming_indices[YMAX] != NULL)) {
-        double* x_on_ymax = x_list[boundary_index[YMAX]];
-        double* y_on_ymax = y_list[boundary_index[YMAX]];
-        
-        double xmin = xmin_list[boundary_index[YMAX]];
-        double xmax = xmax_list[boundary_index[YMAX]];
-        double ymin = ymin_list[boundary_index[YMAX]];
-
-        npy_intp npart = npart_list[boundary_index[YMAX]];
-
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_ymax[ipart] >= xmin) && (x_on_ymax[ipart] <= xmax) && (y_on_ymax[ipart] < ymin)) {
-                incoming_indices[YMAX][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
-            }
-        }
-    }
-    
-    // On xminymin boundary
-    if ((boundary_index[XMINYMIN] >= 0) && (incoming_indices[XMINYMIN] != NULL)) {
-        double* x_on_xminymin = x_list[boundary_index[XMINYMIN]];
-        double* y_on_xminymin = y_list[boundary_index[XMINYMIN]];
-        
-        double xmax = xmax_list[boundary_index[XMINYMIN]];
-        double ymax = ymax_list[boundary_index[XMINYMIN]];
-
-        npy_intp npart = npart_list[boundary_index[XMINYMIN]];
-
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_xminymin[ipart] > xmax) && (y_on_xminymin[ipart] > ymax)) {
-                incoming_indices[XMINYMIN][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
-            }
-        }
-    }
-    
-    // On xmaxymin boundary
-    if ((boundary_index[XMAXYMIN] >= 0) && (incoming_indices[XMAXYMIN] != NULL)) {
-        double* x_on_xmaxymin = x_list[boundary_index[XMAXYMIN]];
-        double* y_on_xmaxymin = y_list[boundary_index[XMAXYMIN]];
-        
-        double xmin = xmin_list[boundary_index[XMAXYMIN]];
-        double ymax = ymax_list[boundary_index[XMAXYMIN]];
-
-        npy_intp npart = npart_list[boundary_index[XMAXYMIN]];
-
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_xmaxymin[ipart] < xmin) && (y_on_xmaxymin[ipart] > ymax)) {
-                incoming_indices[XMAXYMIN][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
-            }
-        }
-    }
-    
-    // On xminymax boundary
-    if ((boundary_index[XMINYMAX] >= 0) && (incoming_indices[XMINYMAX] != NULL)) {
-        double* x_on_xminymax = x_list[boundary_index[XMINYMAX]];
-        double* y_on_xminymax = y_list[boundary_index[XMINYMAX]];
-        
-        double xmax = xmax_list[boundary_index[XMINYMAX]];
-        double ymin = ymin_list[boundary_index[XMINYMAX]];
-
-        npy_intp npart = npart_list[boundary_index[XMINYMAX]];
-
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_xminymax[ipart] > xmax) && (y_on_xminymax[ipart] < ymin)) {
-                incoming_indices[XMINYMAX][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
-            }
-        }
-    }
-    
-    // On xmaxymax boundary
-    if ((boundary_index[XMAXYMAX] >= 0) && (incoming_indices[XMAXYMAX] != NULL)) {
-        double* x_on_xmaxymax = x_list[boundary_index[XMAXYMAX]];
-        double* y_on_xmaxymax = y_list[boundary_index[XMAXYMAX]];
-        
-        double xmin = xmin_list[boundary_index[XMAXYMAX]];
-        double ymin = ymin_list[boundary_index[XMAXYMAX]];
-
-        npy_intp npart = npart_list[boundary_index[XMAXYMAX]];
-
-        npy_intp i = 0;
-        for (npy_intp ipart = 0; ipart < npart; ipart++) {
-            if ((x_on_xmaxymax[ipart] < xmin) && (y_on_xmaxymax[ipart] < ymin)) {
-                incoming_indices[XMAXYMAX][i] = ipart;
-                i++;
-                if (i >= npart) {
-                    break;
-                }
+            else if (x[ip] > xmax) {
+                SET_INCOMING_INDEX(XMAX)
             }
         }
     }
@@ -372,7 +239,7 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
     }
 
     // Allocate arrays for particle counts with cleanup attributes
-    npy_intp dims = 8*npatches;
+    npy_intp dims = NUM_BOUNDARIES*npatches;
     PyArrayObject *npart_to_extend_array = (PyArrayObject*) PyArray_ZEROS(1, &npatches, NPY_INT64, 0);
     PyArrayObject *npart_incoming_array = (PyArrayObject*) PyArray_ZEROS(1, &npatches, NPY_INT64, 0);
     PyArrayObject *npart_outgoing_array = (PyArrayObject*) PyArray_ZEROS(1, &dims, NPY_INT64, 0);
@@ -521,70 +388,101 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
             Py_DECREF(attr_array);
         }
     }
+    // Number of particles coming from each boundary
+    AUTOFREE npy_intp** npart_incoming_boundary_list = (npy_intp**)malloc(npatches * sizeof(npy_intp**));
+    // Indices of particles coming from boundary
+    AUTOFREE npy_intp*** incoming_indices_list = (npy_intp***)malloc(npatches * sizeof(npy_intp**));
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        npart_incoming_boundary_list[ipatch] = (npy_intp*)malloc(NUM_BOUNDARIES * sizeof(npy_intp*));
+        incoming_indices_list[ipatch] = (npy_intp**)malloc(NUM_BOUNDARIES * sizeof(npy_intp*));
+        for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
+            incoming_indices_list[ipatch][ibound] = NULL;
+            incoming_indices_list[ipatch][ibound] = 0;
+        }
+    }
+
+    int num_threads = omp_get_max_threads();
+    if (npatches < num_threads) num_threads = npatches;
 
     Py_BEGIN_ALLOW_THREADS
-    #pragma omp parallel for
-    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
-        npy_intp npart_new = npart_incoming[ipatch];
-        if (npart_new <= 0) {
-            continue;
-        }
-        
-        npy_bool* is_dead = is_dead_list[ipatch];
-        npy_intp npart = npart_list[ipatch];
-
-        npy_intp boundary_index[NUM_BOUNDARIES] = {
-            xmin_index_list[ipatch],
-            xmax_index_list[ipatch],
-            ymin_index_list[ipatch],
-            ymax_index_list[ipatch],
-            xminymin_index_list[ipatch],
-            xmaxymin_index_list[ipatch],
-            xminymax_index_list[ipatch],
-            xmaxymax_index_list[ipatch]
-        };
-        
-        // Number of particles coming from each boundary
-        npy_intp npart_incoming_boundary[NUM_BOUNDARIES];
-        for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
-            npy_intp i = boundary_index[ibound];
-            if (i >= 0) {
-                npart_incoming_boundary[ibound] = npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
-            } else {
-                npart_incoming_boundary[ibound] = 0;
+    #pragma omp parallel num_threads(num_threads)
+    {    // Number of particles coming from each boundary
+        #pragma omp for
+        for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+            npy_intp npart_new = npart_incoming[ipatch];
+            if (npart_new <= 0) {
+                continue;
+            }
+            npy_intp boundary_index[NUM_BOUNDARIES] = {
+                xmin_index_list[ipatch],
+                xmax_index_list[ipatch],
+                ymin_index_list[ipatch],
+                ymax_index_list[ipatch],
+                xminymin_index_list[ipatch],
+                xmaxymin_index_list[ipatch],
+                xminymax_index_list[ipatch],
+                xmaxymax_index_list[ipatch]
+            };
+            
+            for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
+                npy_intp i = boundary_index[ibound];
+                if (i >= 0) {
+                    npart_incoming_boundary_list[ipatch][ibound] = npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
+                    if (npart_incoming_boundary_list[ipatch][ibound] > 0) {
+                        incoming_indices_list[ipatch][ibound] = (npy_intp*)malloc(npart_incoming_boundary_list[ipatch][ibound] * sizeof(npy_intp));
+                    }
+                }
             }
         }
-
-        // Indices of particles coming from boundary
-        npy_intp* incoming_indices[NUM_BOUNDARIES] = {NULL};
-        
-        // Allocate memory for indices
-        for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
-            if (npart_incoming_boundary[ibound] > 0) {
-                incoming_indices[ibound] = (npy_intp*)malloc(npart_incoming_boundary[ibound] * sizeof(npy_intp));
-                for (npy_intp i = 0; i < npart_incoming_boundary[ibound]; i++) incoming_indices[ibound][i] = 0;
-            }
+        #pragma omp for
+        for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+            npy_intp boundary_index[NUM_BOUNDARIES] = {
+                xmin_index_list[ipatch],
+                xmax_index_list[ipatch],
+                ymin_index_list[ipatch],
+                ymax_index_list[ipatch],
+                xminymin_index_list[ipatch],
+                xmaxymin_index_list[ipatch],
+                xminymax_index_list[ipatch],
+                xmaxymax_index_list[ipatch]
+            };
+            
+            // Get indices of incoming particles
+            get_incoming_index(
+                x_list[ipatch], y_list[ipatch], npart_list[ipatch],
+                xmin_list[ipatch], xmax_list[ipatch], 
+                ymin_list[ipatch], ymax_list[ipatch],
+                // boundary indices
+                boundary_index,
+                // out
+                incoming_indices_list
+            );
         }
-        
-        // Get indices of incoming particles
-        get_incoming_index(
-            x_list, y_list, npart_list,
-            xmin_list, xmax_list, ymin_list, ymax_list,
-            // boundary indices
-            boundary_index,
-            // out
-            incoming_indices
-        );
-        
-        // Allocate buffer for incoming particles with cleanup attribute
-        double* buffer AUTOFREE = NULL;                                                                                                                                                                                                                                          
-        if (npart_new > 0) {                                                                                                                                                                                                                                                     
-            buffer = malloc(nattrs*npart_new * sizeof(double));                                                                                                                                                                                                                  
+        #pragma omp for
+        for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+            npy_intp npart_new = npart_incoming[ipatch];
+            if (npart_new <= 0) {
+                continue;
+            }
+            npy_intp boundary_index[NUM_BOUNDARIES] = {
+                xmin_index_list[ipatch],
+                xmax_index_list[ipatch],
+                ymin_index_list[ipatch],
+                ymax_index_list[ipatch],
+                xminymin_index_list[ipatch],
+                xmaxymin_index_list[ipatch],
+                xminymax_index_list[ipatch],
+                xmaxymax_index_list[ipatch]
+            };
+            npy_bool* is_dead = is_dead_list[ipatch];
+            npy_intp npart = npart_list[ipatch];
+            // Allocate buffer for incoming particles with cleanup attribute
+            AUTOFREE double* buffer = malloc(nattrs*npart_new * sizeof(double));                                                                                                                                                                                                                  
             // Fill buffer with boundary particles
             fill_boundary_particles_to_buffer(
                 attrs_list, nattrs,
-                incoming_indices,
-                npart_incoming_boundary,
+                incoming_indices_list[ipatch],
+                npart_incoming_boundary_list[ipatch],
                 boundary_index,
                 buffer
             );
@@ -602,19 +500,26 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
                     is_dead[ipart] = 0; // Mark as alive
                     ibuff++;
                 }
-            }
+            }    
         }
-        
-    }
-    #pragma omp parallel for
-    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
-        mark_out_of_bound_as_dead(
-            x_list[ipatch], y_list[ipatch], is_dead_list[ipatch], npart_list[ipatch],
-            xmin_list[ipatch], xmax_list[ipatch],
-            ymin_list[ipatch], ymax_list[ipatch]
-        );
+        #pragma omp for
+        for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+            mark_out_of_bound_as_dead(
+                x_list[ipatch], y_list[ipatch], is_dead_list[ipatch], npart_list[ipatch],
+                xmin_list[ipatch], xmax_list[ipatch],
+                ymin_list[ipatch], ymax_list[ipatch]
+            );
+        }
     }
     Py_END_ALLOW_THREADS
+
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
+            free(incoming_indices_list[ipatch][ibound]);
+        }
+        free(npart_incoming_boundary_list[ipatch]);
+        free(incoming_indices_list[ipatch]);
+    }
 
     Py_RETURN_NONE;
 }
