@@ -14,7 +14,54 @@ from ..patch.cpu import (
 from ..species import Species
 from .sync_fields import sync_currents_2d, sync_guard_fields_2d
 
+from enum import IntEnum, auto
 
+class Boundary2D(IntEnum):
+    """
+    Must be consistent with sync_particles2d.c
+    """
+    XMIN = 0
+    XMAX = auto()
+    YMIN = auto()
+    YMAX = auto()
+    XMINYMIN = auto()
+    XMAXYMIN = auto()
+    XMINYMAX = auto()
+    XMAXYMAX = auto()
+
+class Boundary3D(IntEnum):
+    """
+    Must be consistent with sync_particles3d.c
+    """
+    # faces
+    XMIN = 0
+    XMAX = auto()
+    YMIN = auto()
+    YMAX = auto()
+    ZMIN = auto()
+    ZMAX = auto()
+    # egdes
+    XMINYMIN = auto()
+    XMINYMAX = auto()
+    XMINZMIN = auto()
+    XMINZMAX = auto()
+    XMAXYMIN = auto()
+    XMAXYMAX = auto()
+    XMAXZMIN = auto()
+    XMAXZMAX = auto()
+    YMINZMIN = auto()
+    YMINZMAX = auto()
+    YMAXZMIN = auto()
+    YMAXZMAX = auto()
+    # vertices
+    XMINYMINZMIN = auto()
+    XMINYMINZMAX = auto()
+    XMINYMAXZMIN = auto()
+    XMINYMAXZMAX = auto()
+    XMAXYMINZMIN = auto()
+    XMAXYMINZMAX = auto()
+    XMAXYMAXZMIN = auto()
+    XMAXYMAXZMAX = auto()
 class Patch:
     rank: int
     index: int
@@ -25,42 +72,16 @@ class Patch:
 
     nx: int
     ny: int
+    nz: int
     dx: float
     dy: float
+    dz: float
 
     xaxis: np.ndarray
     yaxis: np.ndarray
+    zaxis: np.ndarray
 
-    # neighbors
-    # 6 faces
-    xmin_neighbor_index: int
-    xmax_neighbor_index: int
-    ymin_neighbor_index: int
-    ymax_neighbor_index: int
-    zmin_neighbor_index: int
-    zmax_neighbor_index: int
-    # 12 edges
-    xminymin_neighbor_index: int
-    xminymax_neighbor_index: int
-    xminzmin_neighbor_index: int
-    xminzmax_neighbor_index: int
-    xmaxymin_neighbor_index: int
-    xmaxymax_neighbor_index: int
-    xmaxzmin_neighbor_index: int
-    xmaxzmax_neighbor_index: int
-    yminzmin_neighbor_index: int
-    yminzmax_neighbor_index: int
-    ymaxzmin_neighbor_index: int
-    ymaxzmax_neighbor_index: int
-    # 8 corners
-    xminyminzmin_neighbor_index: int
-    xminyminzmax_neighbor_index: int
-    xminymaxzmin_neighbor_index: int
-    xminymaxzmax_neighbor_index: int
-    xmaxyminzmin_neighbor_index: int
-    xmaxyminzmax_neighbor_index: int
-    xmaxymaxzmin_neighbor_index: int
-    xmaxymaxzmax_neighbor_index: int
+    neighbor_index: np.ndarray[int]
 
     # MPI neighbors
     xmin_neighbor_rank: int
@@ -156,15 +177,7 @@ class Patch2D(Patch):
         self.xaxis = np.arange(self.nx) * self.dx + x0
         self.yaxis = np.arange(self.ny) * self.dy + y0
 
-        # neighbors
-        self.xmin_neighbor_index: int = -1
-        self.xmax_neighbor_index: int = -1
-        self.ymin_neighbor_index: int = -1
-        self.ymax_neighbor_index: int = -1
-        self.xminymin_neighbor_index: int = -1
-        self.xmaxymin_neighbor_index: int = -1
-        self.xminymax_neighbor_index: int = -1
-        self.xmaxymax_neighbor_index: int = -1
+        self.neighbor_index = np.full(len(Boundary2D), -1, dtype=int)
 
         # MPI neighbors
         self.xmin_neighbor_rank: int = -1
@@ -176,7 +189,7 @@ class Patch2D(Patch):
         for neighbor in kwargs.keys():
             assert neighbor in ["xmin", "xmax", "ymin", "ymax", "xminymin", "xmaxymin", "xminymax", "xmaxymax"], \
                 f"neighbor {neighbor} not found in kwargs, must be one of ['xmin', 'xmax', 'ymin', 'ymax', 'xminymin', 'xmaxymin', 'xminymax', 'xmaxymax']"
-            setattr(self, f"{neighbor}_neighbor_index", kwargs[neighbor])
+            self.neighbor_index[Boundary2D[neighbor.upper()]] = kwargs[neighbor]
 
     def set_neighbor_rank(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
         if xmin >= 0:
@@ -263,10 +276,6 @@ class Patches:
         lists["xaxis"] = typed.List([p.xaxis for p in self.patches])
         lists["yaxis"] = typed.List([p.yaxis for p in self.patches])
 
-        lists["xmin_neighbor_index"] = np.array([p.xmin_neighbor_index for p in self.patches])
-        lists["xmax_neighbor_index"] = np.array([p.xmax_neighbor_index for p in self.patches])
-        lists["ymin_neighbor_index"] = np.array([p.ymin_neighbor_index for p in self.patches])
-        lists["ymax_neighbor_index"] = np.array([p.ymax_neighbor_index for p in self.patches])
         self.grid_lists = lists
 
         particle_lists = []

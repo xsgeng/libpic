@@ -35,6 +35,20 @@ static inline double** get_attr_array_double(
     return data;
 }
 
+static inline npy_intp** get_attr_array_int(
+    PyObject* list, 
+    npy_intp npatches, 
+    const char* attr
+) {
+    npy_intp **data = malloc(npatches * sizeof(npy_intp*));
+    for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
+        PyObject *npy = PyObject_GetAttrString(PyList_GET_ITEM(list, ipatch), attr);
+        data[ipatch] = (npy_intp*) PyArray_DATA((PyArrayObject*) npy);
+        Py_DecRef(npy);
+    }
+    return data;
+}
+
 static inline npy_bool** get_attr_array_bool(
     PyObject* list, 
     npy_intp npatches, 

@@ -14,7 +14,32 @@
     ((k) >= 0 ? (k) : (k) + (NZ)) + \
     ((j) >= 0 ? (j) : (j) + (NY)) * (NZ) + \
     ((i) >= 0 ? (i) : (i) + (NX)) * (NY) * (NZ)
-    
+
+
+enum Boundary2D {
+    XMIN = 0,
+    XMAX,
+    YMIN,
+    YMAX,
+    XMINYMIN,
+    XMAXYMIN,
+    XMINYMAX,
+    XMAXYMAX,
+    NUM_BOUNDARIES
+};
+
+static const enum Boundary2D OPPOSITE_BOUNDARY[NUM_BOUNDARIES] = {
+    XMAX,
+    XMIN,
+    YMAX,
+    YMIN,
+    XMAXYMAX,
+    XMINYMAX,
+    XMAXYMIN,
+    XMINYMIN
+};
+
+
 static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *patches_list;
     npy_intp npatches, nx, ny, ng;
@@ -31,15 +56,7 @@ static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
     double **jz = get_attr_array_double(fields_list, npatches, "jz");
     double **rho = get_attr_array_double(fields_list, npatches, "rho");
 
-    // Get boundary index arrays
-    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_neighbor_index");
-    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_neighbor_index");
-    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_neighbor_index");
-    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_neighbor_index");
-    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_neighbor_index");
-    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_neighbor_index");
-    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_neighbor_index");
-    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_neighbor_index");
+    npy_intp **neighbor_index_list = get_attr_array_int(patches_list, npatches, "neighbor_index");
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
@@ -64,61 +81,62 @@ static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
                 field[src_patch][INDEX2(ix_src+ix, iy_src+iy)] = 0.0; \
             } \
         }
-
+        
+        const npy_intp* neighbor_index = neighbor_index_list[ipatch];
         // X direction sync
-        if (xmin_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(xmin_index[ipatch], 
+        if (neighbor_index[XMIN] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[XMIN], 
                 0, nx, ng, 
                 0, 0, ny
             )
         }
         
-        if (xmax_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(xmax_index[ipatch], 
+        if (neighbor_index[XMAX] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[XMAX], 
                 nx-ng, -ng, ng, 
                 0, 0, ny
             )
         }
 
         // Y direction sync
-        if (ymin_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(ymin_index[ipatch], 
+        if (neighbor_index[YMIN] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[YMIN], 
                 0, 0, nx, 
                 0, ny, ng
             )
         }
         
-        if (ymax_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(ymax_index[ipatch], 
+        if (neighbor_index[YMAX] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[YMAX], 
                 0, 0, nx, 
                 ny-ng, -ng, ng
             )
         }
 
         // Corner synchronization
-        if (xminymin_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(xminymin_index[ipatch], 
+        if (neighbor_index[XMINYMIN] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[XMINYMIN], 
                 0, nx, ng, 
                 0, ny, ng
             )
         }
         
-        if (xmaxymin_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(xmaxymin_index[ipatch], 
+        if (neighbor_index[XMAXYMIN] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[XMAXYMIN], 
                 nx-ng, -ng, ng, 
                 0, ny, ng
             )
         }
         
-        if (xminymax_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(xminymax_index[ipatch], 
+        if (neighbor_index[XMINYMAX] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[XMINYMAX], 
                 0, nx, ng, 
                 ny-ng, -ng, ng
             )
         }
         
-        if (xmaxymax_index[ipatch] >= 0) {
-            SYNC_BOUNDARY_2D(xmaxymax_index[ipatch], 
+        if (neighbor_index[XMAXYMAX] >= 0) {
+            SYNC_BOUNDARY_2D(neighbor_index[XMAXYMAX], 
                 nx-ng, -ng, ng, 
                 ny-ng, -ng, ng
             )
@@ -128,8 +146,7 @@ static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
 
     // Clean up resources
     free(jx); free(jy); free(jz); free(rho);
-    free(xmin_index); free(xmax_index); free(ymin_index); free(ymax_index);
-    free(xminymin_index); free(xminymax_index); free(xmaxymin_index); free(xmaxymax_index);
+    free(neighbor_index_list);
     // Py_DECREF(fields_list);
     // Py_DECREF(patches_list);
     
@@ -156,15 +173,7 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
     double **by = get_attr_array_double(fields_list, npatches, "by");
     double **bz = get_attr_array_double(fields_list, npatches, "bz");
 
-    // Get boundary index arrays
-    npy_intp *xmin_index = get_attr_int(patches_list, npatches, "xmin_neighbor_index");
-    npy_intp *xmax_index = get_attr_int(patches_list, npatches, "xmax_neighbor_index");
-    npy_intp *ymin_index = get_attr_int(patches_list, npatches, "ymin_neighbor_index");
-    npy_intp *ymax_index = get_attr_int(patches_list, npatches, "ymax_neighbor_index");
-    npy_intp *xminymin_index = get_attr_int(patches_list, npatches, "xminymin_neighbor_index");
-    npy_intp *xminymax_index = get_attr_int(patches_list, npatches, "xminymax_neighbor_index");
-    npy_intp *xmaxymin_index = get_attr_int(patches_list, npatches, "xmaxymin_neighbor_index");
-    npy_intp *xmaxymax_index = get_attr_int(patches_list, npatches, "xmaxymax_neighbor_index");
+    npy_intp **neighbor_index_list = get_attr_array_int(patches_list, npatches, "neighbor_index");
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
@@ -191,60 +200,62 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
             } \
         }
 
+        const npy_intp* neighbor_index = neighbor_index_list[ipatch];
+
         // X direction sync
-        if (xmin_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(xmin_index[ipatch], 
+        if (neighbor_index[XMIN] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[XMIN], 
                 -ng, nx-ng, ng, 
                 0, 0, NY
             )
         }
         
-        if (xmax_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(xmax_index[ipatch], 
+        if (neighbor_index[XMAX] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[XMAX], 
                 nx, 0, ng, 
                 0, 0, ny
             )
         }
 
         // Y direction sync
-        if (ymin_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(ymin_index[ipatch], 
+        if (neighbor_index[YMIN] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[YMIN], 
                 0, 0, nx, 
                 -ng, ny-ng, ng
             )
         }
         
-        if (ymax_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(ymax_index[ipatch], 
+        if (neighbor_index[YMAX] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[YMAX], 
                 0, 0, nx, 
                 ny, 0, ng
             )
         }
 
         // Corner synchronization
-        if (xminymin_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(xminymin_index[ipatch], 
+        if (neighbor_index[XMINYMIN] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[XMINYMIN], 
                 -ng, nx-ng, ng, 
                 -ng, ny-ng, ng
             )
         }
         
-        if (xmaxymin_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(xmaxymin_index[ipatch], 
+        if (neighbor_index[XMAXYMIN] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[XMAXYMIN], 
                 nx, 0, ng, 
                 -ng, ny-ng, ng
             )
         }
         
-        if (xminymax_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(xminymax_index[ipatch], 
+        if (neighbor_index[XMINYMAX] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[XMINYMAX], 
                 -ng, nx-ng, ng, 
                 ny, 0, ng
             )
         }
         
-        if (xmaxymax_index[ipatch] >= 0) {
-            SYNC_GUARD_2D(xmaxymax_index[ipatch], 
+        if (neighbor_index[XMAXYMAX] >= 0) {
+            SYNC_GUARD_2D(neighbor_index[XMAXYMAX], 
                 nx, 0, ng, 
                 ny, 0, ng
             )
@@ -255,8 +266,7 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
     // Clean up resources
     free(ex); free(ey); free(ez);
     free(bx); free(by); free(bz);
-    free(xmin_index); free(xmax_index); free(ymin_index); free(ymax_index);
-    free(xminymin_index); free(xminymax_index); free(xmaxymin_index); free(xmaxymax_index);
+    free(neighbor_index_list);
     // Py_DECREF(fields_list);
     // Py_DECREF(patches_list);
     
