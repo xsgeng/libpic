@@ -716,13 +716,13 @@ static PyMethodDef Methods[] = {
 
 static struct PyModuleDef module = {
     PyModuleDef_HEAD_INIT,
-    "sync_fields",
+    "sync_fields2d",
     NULL,
     -1,
     Methods
 };
 
-PyMODINIT_FUNC PyInit_sync_fields(void) {
+PyMODINIT_FUNC PyInit_sync_fields2d(void) {
     import_array();
     return PyModule_Create(&module);
 }

@@ -12,7 +12,7 @@ from ..patch.cpu import (
     get_num_macro_particles,
 )
 from ..species import Species
-from .sync_fields import sync_currents_2d, sync_guard_fields_2d
+from .sync_fields2d import sync_currents_2d, sync_guard_fields_2d
 
 from enum import IntEnum, auto
 
