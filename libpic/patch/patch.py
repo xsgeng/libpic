@@ -179,16 +179,10 @@ class Patch2D(Patch):
 
         self.neighbor_index = np.full(len(Boundary2D), -1, dtype=int)
 
-        # MPI neighbors
-        self.xmin_neighbor_rank: int = -1
-        self.xmax_neighbor_rank: int = -1
-        self.ymin_neighbor_rank: int = -1
-        self.ymax_neighbor_rank: int = -1
+        self.neighbor_rank = np.full(len(Boundary2D), -1, dtype=int)
 
     def set_neighbor_index(self, **kwargs):
         for neighbor in kwargs.keys():
-            assert neighbor in ["xmin", "xmax", "ymin", "ymax", "xminymin", "xmaxymin", "xminymax", "xmaxymax"], \
-                f"neighbor {neighbor} not found in kwargs, must be one of ['xmin', 'xmax', 'ymin', 'ymax', 'xminymin', 'xmaxymin', 'xminymax', 'xmaxymax']"
             self.neighbor_index[Boundary2D[neighbor.upper()]] = kwargs[neighbor]
 
     def set_neighbor_rank(self, *, xmin : int=-1, xmax : int=-1, ymin : int=-1, ymax : int=-1):
@@ -210,7 +204,86 @@ class Patch2D(Patch):
             # assert isinstance(self.pml_boundary[0], PMLY) ^ isinstance(pml, PMLY)
         self.pml_boundary.append(pml)
 
+class Patch3D(Patch):
+    def __init__(
+        self,
+        rank: int,
+        index: int,
+        ipatch_x: int,
+        ipatch_y: int,
+        ipatch_z: int,
+        x0: float, 
+        y0: float,
+        z0: float,
+        nx: int,
+        ny: int,
+        nz: int,
+        dx: float,
+        dy: float,
+        dz: float,
+    ) -> None:
+        """ 
+        Patch3D is a container for the fields and particles of a single patch.
+        The patch is a rectangular region of the grid.
 
+        Parameters
+        ----------
+        rank : int
+            rank of the process
+        index : int
+            index of the patch
+        ipatch_x : int
+            index of the patch in x direction
+        ipatch_y : int
+            index of the patch in y direction
+        x0 : float
+            start x0 of the patch
+        y0 : float
+            start y0 of the patch
+        nx : int
+            number of grids in x direction of the patch, n_guard not included
+        ny : int
+            number of grids in y direction of the patch, n_guard not included
+        dx : float
+            grid spacing in x direction
+        dy : float
+            grid spacing in y direction
+        """
+        super().__init__()
+        self.rank = rank
+        self.index = index
+        self.ipatch_x = ipatch_x
+        self.ipatch_y = ipatch_y
+        self.ipatch_z = ipatch_z
+        self.x0 = x0
+        self.y0 = y0
+        self.z0 = z0
+
+        self.nx = nx
+        self.ny = ny
+        self.nz = nz
+        self.dx = dx
+        self.dy = dy
+        self.dz = dz
+
+        self.xaxis = np.arange(self.nx) * self.dx + x0
+        self.yaxis = np.arange(self.ny) * self.dy + y0
+        self.zaxis = np.arange(self.nz) * self.dz + z0
+
+        self.neighbor_index = np.full(len(Boundary3D), -1, dtype=int)
+        self.neighbor_rank = np.full(len(Boundary3D), -1, dtype=int)
+
+    def set_neighbor_index(self, **kwargs):
+        for neighbor in kwargs.keys():
+            self.neighbor_index[Boundary3D[neighbor.upper()]] = kwargs[neighbor]
+
+    def set_neighbor_rank(self, **kwargs):
+        for neighbor in kwargs.keys():
+            self.neighbor_rank[Boundary3D[neighbor.upper()]] = kwargs[neighbor]
+
+
+    def add_pml_boundary(self, pml: PML) -> None:
+        raise NotImplementedError
 
 class Patches:
     """ 
@@ -268,16 +341,6 @@ class Patches:
 
         this update is expensive. 
         """
-
-        lists = {}
-        for attr in Fields2D.attrs:
-            lists[attr] = typed.List([getattr(p.fields, attr) for p in self.patches])
-
-        lists["xaxis"] = typed.List([p.xaxis for p in self.patches])
-        lists["yaxis"] = typed.List([p.yaxis for p in self.patches])
-
-        self.grid_lists = lists
-
         particle_lists = []
         for ispec, s in enumerate(self.species):
             particle_lists.append({})
