@@ -1,12 +1,12 @@
 from typing import List
 import numpy as np
 from ...fields import Fields
-from ...patch import Patch
+from ...patch import Patch3D
 
 
 def sync_currents_3d(
     fields_list: List[Fields],
-    patches_list: List[Patch],
+    patches_list: List[Patch3D],
     npatches: int, nx: int, ny: int, nz: int, ng: int
 ):
     """
@@ -16,7 +16,7 @@ def sync_currents_3d(
     ----------
     fields_list : List[Fields]
         List of fields of all patches.
-    patches_list : List[Patch]
+    patches_list : List[Patch3D]
         List of patches
     npatches : int
         Number of patches.
@@ -33,7 +33,7 @@ def sync_currents_3d(
 
 def sync_guard_fields_3d(
     fields_list: List[Fields],
-    patches_list: List[Patch],
+    patches_list: List[Patch3D],
     npatches: int, nx: int, ny: int, nz: int, ng: int
 ):
     """
@@ -43,7 +43,7 @@ def sync_guard_fields_3d(
     ----------
     fields_list : List[Fields]
         List of fields of all patches containing E and B fields
-    patches_list : List[Patch]
+    patches_list : List[Patch3D]
         List of patches
     npatches : int
         Number of patches

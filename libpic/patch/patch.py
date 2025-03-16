@@ -4,7 +4,7 @@ import numpy as np
 from numba import njit, typed
 
 from ..boundary.cpml import PML, PMLX, PMLY
-from .sync_particles import get_npart_to_extend, fill_particles_from_boundary
+
 from ..fields import Fields, Fields2D
 from ..particles import ParticlesBase
 from ..patch.cpu import (
@@ -13,6 +13,9 @@ from ..patch.cpu import (
 )
 from ..species import Species
 from .sync_fields2d import sync_currents_2d, sync_guard_fields_2d
+from .sync_fields3d import sync_currents_3d, sync_guard_fields_3d
+
+from . import sync_particles
 
 from enum import IntEnum, auto
 
@@ -365,24 +368,38 @@ class Patches:
                 plists[ispec][attr][ipatch] = getattr(patch.particles[ispec], attr)
 
     def sync_guard_fields(self):
-        sync_guard_fields_2d(
-            [p.fields for p in self.patches],
-            self.patches,
-            self.npatches, self.nx, self.ny, self.n_guard,
-        )
-
+        if self.dimension == 2:
+            sync_guard_fields_2d(
+                [p.fields for p in self.patches],
+                self.patches,
+                self.npatches, self.nx, self.ny, self.n_guard,
+            )
+        if self.dimension == 3:
+            sync_guard_fields_3d(
+                [p.fields for p in self.patches],
+                self.patches,
+                self.npatches, self.nx, self.ny, self.nz, self.n_guard,
+            )
+        
 
     def sync_currents(self):
-        sync_currents_2d(
-            [p.fields for p in self.patches],
-            self.patches,
-            self.npatches, self.nx, self.ny, self.n_guard,
-        )
-
+        if self.dimension == 2:
+            sync_currents_2d(
+                [p.fields for p in self.patches],
+                self.patches,
+                self.npatches, self.nx, self.ny, self.n_guard,
+            )
+        if self.dimension == 3:
+            sync_currents_3d(
+                [p.fields for p in self.patches],
+                self.patches,
+                self.npatches, self.nx, self.ny, self.nz, self.n_guard,
+            )
+        
     def sync_particles(self) -> None:
         for ispec, s in enumerate(self.species):
 
-            npart_to_extend, npart_incoming, npart_outgoing = get_npart_to_extend(
+            npart_to_extend, npart_incoming, npart_outgoing = sync_particles.get_npart_to_extend(
                 [p.particles[ispec] for p in self],
                 [p for p in self],
                 self.npatches, self.dx, self.dy,
@@ -398,7 +415,7 @@ class Patches:
                     p.extend(npart_to_extend[ipatches])
                     p.extended = True
                     self.update_particle_lists(ipatches)
-            fill_particles_from_boundary(
+            sync_particles.fill_particles_from_boundary(
                 [p.particles[ispec] for p in self],
                 [p for p in self],
                 npart_incoming, npart_outgoing,
