@@ -6,54 +6,49 @@ from scipy.constants import c, e
 
 from libpic.current.cpu import current_deposition_cpu
 from libpic.current.deposition import CurrentDeposition2D
-
+from libpic.current.cpu3d import current_deposition_cpu3d
+from libpic.fields import Fields3D, Fields2D
+from libpic.patch.patch import Patch3D, Patches
+from libpic.species import Electron, Proton
+from libpic.particles import ParticlesBase
 
 class TestCurrentDeposition(unittest.TestCase):
     def test_precision(self):
         nx = 6
         ny = 6
-        npart = 1
         dx = dy = 1.0e-6
-        x0_list = [-3*dx]
-        y0_list = [-3*dy]
         dt = dx / c * 0.9
         q = e
 
+        particles = ParticlesBase(0, 0)
+        particles.initialize(1)
+
+        fields = Fields2D(nx=nx, ny=ny, dx=dx, dy=dy, x0=-3*dx, y0=-3*dy, n_guard=3)
+
         ne = 1e27
-        w_list = [np.array([ne*dx*dy])]
+        particles.w[:] = ne*dx*dy
         
-        ux_list = [np.random.uniform(-10.0, 10.0, (1,))]
-        uy_list = [np.random.uniform(-10.0, 10.0, (1,))]
-        uz_list = [np.random.uniform(-10.0, 10.0, (1,))]
-        inv_gamma_list = [1 / np.sqrt(1 + ux_list[0]**2 + uy_list[0]**2 + uz_list[0]**2)]
+        particles.ux[:] = np.random.uniform(-10.0, 10.0)
+        particles.uy[:] = np.random.uniform(-10.0, 10.0)
+        particles.uz[:] = np.random.uniform(-10.0, 10.0)
+        particles.inv_gamma[:] = 1 / np.sqrt(1 + particles.ux**2 + particles.uy**2 + particles.uz**2)
 
-        rho_list = [np.zeros((nx, ny))]
-        jx_list = [np.zeros((nx, ny))]
-        jy_list = [np.zeros((nx, ny))]
-        jz_list = [np.zeros((nx, ny))]
+        particles.x[:] = np.random.uniform(-dx, dx)
+        particles.y[:] = np.random.uniform(-dy, dy)
 
-        is_dead_list = [np.full(npart, False)]
-
-        x_list = [np.random.uniform(-dx, dx, (1,))]
-        y_list = [np.random.uniform(-dy, dy, (1,))]
         current_deposition_cpu(
-            rho_list, jx_list, jy_list, jz_list, 
-            x0_list, y0_list, 
-            x_list, y_list, 
-            ux_list, uy_list, uz_list, 
-            inv_gamma_list, 
-            is_dead_list, 
-            w_list,
-            1, dx, dy, dt, q
+            [fields], 
+            [particles],
+            1, dt, q
         )
-        vx = ux_list[0]*inv_gamma_list[0]*c
-        vy = uy_list[0]*inv_gamma_list[0]*c
-        vz = uz_list[0]*inv_gamma_list[0]*c
+        vx = particles.ux*particles.inv_gamma*c
+        vy = particles.uy*particles.inv_gamma*c
+        vz = particles.uz*particles.inv_gamma*c
 
-        self.assertLess(abs(jx_list[0].sum() - q*ne*vx)/(q*ne*vx), 1e-10)
-        self.assertLess(abs(jy_list[0].sum() - q*ne*vy)/(q*ne*vy), 1e-10)
-        self.assertLess(abs(jz_list[0].sum() - q*ne*vz)/(q*ne*vz), 1e-10)
-        self.assertLess(abs(rho_list[0].sum() - ne*q)/(ne*q), 1e-10)
+        self.assertLess(abs(fields.jx.sum() - q*ne*vx)/(q*ne*vx), 1e-10)
+        self.assertLess(abs(fields.jy.sum() - q*ne*vy)/(q*ne*vy), 1e-10)
+        self.assertLess(abs(fields.jz.sum() - q*ne*vz)/(q*ne*vz), 1e-10)
+        self.assertLess(abs(fields.rho.sum() - ne*q)/(ne*q), 1e-10)
 
     def test_numba_func(self):
         npatch = 128
@@ -156,7 +151,7 @@ class TestCurrentDeposition(unittest.TestCase):
                     dx=dx,
                     dy=dy,
                 )
-                f = Fields2D(nx=nx_per_patch, ny=ny_per_patch, dx=dx,dy=dy, x0=i*Lx/npatch_x, y0=j*Ly/npatch_y, n_guard=n_guard)      
+                f = Fields2D(nx=nx_per_patch, ny=ny_per_patch, dx=dx,dy=dy, x0=i*Lx/npatch_x, y0=j*Ly/npatch_y, n_guard=n_guard)
                 p.set_fields(f)
 
                 if i > 0:
@@ -195,3 +190,43 @@ class TestCurrentDeposition(unittest.TestCase):
             [patch.particles[0] for patch in patches],
             npatch_x*npatch_y, 1e-15, -e
         )
+class TestCurrentDeposition3D(unittest.TestCase):
+    def test_precision(self):
+        nx = 6
+        ny = 6
+        nz = 6
+        dx = dy = dz = 1.0e-6
+        dt = dx / c * 0.9
+        q = e
+
+        particles = ParticlesBase(0, 0)
+        particles.attrs += ['z']
+        particles.initialize(1)
+
+        fields = Fields3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dy, dz=dz, x0=-3*dx, y0=-3*dy, z0=-3*dz, n_guard=3)
+
+        ne = 1e27
+        particles.w[:] = ne*dx*dy
+        
+        particles.ux[:] = np.random.uniform(-10.0, 10.0)
+        particles.uy[:] = np.random.uniform(-10.0, 10.0)
+        particles.uz[:] = np.random.uniform(-10.0, 10.0)
+        particles.inv_gamma[:] = 1 / np.sqrt(1 + particles.ux**2 + particles.uy**2 + particles.uz**2)
+
+        particles.x[:] = np.random.uniform(-dx, dx)
+        particles.y[:] = np.random.uniform(-dy, dy)
+        particles.z[:] = np.random.uniform(-dz, dz)
+
+        current_deposition_cpu3d(
+            [fields], 
+            [particles],
+            1, dt, q
+        )
+        vx = particles.ux*particles.inv_gamma*c
+        vy = particles.uy*particles.inv_gamma*c
+        vz = particles.uz*particles.inv_gamma*c
+
+        self.assertLess(abs(fields.jx.sum() - q*ne*vx)/(q*ne*vx), 1e-10)
+        self.assertLess(abs(fields.jy.sum() - q*ne*vy)/(q*ne*vy), 1e-10)
+        self.assertLess(abs(fields.jz.sum() - q*ne*vz)/(q*ne*vz), 1e-10)
+        self.assertLess(abs(fields.rho.sum() - ne*q)/(ne*q), 1e-10)

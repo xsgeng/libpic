@@ -239,12 +239,12 @@ inline static void current_deposit_3d(
                 double wy = DSy[j] * (S0x[i]*S0z[k] + 0.5 * DSx[i]*S0z[k] + 0.5*S0x[i]*DSz[k] + one_third*DSx[i]*DSz[k]);
                 double wz = DSz[k] * (S0x[i]*S0y[j] + 0.5 * DSx[i]*S0y[j] + 0.5*S0x[i]*DSy[j] + one_third*DSx[i]*DSy[j]);
 
-                jx_buff[ix][iy] -= factor * dx * wx;
-                jy_buff[i] -= factor * dy * wy;
+                jx_buff[k][j] -= factor * dx * wx;
+                jy_buff[k] -= factor * dy * wy;
                 jz_buff -= factor * dz * wz;
 
-                jx[INDEX3(ix, iy, iz)] += jx_buff[ix][iy];
-                jy[INDEX3(ix, iy, iz)] += jy_buff[i];
+                jx[INDEX3(ix, iy, iz)] += jx_buff[k][j];
+                jy[INDEX3(ix, iy, iz)] += jy_buff[k];
                 jz[INDEX3(ix, iy, iz)] += jz_buff;
                 rho[INDEX3(ix, iy, iz)] += charge_density * S1x[i] * S1y[j] * S1z[k];
             }
