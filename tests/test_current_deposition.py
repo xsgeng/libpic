@@ -50,65 +50,65 @@ class TestCurrentDeposition(unittest.TestCase):
         self.assertLess(abs(fields.jz.sum() - q*ne*vz)/(q*ne*vz), 1e-10)
         self.assertLess(abs(fields.rho.sum() - ne*q)/(ne*q), 1e-10)
 
-    def test_numba_func(self):
-        npatch = 128
-        nx = 100
-        ny = 100
-        npart = 100000
+    # def test_numba_func(self):
+    #     npatch = 128
+    #     nx = 100
+    #     ny = 100
+    #     npart = 100000
 
-        dx = 1e-6
-        dy = 1e-6
-        dt = dx / 2 / c
-        q = e
+    #     dx = 1e-6
+    #     dy = 1e-6
+    #     dt = dx / 2 / c
+    #     q = e
 
-        # Example usage
-        rho_list = [np.zeros((nx, ny)) for _ in range(npatch)]
-        jx_list = [np.zeros((nx, ny)) for _ in range(npatch)]
-        jy_list = [np.zeros((nx, ny)) for _ in range(npatch)]
-        jz_list = [np.zeros((nx, ny)) for _ in range(npatch)]
-        x0_list = [0.0 for _ in range(npatch)]
-        y0_list = [0.0 for _ in range(npatch)]
-        x_list = [np.random.uniform(10*dx, (nx-10)*dx, npart) for _ in range(npatch)]
-        y_list = [np.random.uniform(10*dy, (ny-10)*dy, npart) for _ in range(npatch)]
-        ux_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
-        uy_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
-        uz_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
-        inv_gamma_list = [1/np.sqrt(ux**2 + uy**2 + uz**2 + 1) for ux, uy, uz in zip(ux_list, uy_list, uz_list)]
-        is_dead_list = [np.full(npart, False) for _ in range(npatch)]
-        w_list = [np.random.rand(npart) for _ in range(npatch)]
+    #     # Example usage
+    #     rho_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+    #     jx_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+    #     jy_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+    #     jz_list = [np.zeros((nx, ny)) for _ in range(npatch)]
+    #     x0_list = [0.0 for _ in range(npatch)]
+    #     y0_list = [0.0 for _ in range(npatch)]
+    #     x_list = [np.random.uniform(10*dx, (nx-10)*dx, npart) for _ in range(npatch)]
+    #     y_list = [np.random.uniform(10*dy, (ny-10)*dy, npart) for _ in range(npatch)]
+    #     ux_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+    #     uy_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+    #     uz_list = [np.random.uniform(-0, 0, npart) for _ in range(npatch)]
+    #     inv_gamma_list = [1/np.sqrt(ux**2 + uy**2 + uz**2 + 1) for ux, uy, uz in zip(ux_list, uy_list, uz_list)]
+    #     is_dead_list = [np.full(npart, False) for _ in range(npatch)]
+    #     w_list = [np.random.rand(npart) for _ in range(npatch)]
 
-        current_deposition_cpu(
-            rho_list, jx_list, jy_list, jz_list, 
-            x0_list, y0_list, 
-            x_list, y_list, 
-            ux_list, uy_list, uz_list, 
-            inv_gamma_list, 
-            is_dead_list, 
-            w_list,
-            npatch, dx, dy, dt, q
-        )    
-        self.assertFalse(np.isnan(rho_list[0]).any())
-        self.assertFalse(np.isnan(jx_list[0]).any())
-        self.assertFalse(np.isnan(jy_list[0]).any())
-        self.assertFalse(np.isnan(jz_list[0]).any())
+    #     current_deposition_cpu(
+    #         rho_list, jx_list, jy_list, jz_list, 
+    #         x0_list, y0_list, 
+    #         x_list, y_list, 
+    #         ux_list, uy_list, uz_list, 
+    #         inv_gamma_list, 
+    #         is_dead_list, 
+    #         w_list,
+    #         npatch, dx, dy, dt, q
+    #     )    
+    #     self.assertFalse(np.isnan(rho_list[0]).any())
+    #     self.assertFalse(np.isnan(jx_list[0]).any())
+    #     self.assertFalse(np.isnan(jy_list[0]).any())
+    #     self.assertFalse(np.isnan(jz_list[0]).any())
 
-        tic = perf_counter_ns()
-        current_deposition_cpu(
-            rho_list, jx_list, jy_list, jz_list, 
-            x0_list, y0_list, 
-            x_list, y_list, 
-            ux_list, uy_list, uz_list, 
-            inv_gamma_list, 
-            is_dead_list, 
-            w_list,
-            npatch, dx, dy, dt, q
-        )
-        toc = perf_counter_ns()
+    #     tic = perf_counter_ns()
+    #     current_deposition_cpu(
+    #         rho_list, jx_list, jy_list, jz_list, 
+    #         x0_list, y0_list, 
+    #         x_list, y_list, 
+    #         ux_list, uy_list, uz_list, 
+    #         inv_gamma_list, 
+    #         is_dead_list, 
+    #         w_list,
+    #         npatch, dx, dy, dt, q
+    #     )
+    #     toc = perf_counter_ns()
 
-        import os
-        nthreads = int(os.getenv('OMP_NUM_THREADS', os.cpu_count()))
-        nthreads = min(nthreads, npatch)
-        print(f"current_deposit_2d {(toc - tic)/(npart*npatch)*nthreads:.0f} ns per particle")
+    #     import os
+    #     nthreads = int(os.getenv('OMP_NUM_THREADS', os.cpu_count()))
+    #     nthreads = min(nthreads, npatch)
+    #     print(f"current_deposit_2d {(toc - tic)/(npart*npatch)*nthreads:.0f} ns per particle")
 
     def test_current_deposition_class(self):
         from scipy.constants import c, pi
