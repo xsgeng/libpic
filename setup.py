@@ -24,6 +24,12 @@ extensions = [
         extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
     ),
     Extension(
+        name="libpic.interpolation.cpu3d",
+        sources=["libpic/interpolation/cpu3d.c"],
+        include_dirs=[np.get_include()],
+        extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
+    ),
+    Extension(
         name="libpic.sort.cpu", 
         sources=["libpic/sort/cpu.c"],
         include_dirs=[np.get_include()],
