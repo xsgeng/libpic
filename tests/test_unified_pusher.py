@@ -97,7 +97,88 @@ class TestUnifiedPusher(unittest.TestCase):
         nthreads = min(nthreads, npatch)
         print(f"unified_boris_pusher_cpu: {(toc - tic)/1e6} ms, {(toc - tic)/npart*nthreads:.0f} ns per particle")
 
-    
+    def test_3d_speed(self):
+        from libpic.fields import Fields3D
+        from libpic.patch.patch import Patch3D, Patches
+        from libpic.pusher.unified.unified_pusher_3d import unified_boris_pusher_cpu  # Different import
+        import os
+
+        # Smaller 3D grid parameters
+        dx = dy = dz = 1e-6
+        nx = ny = nz = 64
+        npatch_x = npatch_y = npatch_z = 2
+        nx_per_patch = nx//npatch_x
+        ny_per_patch = ny//npatch_y
+        nz_per_patch = nz//npatch_z
+
+        patches = Patches(dimension=3)
+        for k in range(npatch_z):
+            for j in range(npatch_y):
+                for i in range(npatch_x):
+                    index = i + j*npatch_x + k*npatch_x*npatch_y
+                    p = Patch3D(
+                        rank=0,
+                        index=index,
+                        ipatch_x=i,
+                        ipatch_y=j,
+                        ipatch_z=k,
+                        x0=i*dx*nx_per_patch,
+                        y0=j*dy*ny_per_patch,
+                        z0=k*dz*nz_per_patch,
+                        nx=nx_per_patch,
+                        ny=ny_per_patch,
+                        nz=nz_per_patch,
+                        dx=dx,
+                        dy=dy,
+                        dz=dz,
+                    )
+                    f = Fields3D(
+                        nx=nx_per_patch, ny=ny_per_patch, nz=nz_per_patch,
+                        dx=dx, dy=dy, dz=dz,
+                        x0=i*dx*nx_per_patch,
+                        y0=j*dy*ny_per_patch,
+                        z0=k*dz*nz_per_patch,
+                        n_guard=3
+                    )
+                    p.set_fields(f)
+                    
+                    # Set neighbors in 3D
+                    if i > 0: p.set_neighbor_index(xmin=(i-1) + j*npatch_x + k*npatch_x*npatch_y)
+                    if i < npatch_x-1: p.set_neighbor_index(xmax=(i+1) + j*npatch_x + k*npatch_x*npatch_y)
+                    if j > 0: p.set_neighbor_index(ymin=i + (j-1)*npatch_x + k*npatch_x*npatch_y)
+                    if j < npatch_y-1: p.set_neighbor_index(ymax=i + (j+1)*npatch_x + k*npatch_x*npatch_y)
+                    if k > 0: p.set_neighbor_index(zmin=i + j*npatch_x + (k-1)*npatch_x*npatch_y)
+                    if k < npatch_z-1: p.set_neighbor_index(zmax=i + j*npatch_x + (k+1)*npatch_x*npatch_y)
+
+                    patches.append(p)
+
+        def density(x, y, z):  # 3D density function
+            return 2*1.74e27
+
+        ele = Electron(density=density, ppc=50)  # Fewer particles per cell
+        patches.add_species(ele)
+        patches.fill_particles()
+
+        for patch in patches:
+            p = patch.particles[0]
+            # Initialize 3D velocities
+            p.ux[:] = np.random.normal(0, 1, p.npart)
+            p.uy[:] = np.random.normal(0, 1, p.npart)
+            p.uz[:] = np.random.normal(0, 1, p.npart)
+            p.inv_gamma[:] = (1 + (p.ux**2 + p.uy**2 + p.uz**2))**-0.5
+
+        tic = perf_counter_ns()
+        unified_boris_pusher_cpu(  # 3D version of the pusher
+            [patch.particles[0] for patch in patches],
+            [patch.fields for patch in patches],
+            npatch_x*npatch_y*npatch_z, 1e-15, ele.q, ele.m
+        )
+        toc = perf_counter_ns()
+
+        npart = sum(patch.particles[0].npart for patch in patches)
+        npatch = npatch_x*npatch_y*npatch_z
+        nthreads = min(int(os.getenv('OMP_NUM_THREADS', os.cpu_count())), npatch)
+        print(f"3D unified_boris_pusher_cpu: {(toc - tic)/1e6} ms, {(toc - tic)/npart*nthreads:.0f} ns per particle")
 
 if __name__ == "__main__":
     unittest.main()
