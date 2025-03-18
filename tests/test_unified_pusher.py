@@ -7,8 +7,8 @@ from scipy.constants import c, e
 from libpic.pusher.unified.cpu import unified_boris_pusher_cpu
 
 
-class TestCurrentDeposition(unittest.TestCase):
-    def test_unified_pusher_class(self):
+class TestUnifiedPusher(unittest.TestCase):
+    def test_2d_speed(self):
         from scipy.constants import c, pi
         from libpic.fields import Fields2D
         from libpic.patch.patch import Patch2D, Patches
@@ -96,6 +96,8 @@ class TestCurrentDeposition(unittest.TestCase):
         print(nthreads)
         nthreads = min(nthreads, npatch)
         print(f"unified_boris_pusher_cpu: {(toc - tic)/1e6} ms, {(toc - tic)/npart*nthreads:.0f} ns per particle")
+
+    
 
 if __name__ == "__main__":
     unittest.main()
