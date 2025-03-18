@@ -93,12 +93,12 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
     npy_intp NX = nx+2*ng;
     npy_intp NY = ny+2*ng;
     npy_intp NZ = nz+2*ng;
-    double **jx = get_attr_array_double(fields_list, npatches, "jx");
-    double **jy = get_attr_array_double(fields_list, npatches, "jy"); 
-    double **jz = get_attr_array_double(fields_list, npatches, "jz");
-    double **rho = get_attr_array_double(fields_list, npatches, "rho");
+    AUTOFREE double **jx = get_attr_array_double(fields_list, npatches, "jx");
+    AUTOFREE double **jy = get_attr_array_double(fields_list, npatches, "jy"); 
+    AUTOFREE double **jz = get_attr_array_double(fields_list, npatches, "jz");
+    AUTOFREE double **rho = get_attr_array_double(fields_list, npatches, "rho");
 
-    npy_intp **neighbor_index_list = get_attr_array_int(patches_list, npatches, "neighbor_index");
+    AUTOFREE npy_intp **neighbor_index_list = get_attr_array_int(patches_list, npatches, "neighbor_index");
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
@@ -344,11 +344,6 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
     }
     Py_END_ALLOW_THREADS
 
-    free(jx); free(jy); free(jz); free(rho);
-    free(neighbor_index_list);
-    Py_DECREF(fields_list);
-    Py_DECREF(patches_list);
-    
     Py_RETURN_NONE;
 }
 
@@ -366,14 +361,14 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
     npy_intp NY = ny+2*ng;
     npy_intp NZ = nz+2*ng;
 
-    double **ex = get_attr_array_double(fields_list, npatches, "ex");
-    double **ey = get_attr_array_double(fields_list, npatches, "ey");
-    double **ez = get_attr_array_double(fields_list, npatches, "ez");
-    double **bx = get_attr_array_double(fields_list, npatches, "bx");
-    double **by = get_attr_array_double(fields_list, npatches, "by");
-    double **bz = get_attr_array_double(fields_list, npatches, "bz");
+    AUTOFREE double **ex = get_attr_array_double(fields_list, npatches, "ex");
+    AUTOFREE double **ey = get_attr_array_double(fields_list, npatches, "ey");
+    AUTOFREE double **ez = get_attr_array_double(fields_list, npatches, "ez");
+    AUTOFREE double **bx = get_attr_array_double(fields_list, npatches, "bx");
+    AUTOFREE double **by = get_attr_array_double(fields_list, npatches, "by");
+    AUTOFREE double **bz = get_attr_array_double(fields_list, npatches, "bz");
 
-    npy_intp **neighbor_index_list = get_attr_array_int(patches_list, npatches, "neighbor_index");
+    AUTOFREE npy_intp **neighbor_index_list = get_attr_array_int(patches_list, npatches, "neighbor_index");
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
@@ -617,13 +612,6 @@ static PyObject* sync_guard_fields_3d(PyObject* self, PyObject* args) {
         }
     }
     Py_END_ALLOW_THREADS
-
-    // Clean up resources
-    free(ex); free(ey); free(ez);
-    free(bx); free(by); free(bz);
-    free(neighbor_index_list);
-    // Py_DECREF(fields_list);
-    // Py_DECREF(patches_list);
     
     Py_RETURN_NONE;
 }

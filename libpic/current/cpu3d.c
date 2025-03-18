@@ -4,13 +4,6 @@
 #include <math.h>
 #include "../utils/cutils.h"
 
-static void cleanup_ptr(void* p) {
-    void** ptr = (void**)p;
-    if (*ptr) free(*ptr);
-    *ptr = NULL;
-}
-#define AUTOFREE __attribute__((cleanup(cleanup_ptr)))
-
 static void calculate_S(double delta, int shift, double* S) {
     double delta2 = delta * delta;
 

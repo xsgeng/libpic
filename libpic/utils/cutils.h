@@ -5,6 +5,14 @@
 #include <omp.h>
 #include <math.h>
 
+// Type-independent cleanup function using void*
+static void cleanup_ptr(void* p) {
+    void** ptr = (void**)p;
+    if (*ptr) free(*ptr);
+    *ptr = NULL;
+}
+#define AUTOFREE __attribute__((cleanup(cleanup_ptr)))
+
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #define LIGHT_SPEED 299792458.0
 #define one_third 0.3333333333333333

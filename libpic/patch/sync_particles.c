@@ -10,14 +10,6 @@
 // #define free tc_free
 // #endif
 
-// Type-independent cleanup function using void*
-static void cleanup_ptr(void* p) {
-    void** ptr = (void**)p;
-    if (*ptr) free(*ptr);
-    *ptr = NULL;
-}
-#define AUTOFREE __attribute__((cleanup(cleanup_ptr)))
-
 enum Boundary2D {
     XMIN = 0,
     XMAX,
@@ -360,7 +352,7 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
             PyObject *particle = PyList_GetItem(particles_list, ipatch);
             PyObject *attr_array = PyObject_GetAttr(particle, attr_name);
             attrs_list[ipatch*nattrs + iattr] = (double*) PyArray_DATA((PyArrayObject*)attr_array);
-            Py_DECREF(attr_array);
+            Py_DecRef(attr_array);
         }
     }
     // Number of particles coming from each boundary

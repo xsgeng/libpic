@@ -121,28 +121,28 @@ static PyObject* interpolation_patches_3d(PyObject* self, PyObject* args) {
     double dz = PyFloat_AsDouble(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "dz"));
 
     // fields
-    double **ex         = get_attr_array_double(fields_list, npatches, "ex");
-    double **ey         = get_attr_array_double(fields_list, npatches, "ey");
-    double **ez         = get_attr_array_double(fields_list, npatches, "ez");
-    double **bx         = get_attr_array_double(fields_list, npatches, "bx");
-    double **by         = get_attr_array_double(fields_list, npatches, "by");
-    double **bz         = get_attr_array_double(fields_list, npatches, "bz");
-    double *x0          = get_attr_double(fields_list, npatches, "x0");
-    double *y0          = get_attr_double(fields_list, npatches, "y0");
-    double *z0          = get_attr_double(fields_list, npatches, "z0");
+    AUTOFREE double **ex         = get_attr_array_double(fields_list, npatches, "ex");
+    AUTOFREE double **ey         = get_attr_array_double(fields_list, npatches, "ey");
+    AUTOFREE double **ez         = get_attr_array_double(fields_list, npatches, "ez");
+    AUTOFREE double **bx         = get_attr_array_double(fields_list, npatches, "bx");
+    AUTOFREE double **by         = get_attr_array_double(fields_list, npatches, "by");
+    AUTOFREE double **bz         = get_attr_array_double(fields_list, npatches, "bz");
+    AUTOFREE double *x0          = get_attr_double(fields_list, npatches, "x0");
+    AUTOFREE double *y0          = get_attr_double(fields_list, npatches, "y0");
+    AUTOFREE double *z0          = get_attr_double(fields_list, npatches, "z0");
 
     // particles
-    double **x          = get_attr_array_double(particles_list, npatches, "x");
-    double **y          = get_attr_array_double(particles_list, npatches, "y");
-    double **z          = get_attr_array_double(particles_list, npatches, "z");
-    double **ex_part    = get_attr_array_double(particles_list, npatches, "ex_part");
-    double **ey_part    = get_attr_array_double(particles_list, npatches, "ey_part");
-    double **ez_part    = get_attr_array_double(particles_list, npatches, "ez_part");
-    double **bx_part    = get_attr_array_double(particles_list, npatches, "bx_part");
-    double **by_part    = get_attr_array_double(particles_list, npatches, "by_part");
-    double **bz_part    = get_attr_array_double(particles_list, npatches, "bz_part");
-    npy_bool **is_dead  = get_attr_array_bool(particles_list, npatches, "is_dead");
-    npy_intp *npart     = get_attr_int(particles_list, npatches, "npart");
+    AUTOFREE double **x          = get_attr_array_double(particles_list, npatches, "x");
+    AUTOFREE double **y          = get_attr_array_double(particles_list, npatches, "y");
+    AUTOFREE double **z          = get_attr_array_double(particles_list, npatches, "z");
+    AUTOFREE double **ex_part    = get_attr_array_double(particles_list, npatches, "ex_part");
+    AUTOFREE double **ey_part    = get_attr_array_double(particles_list, npatches, "ey_part");
+    AUTOFREE double **ez_part    = get_attr_array_double(particles_list, npatches, "ez_part");
+    AUTOFREE double **bx_part    = get_attr_array_double(particles_list, npatches, "bx_part");
+    AUTOFREE double **by_part    = get_attr_array_double(particles_list, npatches, "by_part");
+    AUTOFREE double **bz_part    = get_attr_array_double(particles_list, npatches, "bz_part");
+    AUTOFREE npy_bool **is_dead  = get_attr_array_bool(particles_list, npatches, "is_dead");
+    AUTOFREE npy_intp *npart     = get_attr_int(particles_list, npatches, "npart");
 
     // release GIL
     Py_BEGIN_ALLOW_THREADS
