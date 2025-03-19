@@ -10,6 +10,8 @@ from ..particles import ParticlesBase
 from ..patch.cpu import (
     fill_particles,
     get_num_macro_particles,
+    fill_particles_3d,
+    get_num_macro_particles_3d,
 )
 from ..species import Species
 from .sync_fields2d import sync_currents_2d, sync_guard_fields_2d
