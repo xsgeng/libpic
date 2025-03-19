@@ -450,22 +450,43 @@ class Patches:
 
         print(f"Initializing Species {species.name}...", end=" ")
         tic = perf_counter_ns()
-        xaxis = typed.List([p.xaxis for p in self.patches])
-        yaxis = typed.List([p.yaxis for p in self.patches])
-
-        if species.density is not None:
-
-            num_macro_particles = get_num_macro_particles(
-                species.density_jit,
-                xaxis, 
-                yaxis, 
-                self.npatches, 
-                species.density_min, 
-                species.ppc,
-            )
+        
+        if self.dimension == 2:
+            xaxis = typed.List([p.xaxis for p in self.patches])
+            yaxis = typed.List([p.yaxis for p in self.patches])
+            
+            if species.density is not None:
+                num_macro_particles = get_num_macro_particles(
+                    species.density_jit,
+                    xaxis, 
+                    yaxis, 
+                    self.npatches, 
+                    species.density_min, 
+                    species.ppc,
+                )
+            else:
+                num_macro_particles = np.zeros(self.npatches, dtype='int64')
+                
+        elif self.dimension == 3:
+            xaxis = typed.List([p.xaxis for p in self.patches])
+            yaxis = typed.List([p.yaxis for p in self.patches])
+            zaxis = typed.List([p.zaxis for p in self.patches])
+            
+            if species.density is not None:
+                num_macro_particles = get_num_macro_particles_3d(
+                    species.density_jit,
+                    xaxis, 
+                    yaxis,
+                    zaxis,
+                    self.npatches, 
+                    species.density_min, 
+                    species.ppc,
+                )
+            else:
+                num_macro_particles = np.zeros(self.npatches, dtype='int64')
         else:
+            # 1D case or fallback
             num_macro_particles = np.zeros(self.npatches, dtype='int64')
-
 
         for ipatch in range(self.npatches):
             particles : ParticlesBase = species.create_particles(ipatch=ipatch)
@@ -480,23 +501,46 @@ class Patches:
         return num_macro_particles_sum
 
     def fill_particles(self):
-        xaxis = typed.List([p.xaxis for p in self.patches])
-        yaxis = typed.List([p.yaxis for p in self.patches])
         for ispec, s in enumerate(self.species):
             print(f"Creating Species {s.name}...", end=" ")
             tic = perf_counter_ns()
+            
             if s.density is not None:
-                x_list = typed.List([p.particles[ispec].x for p in self.patches])
-                y_list = typed.List([p.particles[ispec].y for p in self.patches])
-                w_list = typed.List([p.particles[ispec].w for p in self.patches])
-                fill_particles(
-                    s.density_jit,
-                    xaxis, 
-                    yaxis, 
-                    self.npatches, 
-                    s.density_min, 
-                    s.ppc,
-                    x_list,y_list,w_list
-                )
+                if self.dimension == 2:
+                    xaxis = typed.List([p.xaxis for p in self.patches])
+                    yaxis = typed.List([p.yaxis for p in self.patches])
+                    x_list = typed.List([p.particles[ispec].x for p in self.patches])
+                    y_list = typed.List([p.particles[ispec].y for p in self.patches])
+                    w_list = typed.List([p.particles[ispec].w for p in self.patches])
+                    
+                    fill_particles(
+                        s.density_jit,
+                        xaxis, 
+                        yaxis, 
+                        self.npatches, 
+                        s.density_min, 
+                        s.ppc,
+                        x_list, y_list, w_list
+                    )
+                    
+                elif self.dimension == 3:
+                    xaxis = typed.List([p.xaxis for p in self.patches])
+                    yaxis = typed.List([p.yaxis for p in self.patches])
+                    zaxis = typed.List([p.zaxis for p in self.patches])
+                    x_list = typed.List([p.particles[ispec].x for p in self.patches])
+                    y_list = typed.List([p.particles[ispec].y for p in self.patches])
+                    z_list = typed.List([p.particles[ispec].z for p in self.patches])
+                    w_list = typed.List([p.particles[ispec].w for p in self.patches])
+                    
+                    fill_particles_3d(
+                        s.density_jit,
+                        xaxis, 
+                        yaxis,
+                        zaxis,
+                        self.npatches, 
+                        s.density_min, 
+                        s.ppc,
+                        x_list, y_list, z_list, w_list
+                    )
     
             print(f"{(perf_counter_ns() - tic)/1e6} ms.")
