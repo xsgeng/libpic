@@ -100,7 +100,8 @@ class TestUnifiedPusher(unittest.TestCase):
     def test_3d_speed(self):
         from libpic.fields import Fields3D
         from libpic.patch.patch import Patch3D, Patches
-        from libpic.pusher.unified.unified_pusher_3d import unified_boris_pusher_cpu  # Different import
+        from libpic.pusher.unified.unified_pusher_3d import unified_boris_pusher_cpu
+        from libpic.species import Electron
         import os
 
         # Smaller 3D grid parameters
@@ -143,12 +144,18 @@ class TestUnifiedPusher(unittest.TestCase):
                     p.set_fields(f)
                     
                     # Set neighbors in 3D
-                    if i > 0: p.set_neighbor_index(xmin=(i-1) + j*npatch_x + k*npatch_x*npatch_y)
-                    if i < npatch_x-1: p.set_neighbor_index(xmax=(i+1) + j*npatch_x + k*npatch_x*npatch_y)
-                    if j > 0: p.set_neighbor_index(ymin=i + (j-1)*npatch_x + k*npatch_x*npatch_y)
-                    if j < npatch_y-1: p.set_neighbor_index(ymax=i + (j+1)*npatch_x + k*npatch_x*npatch_y)
-                    if k > 0: p.set_neighbor_index(zmin=i + j*npatch_x + (k-1)*npatch_x*npatch_y)
-                    if k < npatch_z-1: p.set_neighbor_index(zmax=i + j*npatch_x + (k+1)*npatch_x*npatch_y)
+                    if i > 0: 
+                        p.set_neighbor_index(xmin=(i-1) + j*npatch_x + k*npatch_x*npatch_y)
+                    if i < npatch_x-1: 
+                        p.set_neighbor_index(xmax=(i+1) + j*npatch_x + k*npatch_x*npatch_y)
+                    if j > 0: 
+                        p.set_neighbor_index(ymin=i + (j-1)*npatch_x + k*npatch_x*npatch_y)
+                    if j < npatch_y-1: 
+                        p.set_neighbor_index(ymax=i + (j+1)*npatch_x + k*npatch_x*npatch_y)
+                    if k > 0: 
+                        p.set_neighbor_index(zmin=i + j*npatch_x + (k-1)*npatch_x*npatch_y)
+                    if k < npatch_z-1: 
+                        p.set_neighbor_index(zmax=i + j*npatch_x + (k+1)*npatch_x*npatch_y)
 
                     patches.append(p)
 

@@ -373,7 +373,7 @@ static struct PyModuleDef cpumodule = {
     CpuMethods
 };
 
-PyMODINIT_FUNC PyInit_cpu(void) {
+PyMODINIT_FUNC PyInit_unified_pusher_3d(void) {
     import_array();
     return PyModule_Create(&cpumodule);
 }

@@ -7,6 +7,7 @@ from loguru import logger
 class ParticlesBase:
     x: NDArray[float64]
     y: NDArray[float64]
+    z: NDArray[float64]
     w: NDArray[float64]
     ux: NDArray[float64]
     uy: NDArray[float64]
@@ -40,7 +41,7 @@ class ParticlesBase:
             The rank the particle class is created. default 0
         """
         self.attrs: list[str] = [
-            "x", "y", "w", "ux", "uy", "uz", "inv_gamma",
+            "x", "y", "z", "w", "ux", "uy", "uz", "inv_gamma",
             "ex_part", "ey_part", "ez_part", "bx_part", "by_part", "bz_part",
             "_id"
         ]
