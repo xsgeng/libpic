@@ -279,9 +279,6 @@ def inter_collision_cell_2d(
         
         U1 = random_gen.uniform()
         U2 = random_gen.uniform()
-        if w1_ / w_max <= U2 and w2_ / w_max <= U2:
-            continue
-        
 
         gamma1 = 1/inv_gamma1[ip1]
         gamma2 = 1/inv_gamma2[ip2]
