@@ -17,7 +17,7 @@ from ..species import Species
 from .sync_fields2d import sync_currents_2d, sync_guard_fields_2d
 from .sync_fields3d import sync_currents_3d, sync_guard_fields_3d
 
-from . import sync_particles_2d
+from . import sync_particles_2d, sync_particles_3d
 
 from enum import IntEnum, auto
 
@@ -115,6 +115,12 @@ class Patch:
     @property
     def ymax(self):
         return self.y0 + (self.ny-1) * self.dy
+    @property
+    def zmin(self):
+        return self.z0
+    @property
+    def zmax(self):
+        return self.z0 + (self.nz-1) * self.dz
 
     def add_particles(self, particles: ParticlesBase) -> None:
         self.particles.append(particles)
@@ -399,31 +405,54 @@ class Patches:
             )
         
     def sync_particles(self) -> None:
-        for ispec, s in enumerate(self.species):
+        if self.dimension == 2:
+            for ispec, s in enumerate(self.species):
 
-            npart_to_extend, npart_incoming, npart_outgoing = sync_particles_2d.get_npart_to_extend_2d(
-                [p.particles[ispec] for p in self],
-                [p for p in self],
-                self.npatches, self.dx, self.dy,
-            )
+                npart_to_extend, npart_incoming, npart_outgoing = sync_particles_2d.get_npart_to_extend_2d(
+                    [p.particles[ispec] for p in self],
+                    [p for p in self],
+                    self.npatches, self.dx, self.dy,
+                )
 
-            # extend the particles in each patch in python mode
-            # TODO: extend the particles in each patch in numba mode in parallel
-            # typed.List cannot modify the attr of the particle object since
-            # the address is modified after being extended.
-            for ipatches in range(self.npatches):
-                p = self[ipatches].particles[ispec]
-                if npart_to_extend[ipatches] > 0:
-                    p.extend(npart_to_extend[ipatches])
-                    p.extended = True
-                    self.update_particle_lists(ipatches)
-            sync_particles_2d.fill_particles_from_boundary_2d(
-                [p.particles[ispec] for p in self],
-                [p for p in self],
-                npart_incoming, npart_outgoing,
-                self.npatches, self.dx, self.dy,
-                self[ipatches].particles[ispec].attrs
-            )
+                # extend the particles in each patch in python mode
+                # TODO: extend the particles in each patch in numba mode in parallel
+                # typed.List cannot modify the attr of the particle object since
+                # the address is modified after being extended.
+                for ipatches in range(self.npatches):
+                    p = self[ipatches].particles[ispec]
+                    if npart_to_extend[ipatches] > 0:
+                        p.extend(npart_to_extend[ipatches])
+                        p.extended = True
+                        self.update_particle_lists(ipatches)
+                sync_particles_2d.fill_particles_from_boundary_2d(
+                    [p.particles[ispec] for p in self],
+                    [p for p in self],
+                    npart_incoming, npart_outgoing,
+                    self.npatches, self.dx, self.dy,
+                    self[ipatches].particles[ispec].attrs
+                )
+        if self.dimension == 3:
+            for ispec, s in enumerate(self.species):
+                print(self.npatches, self.dx, self.dy, self.dz,)
+                npart_to_extend, npart_incoming, npart_outgoing = sync_particles_3d.get_npart_to_extend_3d(
+                    [p.particles[ispec] for p in self],
+                    self.patches,
+                    self.npatches, self.dx, self.dy, self.dz,
+                )
+
+                for ipatches in range(self.npatches):
+                    p = self[ipatches].particles[ispec]
+                    if npart_to_extend[ipatches] > 0:
+                        p.extend(npart_to_extend[ipatches])
+                        p.extended = True
+                        self.update_particle_lists(ipatches)
+                sync_particles_3d.fill_particles_from_boundary_3d(
+                    [p.particles[ispec] for p in self],
+                    [p for p in self],
+                    npart_incoming, npart_outgoing,
+                    self.npatches, self.dx, self.dy, self.dz,
+                    self[ipatches].particles[ispec].attrs
+                )
 
         
     @property
@@ -435,12 +464,20 @@ class Patches:
         return self[0].fields.ny
 
     @property
+    def nz(self) -> int:
+        return self[0].fields.nz
+
+    @property
     def dx(self) -> float:
         return self[0].fields.dx
 
     @property
     def dy(self) -> float:
         return self[0].fields.dy
+
+    @property
+    def dz(self) -> float:
+        return self[0].fields.dz
 
 
     @property

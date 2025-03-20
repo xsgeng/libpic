@@ -106,8 +106,8 @@ class TestUnifiedPusher(unittest.TestCase):
 
         # Smaller 3D grid parameters
         dx = dy = dz = 1e-6
-        nx = ny = nz = 64
-        npatch_x = npatch_y = npatch_z = 2
+        nx = ny = nz = 128
+        npatch_x = npatch_y = npatch_z = 16
         nx_per_patch = nx//npatch_x
         ny_per_patch = ny//npatch_y
         nz_per_patch = nz//npatch_z
@@ -162,7 +162,7 @@ class TestUnifiedPusher(unittest.TestCase):
         def density(x, y, z):  # 3D density function
             return 2*1.74e27
 
-        ele = Electron(density=density, ppc=50)  # Fewer particles per cell
+        ele = Electron(density=density, ppc=10)  # Fewer particles per cell
         patches.add_species(ele)
         patches.fill_particles()
 

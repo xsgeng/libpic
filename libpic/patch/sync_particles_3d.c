@@ -345,7 +345,7 @@ static void mark_out_of_bound_as_dead(
     }
 }
 
-PyObject* get_npart_to_extend_2d(PyObject* self, PyObject* args) {
+PyObject* get_npart_to_extend_3d(PyObject* self, PyObject* args) {
     // Parse input arguments
     PyObject* particles_list;
     PyObject* patch_list;
@@ -372,36 +372,7 @@ PyObject* get_npart_to_extend_2d(PyObject* self, PyObject* args) {
 
     AUTOFREE npy_intp **boundary_index_list = (npy_intp**)malloc(npatches * sizeof(npy_intp*));
 
-    // faces
-    AUTOFREE npy_intp *xmin_index_list = get_attr_int(patch_list, npatches, "xmin_neighbor_index");
-    AUTOFREE npy_intp *xmax_index_list = get_attr_int(patch_list, npatches, "xmax_neighbor_index");
-    AUTOFREE npy_intp *ymin_index_list = get_attr_int(patch_list, npatches, "ymin_neighbor_index");
-    AUTOFREE npy_intp *ymax_index_list = get_attr_int(patch_list, npatches, "ymax_neighbor_index");
-    AUTOFREE npy_intp *zmin_index_list = get_attr_int(patch_list, npatches, "zmin_neighbor_index");
-    AUTOFREE npy_intp *zmax_index_list = get_attr_int(patch_list, npatches, "zmax_neighbor_index");
-    // egdes
-    AUTOFREE npy_intp *xminymin_index_list = get_attr_int(patch_list, npatches, "xminymin_neighbor_index");
-    AUTOFREE npy_intp *xminymax_index_list = get_attr_int(patch_list, npatches, "xminymax_neighbor_index");
-    AUTOFREE npy_intp *xminzmin_index_list = get_attr_int(patch_list, npatches, "xminzmin_neighbor_index");
-    AUTOFREE npy_intp *xminzmax_index_list = get_attr_int(patch_list, npatches, "xminzmax_neighbor_index");
-    AUTOFREE npy_intp *xmaxymin_index_list = get_attr_int(patch_list, npatches, "xmaxymin_neighbor_index");
-    AUTOFREE npy_intp *xmaxymax_index_list = get_attr_int(patch_list, npatches, "xmaxymax_neighbor_index");
-    AUTOFREE npy_intp *xmaxzmin_index_list = get_attr_int(patch_list, npatches, "xmaxzmin_neighbor_index");
-    AUTOFREE npy_intp *xmaxzmax_index_list = get_attr_int(patch_list, npatches, "xmaxzmax_neighbor_index");
-    AUTOFREE npy_intp *yminzmin_index_list = get_attr_int(patch_list, npatches, "yminzmin_neighbor_index");
-    AUTOFREE npy_intp *yminzmax_index_list = get_attr_int(patch_list, npatches, "yminzmax_neighbor_index");
-    AUTOFREE npy_intp *ymaxzmin_index_list = get_attr_int(patch_list, npatches, "ymaxzmin_neighbor_index");
-    AUTOFREE npy_intp *ymaxzmax_index_list = get_attr_int(patch_list, npatches, "ymaxzmax_neighbor_index");
-    // vertices
-    AUTOFREE npy_intp *xminyminzmin_index_list = get_attr_int(patch_list, npatches, "xminyminzmin_neighbor_index");
-    AUTOFREE npy_intp *xminyminzmax_index_list = get_attr_int(patch_list, npatches, "xminyminzmax_neighbor_index");
-    AUTOFREE npy_intp *xminymaxzmin_index_list = get_attr_int(patch_list, npatches, "xminymaxzmin_neighbor_index");
-    AUTOFREE npy_intp *xminymaxzmax_index_list = get_attr_int(patch_list, npatches, "xminymaxzmax_neighbor_index");
-    AUTOFREE npy_intp *xmaxyminzmin_index_list = get_attr_int(patch_list, npatches, "xmaxyminzmin_neighbor_index");
-    AUTOFREE npy_intp *xmaxyminzmax_index_list = get_attr_int(patch_list, npatches, "xmaxyminzmax_neighbor_index");
-    AUTOFREE npy_intp *xmaxymaxzmin_index_list = get_attr_int(patch_list, npatches, "xmaxymaxzmin_neighbor_index");
-    AUTOFREE npy_intp *xmaxymaxzmax_index_list = get_attr_int(patch_list, npatches, "xmaxymaxzmax_neighbor_index");
-
+    AUTOFREE npy_intp **neighbor_index_list = get_attr_array_int(patch_list, npatches, "neighbor_index");
 
     AUTOFREE double *xmin_list = get_attr_double(patch_list, npatches, "xmin");
     AUTOFREE double *xmax_list = get_attr_double(patch_list, npatches, "xmax");
@@ -456,40 +427,11 @@ PyObject* get_npart_to_extend_2d(PyObject* self, PyObject* args) {
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         npy_bool *is_dead = is_dead_list[ipatch];
         npy_intp npart = npart_list[ipatch];
-
-        npy_intp boundary_index[NUM_BOUNDARIES] = {
-            xmin_index_list[ipatch],
-            xmax_index_list[ipatch],
-            ymin_index_list[ipatch],
-            ymax_index_list[ipatch],
-            zmin_index_list[ipatch],
-            zmax_index_list[ipatch],
-            xminymin_index_list[ipatch],
-            xminymax_index_list[ipatch],
-            xminzmin_index_list[ipatch],
-            xminzmax_index_list[ipatch],
-            xmaxymin_index_list[ipatch],
-            xmaxymax_index_list[ipatch],
-            xmaxzmin_index_list[ipatch],
-            xmaxzmax_index_list[ipatch],
-            yminzmin_index_list[ipatch],
-            yminzmax_index_list[ipatch],
-            ymaxzmin_index_list[ipatch],
-            ymaxzmax_index_list[ipatch],
-            xminyminzmin_index_list[ipatch],
-            xminyminzmax_index_list[ipatch],
-            xminymaxzmin_index_list[ipatch],
-            xminymaxzmax_index_list[ipatch],
-            xmaxyminzmin_index_list[ipatch],
-            xmaxyminzmax_index_list[ipatch],
-            xmaxymaxzmin_index_list[ipatch],
-            xmaxymaxzmax_index_list[ipatch]
-        };
         
         // Count incoming particles
         npy_intp npart_new = 0;
         for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
-            npy_intp i = boundary_index[ibound];
+            npy_intp i = neighbor_index_list[ipatch][ibound];
             if (i >= 0) {
                 npart_new += npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
             }
@@ -518,7 +460,7 @@ PyObject* get_npart_to_extend_2d(PyObject* self, PyObject* args) {
 }
 
 // Fill particles from boundary
-PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
+PyObject* fill_particles_from_boundary_3d(PyObject* self, PyObject* args) {
     // Parse input arguments
     PyObject *particles_list, *patch_list, *attrs;
     PyArrayObject *npart_incoming_array, *npart_outgoing_array;
@@ -545,36 +487,7 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
     AUTOFREE npy_intp *npart_list = get_attr_int(particles_list, npatches, "npart");
     AUTOFREE npy_bool **is_dead_list = get_attr_array_bool(particles_list, npatches, "is_dead");
 
-    // faces
-    AUTOFREE npy_intp *xmin_index_list = get_attr_int(patch_list, npatches, "xmin_neighbor_index");
-    AUTOFREE npy_intp *xmax_index_list = get_attr_int(patch_list, npatches, "xmax_neighbor_index");
-    AUTOFREE npy_intp *ymin_index_list = get_attr_int(patch_list, npatches, "ymin_neighbor_index");
-    AUTOFREE npy_intp *ymax_index_list = get_attr_int(patch_list, npatches, "ymax_neighbor_index");
-    AUTOFREE npy_intp *zmin_index_list = get_attr_int(patch_list, npatches, "zmin_neighbor_index");
-    AUTOFREE npy_intp *zmax_index_list = get_attr_int(patch_list, npatches, "zmax_neighbor_index");
-    // egdes
-    AUTOFREE npy_intp *xminymin_index_list = get_attr_int(patch_list, npatches, "xminymin_neighbor_index");
-    AUTOFREE npy_intp *xminymax_index_list = get_attr_int(patch_list, npatches, "xminymax_neighbor_index");
-    AUTOFREE npy_intp *xminzmin_index_list = get_attr_int(patch_list, npatches, "xminzmin_neighbor_index");
-    AUTOFREE npy_intp *xminzmax_index_list = get_attr_int(patch_list, npatches, "xminzmax_neighbor_index");
-    AUTOFREE npy_intp *xmaxymin_index_list = get_attr_int(patch_list, npatches, "xmaxymin_neighbor_index");
-    AUTOFREE npy_intp *xmaxymax_index_list = get_attr_int(patch_list, npatches, "xmaxymax_neighbor_index");
-    AUTOFREE npy_intp *xmaxzmin_index_list = get_attr_int(patch_list, npatches, "xmaxzmin_neighbor_index");
-    AUTOFREE npy_intp *xmaxzmax_index_list = get_attr_int(patch_list, npatches, "xmaxzmax_neighbor_index");
-    AUTOFREE npy_intp *yminzmin_index_list = get_attr_int(patch_list, npatches, "yminzmin_neighbor_index");
-    AUTOFREE npy_intp *yminzmax_index_list = get_attr_int(patch_list, npatches, "yminzmax_neighbor_index");
-    AUTOFREE npy_intp *ymaxzmin_index_list = get_attr_int(patch_list, npatches, "ymaxzmin_neighbor_index");
-    AUTOFREE npy_intp *ymaxzmax_index_list = get_attr_int(patch_list, npatches, "ymaxzmax_neighbor_index");
-    // vertices
-    AUTOFREE npy_intp *xminyminzmin_index_list = get_attr_int(patch_list, npatches, "xminyminzmin_neighbor_index");
-    AUTOFREE npy_intp *xminyminzmax_index_list = get_attr_int(patch_list, npatches, "xminyminzmax_neighbor_index");
-    AUTOFREE npy_intp *xminymaxzmin_index_list = get_attr_int(patch_list, npatches, "xminymaxzmin_neighbor_index");
-    AUTOFREE npy_intp *xminymaxzmax_index_list = get_attr_int(patch_list, npatches, "xminymaxzmax_neighbor_index");
-    AUTOFREE npy_intp *xmaxyminzmin_index_list = get_attr_int(patch_list, npatches, "xmaxyminzmin_neighbor_index");
-    AUTOFREE npy_intp *xmaxyminzmax_index_list = get_attr_int(patch_list, npatches, "xmaxyminzmax_neighbor_index");
-    AUTOFREE npy_intp *xmaxymaxzmin_index_list = get_attr_int(patch_list, npatches, "xmaxymaxzmin_neighbor_index");
-    AUTOFREE npy_intp *xmaxymaxzmax_index_list = get_attr_int(patch_list, npatches, "xmaxymaxzmax_neighbor_index");
-
+    AUTOFREE npy_intp **neighbor_index_list = get_attr_array_int(patch_list, npatches, "neighbor_index");
 
     AUTOFREE double *xmin_list = get_attr_double(patch_list, npatches, "xmin");
     AUTOFREE double *xmax_list = get_attr_double(patch_list, npatches, "xmax");
@@ -635,37 +548,9 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
             if (npart_new <= 0) {
                 continue;
             }
-            npy_intp boundary_index[NUM_BOUNDARIES] = {
-                xmin_index_list[ipatch],
-                xmax_index_list[ipatch],
-                ymin_index_list[ipatch],
-                ymax_index_list[ipatch],
-                zmin_index_list[ipatch],
-                zmax_index_list[ipatch],
-                xminymin_index_list[ipatch],
-                xminymax_index_list[ipatch],
-                xminzmin_index_list[ipatch],
-                xminzmax_index_list[ipatch],
-                xmaxymin_index_list[ipatch],
-                xmaxymax_index_list[ipatch],
-                xmaxzmin_index_list[ipatch],
-                xmaxzmax_index_list[ipatch],
-                yminzmin_index_list[ipatch],
-                yminzmax_index_list[ipatch],
-                ymaxzmin_index_list[ipatch],
-                ymaxzmax_index_list[ipatch],
-                xminyminzmin_index_list[ipatch],
-                xminyminzmax_index_list[ipatch],
-                xminymaxzmin_index_list[ipatch],
-                xminymaxzmax_index_list[ipatch],
-                xmaxyminzmin_index_list[ipatch],
-                xmaxyminzmax_index_list[ipatch],
-                xmaxymaxzmin_index_list[ipatch],
-                xmaxymaxzmax_index_list[ipatch]
-            };
             
             for (npy_intp ibound = 0; ibound < NUM_BOUNDARIES; ibound++) {
-                npy_intp i = boundary_index[ibound];
+                npy_intp i = neighbor_index_list[ipatch][ibound];
                 if (i >= 0) {
                     npart_incoming_boundary_list[ipatch][ibound] = npart_outgoing[i*NUM_BOUNDARIES + OPPOSITE_BOUNDARY[ibound]];
                     if (npart_incoming_boundary_list[ipatch][ibound] > 0) {
@@ -676,35 +561,6 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
         }
         #pragma omp for
         for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
-            npy_intp boundary_index[NUM_BOUNDARIES] = {
-                xmin_index_list[ipatch],
-                xmax_index_list[ipatch],
-                ymin_index_list[ipatch],
-                ymax_index_list[ipatch],
-                zmin_index_list[ipatch],
-                zmax_index_list[ipatch],
-                xminymin_index_list[ipatch],
-                xminymax_index_list[ipatch],
-                xminzmin_index_list[ipatch],
-                xminzmax_index_list[ipatch],
-                xmaxymin_index_list[ipatch],
-                xmaxymax_index_list[ipatch],
-                xmaxzmin_index_list[ipatch],
-                xmaxzmax_index_list[ipatch],
-                yminzmin_index_list[ipatch],
-                yminzmax_index_list[ipatch],
-                ymaxzmin_index_list[ipatch],
-                ymaxzmax_index_list[ipatch],
-                xminyminzmin_index_list[ipatch],
-                xminyminzmax_index_list[ipatch],
-                xminymaxzmin_index_list[ipatch],
-                xminymaxzmax_index_list[ipatch],
-                xmaxyminzmin_index_list[ipatch],
-                xmaxyminzmax_index_list[ipatch],
-                xmaxymaxzmin_index_list[ipatch],
-                xmaxymaxzmax_index_list[ipatch]
-            };
-            
             // Get indices of incoming particles
             get_incoming_index(
                 x_list[ipatch], y_list[ipatch], z_list[ipatch], npart_list[ipatch],
@@ -712,7 +568,7 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
                 ymin_list[ipatch], ymax_list[ipatch],
                 zmin_list[ipatch], zmax_list[ipatch],
                 // boundary indices
-                boundary_index,
+                neighbor_index_list[ipatch],
                 // out
                 incoming_indices_list
             );
@@ -723,34 +579,6 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
             if (npart_new <= 0) {
                 continue;
             }
-            npy_intp boundary_index[NUM_BOUNDARIES] = {
-                xmin_index_list[ipatch],
-                xmax_index_list[ipatch],
-                ymin_index_list[ipatch],
-                ymax_index_list[ipatch],
-                zmin_index_list[ipatch],
-                zmax_index_list[ipatch],
-                xminymin_index_list[ipatch],
-                xminymax_index_list[ipatch],
-                xminzmin_index_list[ipatch],
-                xminzmax_index_list[ipatch],
-                xmaxymin_index_list[ipatch],
-                xmaxymax_index_list[ipatch],
-                xmaxzmin_index_list[ipatch],
-                xmaxzmax_index_list[ipatch],
-                yminzmin_index_list[ipatch],
-                yminzmax_index_list[ipatch],
-                ymaxzmin_index_list[ipatch],
-                ymaxzmax_index_list[ipatch],
-                xminyminzmin_index_list[ipatch],
-                xminyminzmax_index_list[ipatch],
-                xminymaxzmin_index_list[ipatch],
-                xminymaxzmax_index_list[ipatch],
-                xmaxyminzmin_index_list[ipatch],
-                xmaxyminzmax_index_list[ipatch],
-                xmaxymaxzmin_index_list[ipatch],
-                xmaxymaxzmax_index_list[ipatch]
-            };
             npy_bool* is_dead = is_dead_list[ipatch];
             npy_intp npart = npart_list[ipatch];
             // Allocate buffer for incoming particles with cleanup attribute
@@ -760,7 +588,7 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
                 attrs_list, nattrs,
                 incoming_indices_list[ipatch],
                 npart_incoming_boundary_list[ipatch],
-                boundary_index,
+                neighbor_index_list[ipatch],
                 buffer
             );
             
@@ -804,8 +632,8 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
 
 // Module method definitions
 static PyMethodDef SyncParticlesMethods[] = {
-    {"get_npart_to_extend_2d", get_npart_to_extend_2d, METH_VARARGS, "count the number of particles to be extended, and return the number of new particles"},
-    {"fill_particles_from_boundary_2d", fill_particles_from_boundary_2d, METH_VARARGS, ""},
+    {"get_npart_to_extend_3d", get_npart_to_extend_3d, METH_VARARGS, "count the number of particles to be extended, and return the number of new particles"},
+    {"fill_particles_from_boundary_3d", fill_particles_from_boundary_3d, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 

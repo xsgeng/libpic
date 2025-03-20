@@ -70,7 +70,14 @@ extensions = [
         include_dirs=[np.get_include()],
         extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
         extra_link_args=['-fopenmp'],
-    )
+    ),
+    Extension(
+        name="libpic.patch.sync_particles_3d", 
+        sources=["libpic/patch/sync_particles_3d.c"],
+        include_dirs=[np.get_include()],
+        extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
+        extra_link_args=['-fopenmp'],
+    ),
 ]
 setup(
     name="libpic",

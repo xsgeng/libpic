@@ -163,7 +163,7 @@ from scipy.constants import c, e
 #         self.assertTrue(all(buffer[7] == [19, 19]), f"xmaxymax not correct")
 
 class TestPatches(unittest.TestCase):
-    def test_sync(self):
+    def test_2d(self):
         from libpic.patch import Patches, Patch2D
         from libpic.species import Electron
         from libpic.fields import Fields2D
@@ -248,3 +248,120 @@ class TestPatches(unittest.TestCase):
             alive = np.logical_not(p.is_dead)
             with self.subTest(f"Patch {patch.index}:"):
                 self.assertTrue(all(~np.isnan(p.x[alive])), f"pos={p.x} is_dead={p.is_dead}")
+
+    def test_3d(self):
+        from libpic.patch import Patches, Patch3D
+        from libpic.species import Electron
+        from libpic.fields import Fields3D
+
+
+        dx = 1.0
+        dy = 1.0
+        dz = 1.0
+
+        nx = 9
+        ny = 9
+        nz = 9
+
+        npatch_x = 3
+        npatch_y = 3
+        npatch_z = 3
+        npatches = npatch_x * npatch_y * npatch_z
+
+        nx_per_patch = nx//npatch_x
+        ny_per_patch = ny//npatch_y
+        nz_per_patch = nz//npatch_z
+
+        Lx = nx*dx
+        Ly = ny*dy
+
+        patches = Patches(dimension=3)
+        for k in range(npatch_z):
+            for j in range(npatch_y):
+                for i in range(npatch_x):
+                    index = i + j*npatch_x + k*npatch_x*npatch_y
+                    p = Patch3D(
+                        rank=0,
+                        index=index,
+                        ipatch_x=i,
+                        ipatch_y=j,
+                        ipatch_z=k,
+                        x0=i*dx*nx_per_patch,
+                        y0=j*dy*ny_per_patch,
+                        z0=k*dz*nz_per_patch,
+                        nx=nx_per_patch,
+                        ny=ny_per_patch,
+                        nz=nz_per_patch,
+                        dx=dx,
+                        dy=dy,
+                        dz=dz,
+                    )
+                    f = Fields3D(
+                        nx=nx_per_patch, ny=ny_per_patch, nz=nz_per_patch,
+                        dx=dx, dy=dy, dz=dz,
+                        x0=i*dx*nx_per_patch,
+                        y0=j*dy*ny_per_patch,
+                        z0=k*dz*nz_per_patch,
+                        n_guard=3
+                    )
+                    p.set_fields(f)
+                    
+                    # Set neighbors in 3D
+                    # faces
+                    if i > 0: 
+                        p.set_neighbor_index(xmin=(i-1) + j*npatch_x + k*npatch_x*npatch_y)
+                    if i < npatch_x-1: 
+                        p.set_neighbor_index(xmax=(i+1) + j*npatch_x + k*npatch_x*npatch_y)
+                    if j > 0: 
+                        p.set_neighbor_index(ymin=i + (j-1)*npatch_x + k*npatch_x*npatch_y)
+                    if j < npatch_y-1: 
+                        p.set_neighbor_index(ymax=i + (j+1)*npatch_x + k*npatch_x*npatch_y)
+                    if k > 0: 
+                        p.set_neighbor_index(zmin=i + j*npatch_x + (k-1)*npatch_x*npatch_y)
+                    if k < npatch_z-1: 
+                        p.set_neighbor_index(zmax=i + j*npatch_x + (k+1)*npatch_x*npatch_y)
+                    # edges
+                    if i > 0 and j > 0: 
+                        p.set_neighbor_index(xminymin=(i-1) + (j-1)*npatch_x + k*npatch_x*npatch_y)
+                    if i < npatch_x-1 and j > 0: 
+                        p.set_neighbor_index(xmaxymin=(i+1) + (j-1)*npatch_x + k*npatch_x*npatch_y)
+                    if i > 0 and j < npatch_y-1: 
+                        p.set_neighbor_index(xminymax=(i-1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
+                    if i < npatch_x-1 and j < npatch_y-1: 
+                        p.set_neighbor_index(xmaxymax=(i+1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
+
+                    patches.append(p)
+
+        
+        ele = Electron(density=lambda x, y, z : 1.0, ppc=1)
+
+        patches.add_species(ele)
+        patches.update_lists()
+
+        patches.fill_particles()
+
+        particles = patches[0].particles[0]
+        particles.x[:] += dx
+        particles.y[:] += dy
+        particles.z[:] += dz
+
+        # x_out = particles.x[6:8].tolist()
+        # y_out = [particles.y[2], particles.y[5]]
+        # corner_out = particles.x[8]
+
+        print(particles.x)
+        patches.sync_particles()
+        print(particles.x)
+
+        npart_total = sum([patch.particles[0].is_alive.sum() for patch in patches])
+        self.assertEqual(npart_total, nx*ny*nz)
+
+        # self.assertListEqual(x_out, patches[1].particles[0].x[9:11].tolist())
+        # self.assertListEqual(y_out, patches[3].particles[0].y[9:11].tolist())
+        # self.assertEqual(corner_out, patches[4].particles[0].x[9])
+
+        # for patch in patches:
+        #     p = patch.particles[0]
+        #     alive = np.logical_not(p.is_dead)
+        #     with self.subTest(f"Patch {patch.index}:"):
+        #         self.assertTrue(all(~np.isnan(p.x[alive])), f"pos={p.x} is_dead={p.is_dead}")
