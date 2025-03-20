@@ -375,6 +375,40 @@ class Patches:
             for attr in patch.particles[ispec].attrs:
                 plists[ispec][attr][ipatch] = getattr(patch.particles[ispec], attr)
 
+    def init_rect_neighbor_index_2d(self, npatch_x, npatch_y):
+        """ 
+        Initialize the neighbor index for a rectangular grid of 2D patches.
+        
+        Parameters
+        ----------
+        npatch_x : int
+            Number of patches in x-direction
+        npatch_y : int
+            Number of patches in y-direction
+        """
+        # Define all possible neighbor offsets and their corresponding names
+        neighbor_offsets = [
+            # faces (4 neighbors)
+            ((-1, 0), 'xmin'), ((+1, 0), 'xmax'),
+            ((0, -1), 'ymin'), ((0, +1), 'ymax'),
+            # edges (corner neighbors) (4)
+            ((-1, -1), 'xminymin'), ((+1, -1), 'xmaxymin'),
+            ((-1, +1), 'xminymax'), ((+1, +1), 'xmaxymax'),
+        ]
+
+        for p in self.patches:
+            i, j = p.ipatch_x, p.ipatch_y
+            
+            for (dx, dy), name in neighbor_offsets:
+                neighbor_i = i + dx
+                neighbor_j = j + dy
+                
+                # Check if neighbor coordinates are valid
+                if 0 <= neighbor_i < npatch_x and 0 <= neighbor_j < npatch_y:
+                    # Calculate neighbor index
+                    neighbor_index = neighbor_i + neighbor_j * npatch_x
+                    p.set_neighbor_index(**{name: neighbor_index})
+                
     def init_rect_neighbor_index_3d(self, npatch_x, npatch_y, npatch_z):
         """ 
         Initialize the neighbor index for a rectangular grid of patches.
