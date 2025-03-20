@@ -3,7 +3,7 @@ import numpy as np
 from ...particles import ParticlesBase
 from ...fields import Fields
 
-def unified_boris_pusher_cpu(
+def unified_boris_pusher_cpu_2d(
     particles_list: List[ParticlesBase], 
     fields_list: List[Fields], 
     npatches: int, 

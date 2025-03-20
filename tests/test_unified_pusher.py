@@ -4,7 +4,9 @@ from time import perf_counter_ns
 import numpy as np
 from scipy.constants import c, e
 
-from libpic.pusher.unified.cpu import unified_boris_pusher_cpu
+from libpic.pusher.unified.unified_pusher_2d import unified_boris_pusher_cpu_2d
+from libpic.pusher.unified.unified_pusher_3d import unified_boris_pusher_cpu_3d
+
 
 
 class TestUnifiedPusher(unittest.TestCase):
@@ -82,7 +84,7 @@ class TestUnifiedPusher(unittest.TestCase):
             p.inv_gamma[:] = (1 + (p.ux**2 + p.uy**2 + p.uz**2))**-0.5
             
         tic = perf_counter_ns()
-        unified_boris_pusher_cpu(
+        unified_boris_pusher_cpu_2d(
             [patch.particles[0] for patch in patches],
             [patch.fields for patch in patches], 
             npatch_x*npatch_y, 1e-15, ele.q, ele.m
@@ -100,7 +102,6 @@ class TestUnifiedPusher(unittest.TestCase):
     def test_3d_speed(self):
         from libpic.fields import Fields3D
         from libpic.patch.patch import Patch3D, Patches
-        from libpic.pusher.unified.unified_pusher_3d import unified_boris_pusher_cpu
         from libpic.species import Electron
         import os
 
@@ -175,7 +176,7 @@ class TestUnifiedPusher(unittest.TestCase):
             p.inv_gamma[:] = (1 + (p.ux**2 + p.uy**2 + p.uz**2))**-0.5
 
         tic = perf_counter_ns()
-        unified_boris_pusher_cpu(  # 3D version of the pusher
+        unified_boris_pusher_cpu_3d(  # 3D version of the pusher
             [patch.particles[0] for patch in patches],
             [patch.fields for patch in patches],
             npatch_x*npatch_y*npatch_z, 1e-15, ele.q, ele.m

@@ -216,7 +216,7 @@ inline static void current_deposit_2d(
     }
 }
 
-static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
+static PyObject* unified_boris_pusher_cpu_2d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *particles_list;
     npy_intp npatches;
     double dt, q, m;
@@ -320,19 +320,19 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef CpuMethods[] = {
-    {"unified_boris_pusher_cpu", unified_boris_pusher_cpu, METH_VARARGS, "Unified Boris Pusher"},
+    {"unified_boris_pusher_cpu_2d", unified_boris_pusher_cpu_2d, METH_VARARGS, "Unified Boris Pusher"},
     {NULL, NULL, 0, NULL}
 };
 
 static struct PyModuleDef cpumodule = {
     PyModuleDef_HEAD_INIT,
-    "cpu",
+    "unified_pusher_2d",
     NULL,
     -1,
     CpuMethods
 };
 
-PyMODINIT_FUNC PyInit_cpu(void) {
+PyMODINIT_FUNC PyInit_unified_pusher_2d(void) {
     import_array();
     return PyModule_Create(&cpumodule);
 }

@@ -252,7 +252,7 @@ inline static void current_deposit_3d(
     }
 }
 
-static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
+static PyObject* unified_boris_pusher_cpu_3d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *particles_list;
     npy_intp npatches;
     double dt, q, m;
@@ -361,7 +361,7 @@ static PyObject* unified_boris_pusher_cpu(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef CpuMethods[] = {
-    {"unified_boris_pusher_cpu", unified_boris_pusher_cpu, METH_VARARGS, "Unified Boris Pusher"},
+    {"unified_boris_pusher_cpu_3d", unified_boris_pusher_cpu_3d, METH_VARARGS, "Unified Boris Pusher"},
     {NULL, NULL, 0, NULL}
 };
 

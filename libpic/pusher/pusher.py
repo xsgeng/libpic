@@ -7,7 +7,8 @@ from scipy.constants import c, e, epsilon_0, mu_0
 from ..patch import Patches
 
 from .cpu import boris_push_patches, push_position_patches_2d, photon_push_patches
-from .unified.cpu import unified_boris_pusher_cpu
+from .unified.unified_pusher_2d import unified_boris_pusher_cpu_2d
+from .unified.unified_pusher_3d import unified_boris_pusher_cpu_3d
 
 
 class PusherBase:
@@ -111,11 +112,18 @@ class PusherBase:
 class BorisPusher(PusherBase):
     def __call__(self, dt: float, unified: bool=False) -> None:
         if unified:
-                unified_boris_pusher_cpu(
-                [p.particles[self.ispec] for p in self.patches],
-                [p.fields for p in self.patches],
-                self.npatches, dt, self.q, self.m
-            )
+            if self.patches.dimension == 2:
+                unified_boris_pusher_cpu_2d(
+                    [p.particles[self.ispec] for p in self.patches],
+                    [p.fields for p in self.patches],
+                    self.npatches, dt, self.q, self.m
+                )
+            if self.patches.dimension == 3:
+                unified_boris_pusher_cpu_3d(
+                    [p.particles[self.ispec] for p in self.patches],
+                    [p.fields for p in self.patches],
+                    self.npatches, dt, self.q, self.m
+                )
         else:
             boris_push_patches(
                 self.ux_list, self.uy_list, self.uz_list, self.inv_gamma_list,
@@ -125,9 +133,17 @@ class BorisPusher(PusherBase):
                 self.npatches, self.q, self.m, dt
             )
 
-class UnifiedBorisPusher(PusherBase):
+class UnifiedBorisPusher2D(PusherBase):
     def __call__(self, dt: float) -> None:
-        unified_boris_pusher_cpu(
+        unified_boris_pusher_cpu_2d(
+            [p.particles[self.ispec] for p in self.patches],
+            [p.fields for p in self.patches],
+            self.npatches, dt, self.q, self.m
+        )
+
+class UnifiedBorisPusher3D(PusherBase):
+    def __call__(self, dt: float) -> None:
+        unified_boris_pusher_cpu_3d(
             [p.particles[self.ispec] for p in self.patches],
             [p.fields for p in self.patches],
             self.npatches, dt, self.q, self.m
