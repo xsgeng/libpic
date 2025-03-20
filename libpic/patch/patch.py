@@ -405,12 +405,12 @@ class Patches:
             i, j, k = p.ipatch_x, p.ipatch_y, p.ipatch_z
             
             for (dx, dy, dz), name in neighbor_offsets:
-                ni, nj, nk = i + dx, j + dy, k + dz
+                neighbor_i, neighbor_j, neighbor_k = i + dx, j + dy, k + dz
                 
                 # Check if neighbor coordinates are valid
-                if 0 <= ni < npatch_x and 0 <= nj < npatch_y and 0 <= nk < npatch_z:
+                if 0 <= neighbor_i < npatch_x and 0 <= neighbor_j < npatch_y and 0 <= neighbor_k < npatch_z:
                     # Calculate neighbor index
-                    neighbor_index = ni + nj * npatch_x + nk * npatch_x * npatch_y
+                    neighbor_index = neighbor_i + neighbor_j * npatch_x + neighbor_k * npatch_x * npatch_y
                     p.set_neighbor_index(**{name: neighbor_index})
                 
     def sync_guard_fields(self):
