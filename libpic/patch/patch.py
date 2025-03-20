@@ -375,6 +375,38 @@ class Patches:
             for attr in patch.particles[ispec].attrs:
                 plists[ispec][attr][ipatch] = getattr(patch.particles[ispec], attr)
 
+    def init_rect_neighbor_index_3d(self, npatch_x, npatch_y, npatch_z):
+        """ 
+        Initialize the neighbor index for a rectangular grid of patches.
+        """
+        for p in self.patches:
+            i = p.ipatch_x
+            j = p.ipatch_y
+            k = p.ipatch_z
+            # faces
+            if i > 0: 
+                p.set_neighbor_index(xmin=(i-1) + j*npatch_x + k*npatch_x*npatch_y)
+            if i < npatch_x-1: 
+                p.set_neighbor_index(xmax=(i+1) + j*npatch_x + k*npatch_x*npatch_y)
+            if j > 0: 
+                p.set_neighbor_index(ymin=i + (j-1)*npatch_x + k*npatch_x*npatch_y)
+            if j < npatch_y-1: 
+                p.set_neighbor_index(ymax=i + (j+1)*npatch_x + k*npatch_x*npatch_y)
+            if k > 0: 
+                p.set_neighbor_index(zmin=i + j*npatch_x + (k-1)*npatch_x*npatch_y)
+            if k < npatch_z-1: 
+                p.set_neighbor_index(zmax=i + j*npatch_x + (k+1)*npatch_x*npatch_y)
+            # edges
+            if i > 0 and j > 0: 
+                p.set_neighbor_index(xminymin=(i-1) + (j-1)*npatch_x + k*npatch_x*npatch_y)
+            if i < npatch_x-1 and j > 0: 
+                p.set_neighbor_index(xmaxymin=(i+1) + (j-1)*npatch_x + k*npatch_x*npatch_y)
+            if i > 0 and j < npatch_y-1: 
+                p.set_neighbor_index(xminymax=(i-1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
+            if i < npatch_x-1 and j < npatch_y-1: 
+                p.set_neighbor_index(xmaxymax=(i+1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
+
+                
     def sync_guard_fields(self):
         if self.dimension == 2:
             sync_guard_fields_2d(
