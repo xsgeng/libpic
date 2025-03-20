@@ -505,7 +505,6 @@ class Patches:
                 )
         if self.dimension == 3:
             for ispec, s in enumerate(self.species):
-                print(self.npatches, self.dx, self.dy, self.dz,)
                 npart_to_extend, npart_incoming, npart_outgoing = sync_particles_3d.get_npart_to_extend_3d(
                     [p.particles[ispec] for p in self],
                     self.patches,
