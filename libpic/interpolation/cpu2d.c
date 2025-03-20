@@ -282,13 +282,13 @@ static PyMethodDef InterpolationMethods[] = {
 
 static struct PyModuleDef interpolationmodule = {
     PyModuleDef_HEAD_INIT,
-    "cpu",
+    "cpu2d",
     NULL,
     -1,
     InterpolationMethods
 };
 
-PyMODINIT_FUNC PyInit_cpu(void) {
+PyMODINIT_FUNC PyInit_cpu2d(void) {
     import_array();
     return PyModule_Create(&interpolationmodule);
 }

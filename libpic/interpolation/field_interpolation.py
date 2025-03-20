@@ -4,7 +4,8 @@ from scipy.constants import c, e, epsilon_0, mu_0
 
 from ..patch import Patches
 
-from .cpu import interpolation_patches_2d
+from .cpu2d import interpolation_patches_2d
+from .cpu3d import interpolation_patches_3d
 
 
 class FieldInterpolation:
@@ -157,4 +158,26 @@ class FieldInterpolation2D(FieldInterpolation):
             self.npatches,
             self.dx, self.dy,
             self.nx + 2*self.patches.n_guard, self.ny + 2*self.patches.n_guard,
+        )
+
+class FieldInterpolation3D(FieldInterpolation2D):
+    def __init__(self, patches: Patches) -> None:
+        super().__init__(patches)
+        self.dz: float = patches.dz
+        self.nz: int = patches.nz
+
+    def generate_particle_lists(self) -> None:
+        pass
+
+    def update_particle_lists(self, ipatch: int, ispec: int):
+        pass
+
+    def generate_field_lists(self) -> None:
+        pass
+
+    def __call__(self, ispec: int) -> None:
+        interpolation_patches_3d(
+            [p.fields for p in self.patches],
+            [p.particles[ispec] for p in self.patches],
+            self.npatches,
         )
