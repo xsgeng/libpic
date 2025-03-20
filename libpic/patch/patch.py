@@ -383,20 +383,26 @@ class Patches:
             i = p.ipatch_x
             j = p.ipatch_y
             k = p.ipatch_z
-            # faces
+            
+            # faces (6 neighbors)
+            # X direction
             if i > 0: 
                 p.set_neighbor_index(xmin=(i-1) + j*npatch_x + k*npatch_x*npatch_y)
             if i < npatch_x-1: 
                 p.set_neighbor_index(xmax=(i+1) + j*npatch_x + k*npatch_x*npatch_y)
+            # Y direction
             if j > 0: 
                 p.set_neighbor_index(ymin=i + (j-1)*npatch_x + k*npatch_x*npatch_y)
             if j < npatch_y-1: 
                 p.set_neighbor_index(ymax=i + (j+1)*npatch_x + k*npatch_x*npatch_y)
+            # Z direction
             if k > 0: 
                 p.set_neighbor_index(zmin=i + j*npatch_x + (k-1)*npatch_x*npatch_y)
             if k < npatch_z-1: 
                 p.set_neighbor_index(zmax=i + j*npatch_x + (k+1)*npatch_x*npatch_y)
-            # edges
+            
+            # edges (12 neighbors)
+            # XY plane
             if i > 0 and j > 0: 
                 p.set_neighbor_index(xminymin=(i-1) + (j-1)*npatch_x + k*npatch_x*npatch_y)
             if i < npatch_x-1 and j > 0: 
@@ -405,7 +411,42 @@ class Patches:
                 p.set_neighbor_index(xminymax=(i-1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
             if i < npatch_x-1 and j < npatch_y-1: 
                 p.set_neighbor_index(xmaxymax=(i+1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
-
+            # XZ plane
+            if i > 0 and k > 0:
+                p.set_neighbor_index(xminzmin=(i-1) + j*npatch_x + (k-1)*npatch_x*npatch_y)
+            if i < npatch_x-1 and k > 0:
+                p.set_neighbor_index(xmaxzmin=(i+1) + j*npatch_x + (k-1)*npatch_x*npatch_y)
+            if i > 0 and k < npatch_z-1:
+                p.set_neighbor_index(xminzmax=(i-1) + j*npatch_x + (k+1)*npatch_x*npatch_y)
+            if i < npatch_x-1 and k < npatch_z-1:
+                p.set_neighbor_index(xmaxzmax=(i+1) + j*npatch_x + (k+1)*npatch_x*npatch_y)
+            # YZ plane
+            if j > 0 and k > 0:
+                p.set_neighbor_index(yminzmin=i + (j-1)*npatch_x + (k-1)*npatch_x*npatch_y)
+            if j < npatch_y-1 and k > 0:
+                p.set_neighbor_index(ymaxzmin=i + (j+1)*npatch_x + (k-1)*npatch_x*npatch_y)
+            if j > 0 and k < npatch_z-1:
+                p.set_neighbor_index(yminzmax=i + (j-1)*npatch_x + (k+1)*npatch_x*npatch_y)
+            if j < npatch_y-1 and k < npatch_z-1:
+                p.set_neighbor_index(ymaxzmax=i + (j+1)*npatch_x + (k+1)*npatch_x*npatch_y)
+            
+            # vertices (8 neighbors)
+            if i > 0 and j > 0 and k > 0:
+                p.set_neighbor_index(xminyminzmin=(i-1) + (j-1)*npatch_x + (k-1)*npatch_x*npatch_y)
+            if i > 0 and j > 0 and k < npatch_z-1:
+                p.set_neighbor_index(xminyminzmax=(i-1) + (j-1)*npatch_x + (k+1)*npatch_x*npatch_y)
+            if i > 0 and j < npatch_y-1 and k > 0:
+                p.set_neighbor_index(xminymaxzmin=(i-1) + (j+1)*npatch_x + (k-1)*npatch_x*npatch_y)
+            if i > 0 and j < npatch_y-1 and k < npatch_z-1:
+                p.set_neighbor_index(xminymaxzmax=(i-1) + (j+1)*npatch_x + (k+1)*npatch_x*npatch_y)
+            if i < npatch_x-1 and j > 0 and k > 0:
+                p.set_neighbor_index(xmaxyminzmin=(i+1) + (j-1)*npatch_x + (k-1)*npatch_x*npatch_y)
+            if i < npatch_x-1 and j > 0 and k < npatch_z-1:
+                p.set_neighbor_index(xmaxyminzmax=(i+1) + (j-1)*npatch_x + (k+1)*npatch_x*npatch_y)
+            if i < npatch_x-1 and j < npatch_y-1 and k > 0:
+                p.set_neighbor_index(xmaxymaxzmin=(i+1) + (j+1)*npatch_x + (k-1)*npatch_x*npatch_y)
+            if i < npatch_x-1 and j < npatch_y-1 and k < npatch_z-1:
+                p.set_neighbor_index(xmaxymaxzmax=(i+1) + (j+1)*npatch_x + (k+1)*npatch_x*npatch_y)
                 
     def sync_guard_fields(self):
         if self.dimension == 2:
