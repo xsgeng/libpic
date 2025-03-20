@@ -379,74 +379,39 @@ class Patches:
         """ 
         Initialize the neighbor index for a rectangular grid of patches.
         """
-        for p in self.patches:
-            i = p.ipatch_x
-            j = p.ipatch_y
-            k = p.ipatch_z
-            
+        # Define all possible neighbor offsets and their corresponding names
+        neighbor_offsets = [
             # faces (6 neighbors)
-            # X direction
-            if i > 0: 
-                p.set_neighbor_index(xmin=(i-1) + j*npatch_x + k*npatch_x*npatch_y)
-            if i < npatch_x-1: 
-                p.set_neighbor_index(xmax=(i+1) + j*npatch_x + k*npatch_x*npatch_y)
-            # Y direction
-            if j > 0: 
-                p.set_neighbor_index(ymin=i + (j-1)*npatch_x + k*npatch_x*npatch_y)
-            if j < npatch_y-1: 
-                p.set_neighbor_index(ymax=i + (j+1)*npatch_x + k*npatch_x*npatch_y)
-            # Z direction
-            if k > 0: 
-                p.set_neighbor_index(zmin=i + j*npatch_x + (k-1)*npatch_x*npatch_y)
-            if k < npatch_z-1: 
-                p.set_neighbor_index(zmax=i + j*npatch_x + (k+1)*npatch_x*npatch_y)
+            ((-1, 0, 0), 'xmin'), ((+1, 0, 0), 'xmax'),
+            ((0, -1, 0), 'ymin'), ((0, +1, 0), 'ymax'),
+            ((0, 0, -1), 'zmin'), ((0, 0, +1), 'zmax'),
             
             # edges (12 neighbors)
-            # XY plane
-            if i > 0 and j > 0: 
-                p.set_neighbor_index(xminymin=(i-1) + (j-1)*npatch_x + k*npatch_x*npatch_y)
-            if i < npatch_x-1 and j > 0: 
-                p.set_neighbor_index(xmaxymin=(i+1) + (j-1)*npatch_x + k*npatch_x*npatch_y)
-            if i > 0 and j < npatch_y-1: 
-                p.set_neighbor_index(xminymax=(i-1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
-            if i < npatch_x-1 and j < npatch_y-1: 
-                p.set_neighbor_index(xmaxymax=(i+1) + (j+1)*npatch_x + k*npatch_x*npatch_y)
-            # XZ plane
-            if i > 0 and k > 0:
-                p.set_neighbor_index(xminzmin=(i-1) + j*npatch_x + (k-1)*npatch_x*npatch_y)
-            if i < npatch_x-1 and k > 0:
-                p.set_neighbor_index(xmaxzmin=(i+1) + j*npatch_x + (k-1)*npatch_x*npatch_y)
-            if i > 0 and k < npatch_z-1:
-                p.set_neighbor_index(xminzmax=(i-1) + j*npatch_x + (k+1)*npatch_x*npatch_y)
-            if i < npatch_x-1 and k < npatch_z-1:
-                p.set_neighbor_index(xmaxzmax=(i+1) + j*npatch_x + (k+1)*npatch_x*npatch_y)
-            # YZ plane
-            if j > 0 and k > 0:
-                p.set_neighbor_index(yminzmin=i + (j-1)*npatch_x + (k-1)*npatch_x*npatch_y)
-            if j < npatch_y-1 and k > 0:
-                p.set_neighbor_index(ymaxzmin=i + (j+1)*npatch_x + (k-1)*npatch_x*npatch_y)
-            if j > 0 and k < npatch_z-1:
-                p.set_neighbor_index(yminzmax=i + (j-1)*npatch_x + (k+1)*npatch_x*npatch_y)
-            if j < npatch_y-1 and k < npatch_z-1:
-                p.set_neighbor_index(ymaxzmax=i + (j+1)*npatch_x + (k+1)*npatch_x*npatch_y)
+            ((-1, -1, 0), 'xminymin'), ((+1, -1, 0), 'xmaxymin'),
+            ((-1, +1, 0), 'xminymax'), ((+1, +1, 0), 'xmaxymax'),
+            ((-1, 0, -1), 'xminzmin'), ((+1, 0, -1), 'xmaxzmin'),
+            ((-1, 0, +1), 'xminzmax'), ((+1, 0, +1), 'xmaxzmax'),
+            ((0, -1, -1), 'yminzmin'), ((0, +1, -1), 'ymaxzmin'),
+            ((0, -1, +1), 'yminzmax'), ((0, +1, +1), 'ymaxzmax'),
             
             # vertices (8 neighbors)
-            if i > 0 and j > 0 and k > 0:
-                p.set_neighbor_index(xminyminzmin=(i-1) + (j-1)*npatch_x + (k-1)*npatch_x*npatch_y)
-            if i > 0 and j > 0 and k < npatch_z-1:
-                p.set_neighbor_index(xminyminzmax=(i-1) + (j-1)*npatch_x + (k+1)*npatch_x*npatch_y)
-            if i > 0 and j < npatch_y-1 and k > 0:
-                p.set_neighbor_index(xminymaxzmin=(i-1) + (j+1)*npatch_x + (k-1)*npatch_x*npatch_y)
-            if i > 0 and j < npatch_y-1 and k < npatch_z-1:
-                p.set_neighbor_index(xminymaxzmax=(i-1) + (j+1)*npatch_x + (k+1)*npatch_x*npatch_y)
-            if i < npatch_x-1 and j > 0 and k > 0:
-                p.set_neighbor_index(xmaxyminzmin=(i+1) + (j-1)*npatch_x + (k-1)*npatch_x*npatch_y)
-            if i < npatch_x-1 and j > 0 and k < npatch_z-1:
-                p.set_neighbor_index(xmaxyminzmax=(i+1) + (j-1)*npatch_x + (k+1)*npatch_x*npatch_y)
-            if i < npatch_x-1 and j < npatch_y-1 and k > 0:
-                p.set_neighbor_index(xmaxymaxzmin=(i+1) + (j+1)*npatch_x + (k-1)*npatch_x*npatch_y)
-            if i < npatch_x-1 and j < npatch_y-1 and k < npatch_z-1:
-                p.set_neighbor_index(xmaxymaxzmax=(i+1) + (j+1)*npatch_x + (k+1)*npatch_x*npatch_y)
+            ((-1, -1, -1), 'xminyminzmin'), ((-1, -1, +1), 'xminyminzmax'),
+            ((-1, +1, -1), 'xminymaxzmin'), ((-1, +1, +1), 'xminymaxzmax'),
+            ((+1, -1, -1), 'xmaxyminzmin'), ((+1, -1, +1), 'xmaxyminzmax'),
+            ((+1, +1, -1), 'xmaxymaxzmin'), ((+1, +1, +1), 'xmaxymaxzmax')
+        ]
+
+        for p in self.patches:
+            i, j, k = p.ipatch_x, p.ipatch_y, p.ipatch_z
+            
+            for (dx, dy, dz), name in neighbor_offsets:
+                ni, nj, nk = i + dx, j + dy, k + dz
+                
+                # Check if neighbor coordinates are valid
+                if 0 <= ni < npatch_x and 0 <= nj < npatch_y and 0 <= nk < npatch_z:
+                    # Calculate neighbor index
+                    neighbor_index = ni + nj * npatch_x + nk * npatch_x * npatch_y
+                    p.set_neighbor_index(**{name: neighbor_index})
                 
     def sync_guard_fields(self):
         if self.dimension == 2:
