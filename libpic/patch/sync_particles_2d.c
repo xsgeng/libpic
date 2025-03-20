@@ -184,7 +184,7 @@ static void mark_out_of_bound_as_dead(
     }
 }
 
-PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
+PyObject* get_npart_to_extend_2d(PyObject* self, PyObject* args) {
     // Parse input arguments
     PyObject* particles_list;
     PyObject* patch_list;
@@ -297,7 +297,7 @@ PyObject* get_npart_to_extend(PyObject* self, PyObject* args) {
 }
 
 // Fill particles from boundary
-PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
+PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
     // Parse input arguments
     PyObject *particles_list, *patch_list, *attrs;
     PyArrayObject *npart_incoming_array, *npart_outgoing_array;
@@ -464,22 +464,22 @@ PyObject* fill_particles_from_boundary(PyObject* self, PyObject* args) {
 
 // Module method definitions
 static PyMethodDef SyncParticlesMethods[] = {
-    {"get_npart_to_extend", get_npart_to_extend, METH_VARARGS, "count the number of particles to be extended, and return the number of new particles"},
-    {"fill_particles_from_boundary", fill_particles_from_boundary, METH_VARARGS, ""},
+    {"get_npart_to_extend_2d", get_npart_to_extend_2d, METH_VARARGS, "count the number of particles to be extended, and return the number of new particles"},
+    {"fill_particles_from_boundary_2d", fill_particles_from_boundary_2d, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
 // Module definition
 static struct PyModuleDef syncparticlesmodule = {
     PyModuleDef_HEAD_INIT,
-    "sync_particles",
+    "sync_particles_2d",
     NULL,
     -1,
     SyncParticlesMethods
 };
 
 // Module initialization function
-PyMODINIT_FUNC PyInit_sync_particles(void) {
+PyMODINIT_FUNC PyInit_sync_particles_2d(void) {
     import_array();
     return PyModule_Create(&syncparticlesmodule);
 }

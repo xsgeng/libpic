@@ -2,14 +2,7 @@
 #include <numpy/arrayobject.h>
 #include <omp.h>
 #include <math.h>
-
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#define LIGHT_SPEED 299792458.0
-#define one_third 0.3333333333333333
-#define INDEX(i, j, nx, ny) \
-    ((j) >= 0 ? (j) : (j) + (ny)) + \
-    ((i) >= 0 ? (i) : (i) + (nx)) * (ny)
-#define GetPatchArrayData(list, ipatch) PyArray_DATA((PyArrayObject*)PyList_GetItem(list, ipatch))
+#include "../utils/cutils.h"
 
 static void calculate_S(double delta, int shift, double* S) {
     double delta2 = delta * delta;
@@ -106,16 +99,16 @@ static void current_deposit_2d(
                 jx_buff -= factor * dx * wx;
                 jy_buff[i] -= factor * dy * wy;
 
-                jx[INDEX(ix, iy, nx, ny)] += jx_buff;
-                jy[INDEX(ix, iy, nx, ny)] += jy_buff[i];
-                jz[INDEX(ix, iy, nx, ny)] += factor * dt * wz * vz;
-                rho[INDEX(ix, iy, nx, ny)] += charge_density * S1x[i] * S1y[j];
+                jx[INDEX2(ix, iy)] += jx_buff;
+                jy[INDEX2(ix, iy)] += jy_buff[i];
+                jz[INDEX2(ix, iy)] += factor * dt * wz * vz;
+                rho[INDEX2(ix, iy)] += charge_density * S1x[i] * S1y[j];
             }
         }
     }
 }
 
-static PyObject* current_deposition_cpu(PyObject* self, PyObject* args) {
+static PyObject* current_deposition_cpu_2d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *particles_list;
     npy_intp npatches;
     double dt, q;
@@ -138,22 +131,22 @@ static PyObject* current_deposition_cpu(PyObject* self, PyObject* args) {
     double dx = PyFloat_AsDouble(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "dx"));
     double dy = PyFloat_AsDouble(PyObject_GetAttrString(PyList_GET_ITEM(fields_list, 0), "dy"));
 
-    double **rho        = (double**) malloc(npatches * sizeof(double*));
-    double **jx         = (double**) malloc(npatches * sizeof(double*));
-    double **jy         = (double**) malloc(npatches * sizeof(double*));
-    double **jz         = (double**) malloc(npatches * sizeof(double*));
-    double *x0          = (double*)  malloc(npatches * sizeof(double));
-    double *y0          = (double*)  malloc(npatches * sizeof(double));
+    AUTOFREE double **rho        = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **jx         = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **jy         = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **jz         = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double *x0          = (double*)  malloc(npatches * sizeof(double));
+    AUTOFREE double *y0          = (double*)  malloc(npatches * sizeof(double));
 
-    double **x          = (double**) malloc(npatches * sizeof(double*));
-    double **y          = (double**) malloc(npatches * sizeof(double*));
-    double **ux         = (double**) malloc(npatches * sizeof(double*));
-    double **uy         = (double**) malloc(npatches * sizeof(double*));
-    double **uz         = (double**) malloc(npatches * sizeof(double*));
-    double **inv_gamma  = (double**) malloc(npatches * sizeof(double*));
-    npy_bool **is_dead  = (npy_bool**) malloc(npatches * sizeof(npy_bool*));
-    double **w          = (double**) malloc(npatches * sizeof(double*));
-    npy_intp *npart     = (npy_intp*) malloc(npatches * sizeof(npy_intp));
+    AUTOFREE double **x          = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **y          = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **ux         = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **uy         = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **uz         = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE double **inv_gamma  = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE npy_bool **is_dead  = (npy_bool**) malloc(npatches * sizeof(npy_bool*));
+    AUTOFREE double **w          = (double**) malloc(npatches * sizeof(double*));
+    AUTOFREE npy_intp *npart     = (npy_intp*) malloc(npatches * sizeof(npy_intp));
 
     // prestore the data in the list
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
@@ -220,41 +213,23 @@ static PyObject* current_deposition_cpu(PyObject* self, PyObject* args) {
     }
     // reacquire GIL
     Py_END_ALLOW_THREADS
-    
-    Py_DecRef(fields_list);
-    Py_DecRef(particles_list);
-    free(rho);
-    free(jx);
-    free(jy);
-    free(jz);
-    free(x0);
-    free(y0);
-    free(x);
-    free(y);
-    free(ux);
-    free(uy);
-    free(uz);
-    free(inv_gamma);
-    free(is_dead);
-    free(w);
-    free(npart);
     Py_RETURN_NONE;
 }
 
 static PyMethodDef CpuMethods[] = {
-    {"current_deposition_cpu", current_deposition_cpu, METH_VARARGS, "Current deposition on CPU"},
+    {"current_deposition_cpu_2d", current_deposition_cpu_2d, METH_VARARGS, "Current deposition on CPU"},
     {NULL, NULL, 0, NULL}
 };
 
 static struct PyModuleDef cpumodule = {
     PyModuleDef_HEAD_INIT,
-    "cpu",
+    "cpu_2d",
     NULL,
     -1,
     CpuMethods
 };
 
-PyMODINIT_FUNC PyInit_cpu(void) {
+PyMODINIT_FUNC PyInit_cpu2d(void) {
     import_array();
     return PyModule_Create(&cpumodule);
 }

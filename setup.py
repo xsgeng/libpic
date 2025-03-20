@@ -4,8 +4,8 @@ import numpy as np
 
 extensions = [
     Extension(
-        name="libpic.current.cpu",
-        sources=["libpic/current/cpu.c"],
+        name="libpic.current.cpu2d",
+        sources=["libpic/current/cpu2d.c"],
         include_dirs=[np.get_include()],
         extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
         extra_link_args=['-fopenmp'],
@@ -65,8 +65,8 @@ extensions = [
         extra_link_args=['-fopenmp'],
     ),
     Extension(
-        name="libpic.patch.sync_particles", 
-        sources=["libpic/patch/sync_particles.c"],
+        name="libpic.patch.sync_particles_2d", 
+        sources=["libpic/patch/sync_particles_2d.c"],
         include_dirs=[np.get_include()],
         extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
         extra_link_args=['-fopenmp'],

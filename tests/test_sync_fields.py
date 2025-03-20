@@ -6,8 +6,6 @@ import numpy as np
 from numba import typed
 from scipy.constants import c, e
 
-from libpic.patch.sync_fields import sync_guard_fields_2d, sync_currents_2d
-
 
 class TestPatches(unittest.TestCase):
     def test_sync_guard_2d(self):

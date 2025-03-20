@@ -3,7 +3,7 @@ import numpy as np
 from ..particles import ParticlesBase
 from ..fields import Fields
 
-def current_deposition_cpu(
+def current_deposition_cpu_2d(
     particles_list: List[ParticlesBase],
     fields_list: List[Fields],
     npatches: int,

@@ -8,8 +8,8 @@ from ..boundary.cpml import PML, PMLX, PMLY
 from ..fields import Fields, Fields2D
 from ..particles import ParticlesBase
 from ..patch.cpu import (
-    fill_particles,
-    get_num_macro_particles,
+    fill_particles_2d,
+    get_num_macro_particles_2d,
     fill_particles_3d,
     get_num_macro_particles_3d,
 )
@@ -17,7 +17,7 @@ from ..species import Species
 from .sync_fields2d import sync_currents_2d, sync_guard_fields_2d
 from .sync_fields3d import sync_currents_3d, sync_guard_fields_3d
 
-from . import sync_particles
+from . import sync_particles_2d
 
 from enum import IntEnum, auto
 
@@ -401,7 +401,7 @@ class Patches:
     def sync_particles(self) -> None:
         for ispec, s in enumerate(self.species):
 
-            npart_to_extend, npart_incoming, npart_outgoing = sync_particles.get_npart_to_extend(
+            npart_to_extend, npart_incoming, npart_outgoing = sync_particles_2d.get_npart_to_extend_2d(
                 [p.particles[ispec] for p in self],
                 [p for p in self],
                 self.npatches, self.dx, self.dy,
@@ -417,7 +417,7 @@ class Patches:
                     p.extend(npart_to_extend[ipatches])
                     p.extended = True
                     self.update_particle_lists(ipatches)
-            sync_particles.fill_particles_from_boundary(
+            sync_particles_2d.fill_particles_from_boundary_2d(
                 [p.particles[ispec] for p in self],
                 [p for p in self],
                 npart_incoming, npart_outgoing,
@@ -458,7 +458,7 @@ class Patches:
             yaxis = typed.List([p.yaxis for p in self.patches])
             
             if species.density is not None:
-                num_macro_particles = get_num_macro_particles(
+                num_macro_particles = get_num_macro_particles_2d(
                     species.density_jit,
                     xaxis, 
                     yaxis, 
@@ -515,7 +515,7 @@ class Patches:
                     y_list = typed.List([p.particles[ispec].y for p in self.patches])
                     w_list = typed.List([p.particles[ispec].w for p in self.patches])
                     
-                    fill_particles(
+                    fill_particles_2d(
                         s.density_jit,
                         xaxis, 
                         yaxis, 

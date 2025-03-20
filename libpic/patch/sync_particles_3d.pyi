@@ -1,10 +1,9 @@
-from libpic.patch import Patch
 from libpic.particles import ParticlesBase
 from numpy import ndarray
 
-def get_npart_to_extend(
+def get_npart_to_extend_3d(
     particles_list: list[ParticlesBase],
-    patches_list: list[Patch],
+    patches_list: list['Patch3D'],
     npatches: int, dx: float, dy: float, dz: float
 ) -> tuple[ndarray, ndarray, ndarray]:
     """
@@ -14,7 +13,7 @@ def get_npart_to_extend(
     ----------
     particles_list : List[ParticlesBase]
         List of particles of all patches.
-    patches_list : List[Patch]
+    patches_list : List['Patch3D']
         List of patches
     npatches : int
         Number of patches.
@@ -34,9 +33,9 @@ def get_npart_to_extend(
     """
     ...
     
-def fill_particles_from_boundary(
+def fill_particles_from_boundary_3d(
     particles_list: list[ParticlesBase],
-    patches_list: list[Patch],
+    patches_list: list['Patch3D'],
     npart_incoming: ndarray,
     npart_outgoing: ndarray,
     npatches: int, dx: float, dy: float, dz: float,
@@ -49,7 +48,7 @@ def fill_particles_from_boundary(
     ----------
     particles_list : List[ParticlesBase]
         List of particles of all patches.
-    patches_list : List[Patch]
+    patches_list : List['Patch3D']
         List of patches.
     npart_incoming : ndarray
         Number of incoming particles in each patch.

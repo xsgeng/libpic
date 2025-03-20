@@ -106,7 +106,7 @@ inline static void current_deposit_3d(
     }
 }
 
-static PyObject* current_deposition_cpu3d(PyObject* self, PyObject* args) {
+static PyObject* current_deposition_cpu_3d(PyObject* self, PyObject* args) {
     PyObject *fields_list, *particles_list;
     npy_intp npatches;
     double dt, q;
@@ -175,7 +175,7 @@ static PyObject* current_deposition_cpu3d(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef CpuMethods[] = {
-    {"current_deposition_cpu3d", current_deposition_cpu3d, METH_VARARGS, "Current deposition on CPU"},
+    {"current_deposition_cpu_3d", current_deposition_cpu_3d, METH_VARARGS, "Current deposition on CPU"},
     {NULL, NULL, 0, NULL}
 };
 

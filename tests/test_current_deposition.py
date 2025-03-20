@@ -4,9 +4,9 @@ from time import perf_counter_ns
 import numpy as np
 from scipy.constants import c, e
 
-from libpic.current.cpu import current_deposition_cpu
+from libpic.current.cpu2d import current_deposition_cpu_2d
 from libpic.current.deposition import CurrentDeposition2D
-from libpic.current.cpu3d import current_deposition_cpu3d
+from libpic.current.cpu3d import current_deposition_cpu_3d
 from libpic.fields import Fields3D, Fields2D
 from libpic.patch.patch import Patch3D, Patches
 from libpic.species import Electron, Proton
@@ -36,7 +36,7 @@ class TestCurrentDeposition(unittest.TestCase):
         particles.x[:] = np.random.uniform(-dx, dx)
         particles.y[:] = np.random.uniform(-dy, dy)
 
-        current_deposition_cpu(
+        current_deposition_cpu_2d(
             [fields], 
             [particles],
             1, dt, q
@@ -185,7 +185,7 @@ class TestCurrentDeposition(unittest.TestCase):
             p.uz[:] = np.random.normal(0, 1, p.npart)
             p.inv_gamma[:] = (1 + (p.ux**2 + p.uy**2 + p.uz**2))**-0.5
             
-        current_deposition_cpu(
+        current_deposition_cpu_2d(
             [patch.fields for patch in patches], 
             [patch.particles[0] for patch in patches],
             npatch_x*npatch_y, 1e-15, -e
@@ -217,7 +217,7 @@ class TestCurrentDeposition3D(unittest.TestCase):
         particles.y[:] = np.random.uniform(-dy, dy)
         particles.z[:] = np.random.uniform(-dz, dz)
 
-        current_deposition_cpu3d(
+        current_deposition_cpu_3d(
             [fields], 
             [particles],
             1, dt, q

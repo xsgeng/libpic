@@ -6,10 +6,6 @@ import numpy as np
 from numba import typed
 from scipy.constants import c, e
 
-from libpic.boundary.particles import (count_outgoing_particles,
-                                       fill_boundary_particles_to_buffer,
-                                       get_incoming_index)
-
 
 # class TestBoundaryExchange(unittest.TestCase):
 #     def test_count(self):

@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..patch import Patches
-from .cpu import current_deposition_cpu
+from .cpu2d import current_deposition_cpu_2d
 from deprecated import deprecated
 
 class CurrentDeposition:
@@ -157,7 +157,7 @@ class CurrentDeposition2D(CurrentDeposition):
 
     def __call__(self, ispec:int, dt: float) -> None:
         if self.q[ispec] != 0:
-            current_deposition_cpu(
+            current_deposition_cpu_2d(
                 [p.fields for p in self.patches],
                 [p.particles[ispec] for p in self.patches],
                 self.npatches,

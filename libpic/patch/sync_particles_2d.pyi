@@ -1,7 +1,7 @@
 from libpic.particles import ParticlesBase
 from numpy import ndarray
 
-def get_npart_to_extend(
+def get_npart_to_extend_2d(
     particles_list: list[ParticlesBase],
     patches_list: list['Patch2D'],
     npatches: int, dx: float, dy: float

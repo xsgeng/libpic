@@ -4,7 +4,7 @@ from numba import njit, prange
 
 """ Parallel functions for patches """
 @njit(cache=False, parallel=True)
-def get_num_macro_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc) -> NDArray[np.int64]:
+def get_num_macro_particles_2d(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc) -> NDArray[np.int64]:
     num_particles = np.zeros(npatches, dtype=np.int64)
     for ipatch in prange(npatches):
         xaxis =  xaxis_list[ipatch]
@@ -19,7 +19,7 @@ def get_num_macro_particles(density_func, xaxis_list, yaxis_list, npatches, dens
 
 
 @njit(cache=False, parallel=True)
-def fill_particles(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc, x_list, y_list, w_list):
+def fill_particles_2d(density_func, xaxis_list, yaxis_list, npatches, dens_min, ppc, x_list, y_list, w_list):
     dx = xaxis_list[0][1] - xaxis_list[0][0]
     dy = yaxis_list[0][1] - yaxis_list[0][0]
     for ipatch in prange(npatches):
