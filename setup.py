@@ -18,16 +18,18 @@ extensions = [
         extra_link_args=['-fopenmp'],
     ),
     Extension(
-        name="libpic.interpolation.cpu",
-        sources=["libpic/interpolation/cpu.c"],
+        name="libpic.interpolation.cpu2d",
+        sources=["libpic/interpolation/cpu2d.c"],
         include_dirs=[np.get_include()],
         extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
+        extra_link_args=['-fopenmp'],
     ),
     Extension(
         name="libpic.interpolation.cpu3d",
         sources=["libpic/interpolation/cpu3d.c"],
         include_dirs=[np.get_include()],
         extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
+        extra_link_args=['-fopenmp'],
     ),
     Extension(
         name="libpic.sort.cpu", 
