@@ -277,7 +277,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
         }
 
         // Corner synchronization (3D)
-        if (neighbor_index[XMINYMINZMIN]) {
+        if (neighbor_index[XMINYMINZMIN] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMINYMINZMIN],
                 0, nx, ng,
                 0, ny, ng,
@@ -285,7 +285,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             )
         }
 
-        if (neighbor_index[XMINYMINZMAX]) {
+        if (neighbor_index[XMINYMINZMAX] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMINYMINZMAX],
                 0, nx, ng,
                 0, ny, ng,
@@ -293,7 +293,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             )
         }
 
-        if (neighbor_index[XMINYMAXZMIN]) {
+        if (neighbor_index[XMINYMAXZMIN] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMINYMAXZMIN],
                 0, nx, ng,
                 ny-ng, -ng, ng,
@@ -301,7 +301,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             )
         }
 
-        if (neighbor_index[XMINYMAXZMAX]) {
+        if (neighbor_index[XMINYMAXZMAX] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMINYMAXZMAX],
                 0, nx, ng,
                 ny-ng, -ng, ng,
@@ -309,7 +309,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             )
         }
 
-        if (neighbor_index[XMAXYMINZMIN]) {
+        if (neighbor_index[XMAXYMINZMIN] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMAXYMINZMIN],
                 nx-ng, -ng, ng,
                 0, ny, ng,
@@ -317,7 +317,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             )
         }
 
-        if (neighbor_index[XMAXYMINZMAX]) {
+        if (neighbor_index[XMAXYMINZMAX] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMAXYMINZMAX],
                 nx-ng, -ng, ng,
                 0, ny, ng,
@@ -325,7 +325,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             )
         }
 
-        if (neighbor_index[XMAXYMAXZMIN]) {
+        if (neighbor_index[XMAXYMAXZMIN] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMAXYMAXZMIN],
                 nx-ng, -ng, ng,
                 ny-ng, -ng, ng,
@@ -333,7 +333,7 @@ static PyObject* sync_currents_3d(PyObject* self, PyObject* args) {
             )
         }
 
-        if (neighbor_index[XMAXYMAXZMAX]) {
+        if (neighbor_index[XMAXYMAXZMAX] >= 0) {
             SYNC_BOUNDARY_3D(neighbor_index[XMAXYMAXZMAX],
                 nx-ng, -ng, ng,
                 ny-ng, -ng, ng,
