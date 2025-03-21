@@ -220,7 +220,7 @@ inline static void current_deposit_3d(
         DSz[i] = S1z[i] - S0z[i];
     }
 
-    double charge_density = q * w / (dx * dy);
+    double charge_density = q * w / (dx * dy * dz);
     double factor = charge_density / dt;
 
     double jx_buff[5][5] = {0};
