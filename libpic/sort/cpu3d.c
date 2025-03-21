@@ -170,7 +170,7 @@ static PyObject* sort_particles_patches_3d(PyObject* self, PyObject* args) {
     npy_intp nx, ny, nz, npatches;
     double dx, dy, dz;
 
-    if (!PyArg_ParseTuple(args, "OOOOOOnnnddddnOOOOOOO", 
+    if (!PyArg_ParseTuple(args, "OOOOOOnnndddnOOOOOOO", 
         &grid_cell_count_list, &cell_bound_min_list, &cell_bound_max_list,
         &x0s, &y0s, &z0s,
         &nx, &ny, &nz, &dx, &dy, &dz,

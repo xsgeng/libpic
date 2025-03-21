@@ -39,6 +39,13 @@ extensions = [
         extra_link_args=['-fopenmp'],
     ),
     Extension(
+        name="libpic.sort.cpu3d", 
+        sources=["libpic/sort/cpu3d.c"],
+        include_dirs=[np.get_include()],
+        extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
+        extra_link_args=['-fopenmp'],
+    ),
+    Extension(
         name="libpic.pusher.unified.unified_pusher_2d", 
         sources=["libpic/pusher/unified/unified_pusher_2d.c"],
         include_dirs=[np.get_include()],
