@@ -213,7 +213,7 @@ static PyObject* _sorted_cell_bound(PyObject* self, PyObject* args) {
  * @param args Python arguments tuple.
  * @return None.
  */
-static PyObject* sort_particles_patches(PyObject* self, PyObject* args) {
+static PyObject* sort_particles_patches_2d(PyObject* self, PyObject* args) {
     PyObject *grid_cell_count_list, *cell_bound_min_list, *cell_bound_max_list, *x0s, *y0s, *particle_cell_indices_list, *sorted_indices_list, *x_list, *y_list, *is_dead_list, *attrs_list;
     npy_intp nx, ny, npatches;
     double dx, dy;
@@ -299,7 +299,7 @@ static PyObject* sort_particles_patches(PyObject* self, PyObject* args) {
 }
 
 static PyMethodDef SortMethods[] = {
-    {"sort_particles_patches", sort_particles_patches, METH_VARARGS, "Sort particles patches"},
+    {"sort_particles_patches_2d", sort_particles_patches_2d, METH_VARARGS, "Sort particles patches"},
     {"_calculate_cell_index", _calculate_cell_index, METH_VARARGS, "Calculate cell index"},
     {"_sorted_cell_bound", _sorted_cell_bound, METH_VARARGS, "Calculate sorted cell bound"},
     {"_cycle_sort", _cycle_sort, METH_VARARGS, "Cycle sort"},
@@ -308,13 +308,13 @@ static PyMethodDef SortMethods[] = {
 
 static struct PyModuleDef sortmodule = {
     PyModuleDef_HEAD_INIT,
-    "cpu",
+    "cpu2d",
     NULL,
     -1,
     SortMethods
 };
 
-PyMODINIT_FUNC PyInit_cpu(void) {
+PyMODINIT_FUNC PyInit_cpu2d(void) {
     import_array();
     return PyModule_Create(&sortmodule);
 }

@@ -32,8 +32,8 @@ extensions = [
         extra_link_args=['-fopenmp'],
     ),
     Extension(
-        name="libpic.sort.cpu", 
-        sources=["libpic/sort/cpu.c"],
+        name="libpic.sort.cpu2d", 
+        sources=["libpic/sort/cpu2d.c"],
         include_dirs=[np.get_include()],
         extra_compile_args=['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize'],
         extra_link_args=['-fopenmp'],

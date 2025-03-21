@@ -1,7 +1,7 @@
 import numpy as np
 from ..patch import Patches
 
-from .cpu import sort_particles_patches
+from .cpu2d import sort_particles_patches_2d
 
 class ParticleSort2D:
     """
@@ -105,7 +105,7 @@ class ParticleSort2D:
         self.y0s = [p.y0 - self.dy/2 for p in self.patches]
         
     def __call__(self) -> None:
-        sort_particles_patches(
+        sort_particles_patches_2d(
             self.grid_cell_count_list, self.cell_bound_min_list, self.cell_bound_max_list, self.x0s, self.y0s,
             self.nx, self.ny, self.dx, self.dy, 
             self.npatches, 

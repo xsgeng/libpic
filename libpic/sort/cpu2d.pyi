@@ -1,7 +1,7 @@
 from numpy.typing import NDArray
 from typing import List
 
-def sort_particles_patches(
+def sort_particles_patches_2d(
     # grid
     grid_cell_count_list: List[NDArray[int]], 
     cell_bound_min_list: List[NDArray[int]], cell_bound_max_list: List[NDArray[int]], 
@@ -47,5 +47,3 @@ def _sorted_cell_bound(
     Calculate the cell bounds for each cell.
     """
     ...
-
-)
