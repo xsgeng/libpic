@@ -200,7 +200,6 @@ class TestCurrentDeposition3D(unittest.TestCase):
         q = e
 
         particles = ParticlesBase(0, 0)
-        particles.attrs += ['z']
         particles.initialize(1)
 
         fields = Fields3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dy, dz=dz, x0=-3*dx, y0=-3*dy, z0=-3*dz, n_guard=3)
