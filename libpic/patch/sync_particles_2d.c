@@ -35,12 +35,13 @@ static const enum Boundary2D OPPOSITE_BOUNDARY[NUM_BOUNDARIES] = {
 
 // Implementation of count_outgoing_particles function
 static void count_outgoing_particles(
-    double* x, double* y, 
+    double* x, double* y, npy_bool* is_dead,
     double xmin, double xmax, double ymin, double ymax,
     npy_intp npart,
     npy_intp* npart_out
 ) {
     for (npy_intp ip = 0; ip < npart; ip++) {
+        if (is_dead[ip]) continue;
         if (y[ip] < ymin) {
             if (x[ip] < xmin) {
                 (npart_out[XMINYMIN])++;
@@ -92,7 +93,7 @@ static void count_outgoing_particles(
 
 // Get indices of incoming particles from neighboring patches
 static void get_incoming_index(
-double* x, double* y, npy_intp npart,
+double* x, double* y, npy_bool* is_dead, npy_intp npart,
 double xmin, double xmax, 
 double ymin, double ymax, 
 npy_intp* boundary_index,
@@ -105,6 +106,7 @@ npy_intp*** incoming_indices_list
     }
     npy_intp ipatch, ibound;
     for (npy_intp ip = 0; ip < npart; ip++) {
+        if (is_dead[ip]) continue;
         if (y[ip] < ymin) {
             if (x[ip] < xmin) {
                 SET_INCOMING_INDEX(XMINYMIN)
@@ -172,8 +174,8 @@ static void mark_out_of_bound_as_dead(
 ) {
     for (npy_intp ipart = 0; ipart < npart; ipart++) {
         if (is_dead[ipart]) {
-            x[ipart] = NAN;
-            y[ipart] = NAN;
+            // x[ipart] = NAN;
+            // y[ipart] = NAN;
             continue;
         }
         if ((x[ipart] < xmin) || (x[ipart] > xmax) || (y[ipart] < ymin) || (y[ipart] > ymax)) {
@@ -239,6 +241,7 @@ PyObject* get_npart_to_extend_2d(PyObject* self, PyObject* args) {
     for (npy_intp ipatch = 0; ipatch < npatches; ipatch++) {
         double *x = x_list[ipatch];
         double *y = y_list[ipatch];
+        npy_bool *is_dead = is_dead_list[ipatch];
         double xmin = xmin_list[ipatch];
         double xmax = xmax_list[ipatch];
         double ymin = ymin_list[ipatch];
@@ -249,7 +252,7 @@ PyObject* get_npart_to_extend_2d(PyObject* self, PyObject* args) {
         npy_intp npart_out[NUM_BOUNDARIES] = {0};
         
         count_outgoing_particles(
-            x, y, xmin, xmax, ymin, ymax, npart,
+            x, y, is_dead, xmin, xmax, ymin, ymax, npart,
             npart_out
         );
         
@@ -396,7 +399,7 @@ PyObject* fill_particles_from_boundary_2d(PyObject* self, PyObject* args) {
             
             // Get indices of incoming particles
             get_incoming_index(
-                x_list[ipatch], y_list[ipatch], npart_list[ipatch],
+                x_list[ipatch], y_list[ipatch], is_dead_list[ipatch], npart_list[ipatch],
                 xmin_list[ipatch], xmax_list[ipatch], 
                 ymin_list[ipatch], ymax_list[ipatch],
                 // boundary indices
