@@ -158,11 +158,31 @@ class PMLY(PML):
         self.psi_bz_y = np.zeros(self.dimensions)
 
     def advance_e_currents(self, dt):
-        update_psi_y_and_e_2d(self.kappa_ey, self.sigma_ey, self.a_ey, self.nx, dt, self.dy, self.efield_start, self.efield_end, 
+        if isinstance(self.fields, Fields3D):
+            update_psi_y_and_e_3d(
+                self.kappa_ey, self.sigma_ey, self.a_ey,
+                self.nx, self.nz, dt, self.dy,
+                self.efield_start, self.efield_end,
+                self.fields.bx, self.fields.bz,
+                self.fields.ex, self.fields.ez,
+                self.psi_ex_y, self.psi_ez_y
+            )
+        else:
+            update_psi_y_and_e_2d(self.kappa_ey, self.sigma_ey, self.a_ey, self.nx, dt, self.dy, self.efield_start, self.efield_end, 
                            self.fields.bx, self.fields.bz, self.fields.ex, self.fields.ez, self.psi_ex_y, self.psi_ez_y)
 
     def advance_b_currents(self, dt):
-        update_psi_y_and_b_2d(self.kappa_by, self.sigma_by, self.a_by, self.nx, dt, self.dy, self.bfield_start, self.bfield_end, 
+        if isinstance(self.fields, Fields3D):
+            update_psi_y_and_b_3d(
+                self.kappa_by, self.sigma_by, self.a_by,
+                self.nx, self.nz, dt, self.dy,
+                self.bfield_start, self.bfield_end,
+                self.fields.ex, self.fields.ez,
+                self.fields.bx, self.fields.bz,
+                self.psi_bx_y, self.psi_bz_y
+            )
+        else:
+            update_psi_y_and_b_2d(self.kappa_by, self.sigma_by, self.a_by, self.nx, dt, self.dy, self.bfield_start, self.bfield_end, 
                            self.fields.ex, self.fields.ez, self.fields.bx, self.fields.bz, self.psi_bx_y, self.psi_bz_y)
 
 class PMLZ(PML):
