@@ -20,6 +20,64 @@
  * @param particle_cell_indices Pointer to the array to store the cell indices.
  * @param grid_cell_count Pointer to the array to store the count of particles in each cell.
  */
+static void calculate_bucket_index(
+    double* x, double* y, npy_bool* is_dead, 
+    npy_intp npart, npy_intp nx, npy_intp ny, 
+    npy_intp nx_bucket, npy_intp ny_bucket,
+    double dx, double dy, double x0, double y0,
+    npy_intp* particle_bucket_indices, npy_intp* bucket_count
+) {
+    npy_intp ix, iy, ip, ix_bucket, iy_bucket, ibucket;
+    npy_intp nx_buckets = (nx + nx_bucket - 1) / nx_bucket;
+    npy_intp ny_buckets = (ny + ny_bucket - 1) / ny_bucket;
+
+    for (ip = 0; ip < npart; ip++) {
+        if (!is_dead[ip]) {
+            ix = (npy_intp)floor((x[ip] - x0) / dx);
+            iy = (npy_intp)floor((y[ip] - y0) / dy);
+            
+            if (0 <= ix && ix < nx && 0 <= iy && iy < ny) {
+                ix_bucket = ix / nx_bucket;
+                iy_bucket = iy / ny_bucket;
+                ibucket = iy_bucket + ix_bucket * ny_buckets;
+                
+                if (ibucket < nx_buckets * ny_buckets) {
+                    particle_bucket_indices[ip] = ibucket;
+                    bucket_count[ibucket]++;
+                    continue;
+                }
+            }
+            particle_bucket_indices[ip] = -1;
+        } else {
+            particle_bucket_indices[ip] = -1;
+        }
+    }
+}
+
+static PyObject* _calculate_bucket_index(PyObject* self, PyObject* args) {
+    PyObject *x, *y, *is_dead, *particle_bucket_indices, *bucket_count;
+    npy_intp nx, ny, npart, nx_bucket, ny_bucket;
+    double dx, dy, x0, y0;
+
+    if (!PyArg_ParseTuple(args, "OOOnnnnnddddOO", 
+        &x, &y, &is_dead, 
+        &npart, &nx, &ny, &nx_bucket, &ny_bucket,
+        &dx, &dy, &x0, &y0, 
+        &particle_bucket_indices, &bucket_count)) {
+        return NULL;  
+    }
+
+    calculate_bucket_index(
+        (double*) PyArray_DATA(x), (double*) PyArray_DATA(y), 
+        (npy_bool*) PyArray_DATA(is_dead), npart, nx, ny, 
+        nx_bucket, ny_bucket,
+        dx, dy, x0, y0,
+        (npy_intp*) PyArray_DATA(particle_bucket_indices),
+        (npy_intp*) PyArray_DATA(bucket_count)
+    );
+    Py_RETURN_NONE;
+}
+
 static void calculate_cell_index(
     double* x, double* y, npy_bool* is_dead, 
     npy_intp npart, npy_intp nx, npy_intp ny, double dx, double dy, double x0, double y0, 
@@ -301,6 +359,7 @@ static PyObject* sort_particles_patches_2d(PyObject* self, PyObject* args) {
 static PyMethodDef SortMethods[] = {
     {"sort_particles_patches_2d", sort_particles_patches_2d, METH_VARARGS, "Sort particles patches"},
     {"_calculate_cell_index", _calculate_cell_index, METH_VARARGS, "Calculate cell index"},
+    {"_calculate_bucket_index", _calculate_bucket_index, METH_VARARGS, "Calculate bucket index"},
     {"_sorted_cell_bound", _sorted_cell_bound, METH_VARARGS, "Calculate sorted cell bound"},
     {"_cycle_sort", _cycle_sort, METH_VARARGS, "Cycle sort"},
     {NULL, NULL, 0, NULL}
