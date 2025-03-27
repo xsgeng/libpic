@@ -517,3 +517,43 @@ def update_psi_x_and_b_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, ey, ez, 
 
                 by[ipos, iy, iz] += fac * psi_by_x[ipos, iy, iz]
                 bz[ipos, iy, iz] -= fac * psi_bz_x[ipos, iy, iz]
+
+@njit
+def update_psi_z_and_e_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, bx, by, ex, ey, psi_ex_z, psi_ey_z):
+    fac = dt * c**2
+    for iy in range(ny):
+        for ix in range(nx):
+            for ipos in range(start, stop):
+                kappa_ = kappa[ipos]
+                sigma_ = sigma[ipos]
+                acoeff = a[ipos]
+                bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+                ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dz
+
+                psi_ex_z[ix, iy, ipos] = bcoeff * psi_ex_z[ix, iy, ipos] \
+                    + ccoeff_d * (by[ix, iy, ipos] - by[ix, iy, ipos-1])
+                psi_ey_z[ix, iy, ipos] = bcoeff * psi_ey_z[ix, iy, ipos] \
+                    + ccoeff_d * (bx[ix, iy, ipos] - bx[ix, iy, ipos-1])
+
+                ex[ix, iy, ipos] += fac * psi_ex_z[ix, iy, ipos]
+                ey[ix, iy, ipos] -= fac * psi_ey_z[ix, iy, ipos]
+
+@njit
+def update_psi_z_and_b_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, ex, ey, bx, by, psi_bx_z, psi_by_z):
+    fac = dt
+    for iy in range(ny):
+        for ix in range(nx):
+            for ipos in range(start, stop):
+                kappa_ = kappa[ipos]
+                sigma_ = sigma[ipos]
+                acoeff = a[ipos]
+                bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+                ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dz
+
+                psi_bx_z[ix, iy, ipos] = bcoeff * psi_bx_z[ix, iy, ipos] \
+                    + ccoeff_d * (ey[ix, iy, ipos+1] - ey[ix, iy, ipos])
+                psi_by_z[ix, iy, ipos] = bcoeff * psi_by_z[ix, iy, ipos] \
+                    + ccoeff_d * (ex[ix, iy, ipos+1] - ex[ix, iy, ipos])
+
+                bx[ix, iy, ipos] += fac * psi_bx_z[ix, iy, ipos]
+                by[ix, iy, ipos] -= fac * psi_by_z[ix, iy, ipos]
