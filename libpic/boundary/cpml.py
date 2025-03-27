@@ -60,15 +60,15 @@ class PML(Boundary):
             shapex = fields.nx
             shapey = fields.ny
             shapez = 0
-        # if isinstance(fields, Fields3D):
-        #     self.ny = fields.ny
-        #     self.nz = fields.nz
-        #     self.dy = fields.dy
-        #     self.dz = fields.dz
-        #     self.dimensions = (fields.nx, fields.ny, fields.nz)
-        #     shapex = (fields.nx, fields.ny)
-        #     shapey = (fields.ny, fields.nz)
-        #     shapez = (fields.nz, fields.nx)
+        if isinstance(fields, Fields3D):
+            self.ny = fields.ny
+            self.nz = fields.nz
+            self.dy = fields.dy
+            self.dz = fields.dz
+            self.dimensions = (fields.nx, fields.ny, fields.nz)
+            shapex = (fields.nx, fields.ny)
+            shapey = (fields.ny, fields.nz)
+            shapez = (fields.nz, fields.nx)
 
         self.kappa_ex = np.ones(shapex)
         self.kappa_bx = np.ones(shapex)
@@ -126,11 +126,11 @@ class PMLX(PML):
         self.psi_bz_x = np.zeros(self.dimensions)
 
     def advance_e_currents(self, dt):
-        update_psi_x_and_e(self.kappa_ex, self.sigma_ex, self.a_ex, self.ny, dt, self.dx, self.efield_start, self.efield_end, 
+        update_psi_x_and_e_2d(self.kappa_ex, self.sigma_ex, self.a_ex, self.ny, dt, self.dx, self.efield_start, self.efield_end, 
                            self.fields.by, self.fields.bz, self.fields.ey, self.fields.ez, self.psi_ey_x, self.psi_ez_x)
 
     def advance_b_currents(self, dt):
-        update_psi_x_and_b(self.kappa_bx, self.sigma_bx, self.a_bx, self.ny, dt, self.dx, self.bfield_start, self.bfield_end, 
+        update_psi_x_and_b_2d(self.kappa_bx, self.sigma_bx, self.a_bx, self.ny, dt, self.dx, self.bfield_start, self.bfield_end, 
                            self.fields.ey, self.fields.ez, self.fields.by, self.fields.bz, self.psi_by_x, self.psi_bz_x)
 
 class PMLY(PML):
@@ -142,11 +142,11 @@ class PMLY(PML):
         self.psi_bz_y = np.zeros(self.dimensions)
 
     def advance_e_currents(self, dt):
-        update_psi_y_and_e(self.kappa_ey, self.sigma_ey, self.a_ey, self.nx, dt, self.dy, self.efield_start, self.efield_end, 
+        update_psi_y_and_e_2d(self.kappa_ey, self.sigma_ey, self.a_ey, self.nx, dt, self.dy, self.efield_start, self.efield_end, 
                            self.fields.bx, self.fields.bz, self.fields.ex, self.fields.ez, self.psi_ex_y, self.psi_ez_y)
 
     def advance_b_currents(self, dt):
-        update_psi_y_and_b(self.kappa_by, self.sigma_by, self.a_by, self.nx, dt, self.dy, self.bfield_start, self.bfield_end, 
+        update_psi_y_and_b_2d(self.kappa_by, self.sigma_by, self.a_by, self.nx, dt, self.dy, self.bfield_start, self.bfield_end, 
                            self.fields.ex, self.fields.ez, self.fields.bx, self.fields.bz, self.psi_bx_y, self.psi_bz_y)
 
 
@@ -313,7 +313,7 @@ def update_bfield_cpml_patches_2d(
         update_bfield_cpml_2d(ex, ey, ez, bx, by, bz, kappa_bx, kappa_by, dx, dy, dt, nx, ny, n_guard)
 
 @njit
-def update_psi_x_and_e(kappa, sigma, a, ny, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
+def update_psi_x_and_e_2d(kappa, sigma, a, ny, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
     fac = dt * c**2
     for iy in range(ny):
         for ipos in range(start, stop):
@@ -332,7 +332,7 @@ def update_psi_x_and_e(kappa, sigma, a, ny, dt, dx, start, stop, by, bz, ey, ez,
             ez[ipos, iy] += fac * psi_ez_x[ipos, iy]
 
 @njit
-def update_psi_x_and_b(kappa, sigma, a, ny, dt, dx, start, stop, ey, ez, by, bz, psi_by_x, psi_bz_x):
+def update_psi_x_and_b_2d(kappa, sigma, a, ny, dt, dx, start, stop, ey, ez, by, bz, psi_by_x, psi_bz_x):
     fac = dt
     for iy in range(ny):
         for ipos in range(start, stop):
@@ -351,7 +351,7 @@ def update_psi_x_and_b(kappa, sigma, a, ny, dt, dx, start, stop, ey, ez, by, bz,
             bz[ipos, iy] -= fac * psi_bz_x[ipos, iy]
 
 @njit
-def update_psi_y_and_e(kappa, sigma, a, nx, dt, dy, start, stop, bx, bz, ex, ez, psi_ex_y, psi_ez_y):
+def update_psi_y_and_e_2d(kappa, sigma, a, nx, dt, dy, start, stop, bx, bz, ex, ez, psi_ex_y, psi_ez_y):
     fac = dt * c**2
     for ix in range(nx):
         for ipos in range(start, stop):
@@ -370,7 +370,7 @@ def update_psi_y_and_e(kappa, sigma, a, nx, dt, dy, start, stop, bx, bz, ex, ez,
             ez[ix, ipos] -= fac * psi_ez_y[ix, ipos]
 
 @njit
-def update_psi_y_and_b(kappa, sigma, a, nx, dt, dy, start, stop, ex, ez, bx, bz, psi_bx_y, psi_bz_y):
+def update_psi_y_and_b_2d(kappa, sigma, a, nx, dt, dy, start, stop, ex, ez, bx, bz, psi_bx_y, psi_bz_y):
     fac = dt
     for ix in range(nx):
         for ipos in range(start, stop):
