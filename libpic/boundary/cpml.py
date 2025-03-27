@@ -543,3 +543,41 @@ def update_psi_z_and_b_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, ex, ey, 
 
                 bx[ix, iy, ipos] += fac * psi_bx_z[ix, iy, ipos]
                 by[ix, iy, ipos] -= fac * psi_by_z[ix, iy, ipos]
+
+@njit
+def update_psi_y_and_e_3d(kappa, sigma, a, nx, nz, dt, dy, start, stop, bx, bz, ex, ez, psi_ex_y, psi_ez_y):
+    fac = dt * c**2
+    for ix in range(nx):
+        for ipos in range(start, stop):
+            kappa_ = kappa[ipos]
+            sigma_ = sigma[ipos]
+            acoeff = a[ipos]
+            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dy
+            for iz in range(nz):
+                psi_ex_y[ix, ipos, iz] = bcoeff * psi_ex_y[ix, ipos, iz] \
+                    + ccoeff_d * (bz[ix, ipos, iz] - bz[ix, ipos-1, iz])
+                psi_ez_y[ix, ipos, iz] = bcoeff * psi_ez_y[ix, ipos, iz] \
+                    + ccoeff_d * (bx[ix, ipos, iz] - bx[ix, ipos-1, iz])
+
+                ex[ix, ipos, iz] += fac * psi_ex_y[ix, ipos, iz]
+                ez[ix, ipos, iz] -= fac * psi_ez_y[ix, ipos, iz]
+
+@njit
+def update_psi_y_and_b_3d(kappa, sigma, a, nx, nz, dt, dy, start, stop, ex, ez, bx, bz, psi_bx_y, psi_bz_y):
+    fac = dt
+    for ix in range(nx):
+        for ipos in range(start, stop):
+            kappa_ = kappa[ipos]
+            sigma_ = sigma[ipos]
+            acoeff = a[ipos]
+            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dy
+            for iz in range(nz):
+                psi_bx_y[ix, ipos, iz] = bcoeff * psi_bx_y[ix, ipos, iz] \
+                    + ccoeff_d * (ez[ix, ipos+1, iz] - ez[ix, ipos, iz])
+                psi_bz_y[ix, ipos, iz] = bcoeff * psi_bz_y[ix, ipos, iz] \
+                    + ccoeff_d * (ex[ix, ipos+1, iz] - ex[ix, ipos, iz])
+
+                bx[ix, ipos, iz] -= fac * psi_bx_y[ix, ipos, iz]
+                bz[ix, ipos, iz] += fac * psi_bz_y[ix, ipos, iz]
