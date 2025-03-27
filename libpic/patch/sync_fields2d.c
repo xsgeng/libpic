@@ -148,42 +148,42 @@ static PyObject* sync_currents_2d(PyObject* self, PyObject* args) {
 }
 
 static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
-    PyObject *fields_list, *patches_list;
-    npy_intp npatches, nx, ny, ng;
+    PyObject *fields_list, *patches_list, *attrs;
+    npy_intp npatches, nx, ny, ng, nsync;
 
-    if (!PyArg_ParseTuple(args, "OOnnnn", 
-        &fields_list, &patches_list,
-        &npatches, &nx, &ny, &ng)) {
+    if (!PyArg_ParseTuple(args, "OOOnnnnn", 
+        &fields_list, &patches_list, &attrs,
+        &npatches, &nx, &ny, &ng, &nsync)) {
+        return NULL;
+    }
+
+    if (nsync == 0) {
+        Py_RETURN_NONE;
+    }
+
+    if (nsync > ng) {
+        PyErr_SetString(PyExc_ValueError, "nsync must be less than ng");
         return NULL;
     }
 
     npy_intp NX = nx+2*ng;
     npy_intp NY = ny+2*ng;
 
-    AUTOFREE double **ex = get_attr_array_double(fields_list, npatches, "ex");
-    AUTOFREE double **ey = get_attr_array_double(fields_list, npatches, "ey");
-    AUTOFREE double **ez = get_attr_array_double(fields_list, npatches, "ez");
-    AUTOFREE double **bx = get_attr_array_double(fields_list, npatches, "bx");
-    AUTOFREE double **by = get_attr_array_double(fields_list, npatches, "by");
-    AUTOFREE double **bz = get_attr_array_double(fields_list, npatches, "bz");
+    int nattrs = PyList_Size(attrs);
+    AUTOFREE double ***attrs_list = malloc(nattrs * sizeof(double**));
+    for (int i = 0; i < nattrs; i++) {
+        attrs_list[i] = get_attr_array_double(fields_list, npatches, PyUnicode_AsUTF8(PyList_GetItem(attrs, i)));
+    }
 
     AUTOFREE npy_intp **neighbor_index_list = get_attr_array_int(patches_list, npatches, "neighbor_index");
 
     Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel for
-    for (npy_intp i = 0; i < npatches*6; i++) {
-        int field_type = i % 6; // 0:ex,1:ey,2:ez,3:bx,4:by,5:bz
-        npy_intp ipatch = i / 6;
+    for (npy_intp i = 0; i < npatches*nattrs; i++) {
+        int field_type = i % nattrs;
+        npy_intp ipatch = i / nattrs;
         
-        double** field = NULL;
-        switch(field_type) {
-            case 0: field = ex; break;
-            case 1: field = ey; break;
-            case 2: field = ez; break;
-            case 3: field = bx; break;
-            case 4: field = by; break;
-            case 5: field = bz; break;
-        }
+        double** field = attrs_list[field_type];
 
         #define SYNC_GUARD_2D(src_patch, \
             ix_dst, ix_src, NX, \
@@ -257,6 +257,9 @@ static PyObject* sync_guard_fields_2d(PyObject* self, PyObject* args) {
     }
     Py_END_ALLOW_THREADS
 
+    for (int i = 0; i < nattrs; i++) {
+        free(attrs_list[i]);
+    }
     Py_RETURN_NONE;
 }
 
