@@ -126,12 +126,28 @@ class PMLX(PML):
         self.psi_bz_x = np.zeros(self.dimensions)
 
     def advance_e_currents(self, dt):
-        update_psi_x_and_e_2d(self.kappa_ex, self.sigma_ex, self.a_ex, self.ny, dt, self.dx, self.efield_start, self.efield_end, 
-                           self.fields.by, self.fields.bz, self.fields.ey, self.fields.ez, self.psi_ey_x, self.psi_ez_x)
+        if isinstance(self.fields, Fields3D):
+            update_psi_x_and_e_3d(self.kappa_ex, self.sigma_ex, self.a_ex,
+                                self.ny, self.nz, dt, self.dx,
+                                self.efield_start, self.efield_end,
+                                self.fields.by, self.fields.bz,
+                                self.fields.ey, self.fields.ez,
+                                self.psi_ey_x, self.psi_ez_x)
+        else:
+            update_psi_x_and_e_2d(self.kappa_ex, self.sigma_ex, self.a_ex, self.ny, dt, self.dx, self.efield_start, self.efield_end, 
+                               self.fields.by, self.fields.bz, self.fields.ey, self.fields.ez, self.psi_ey_x, self.psi_ez_x)
 
     def advance_b_currents(self, dt):
-        update_psi_x_and_b_2d(self.kappa_bx, self.sigma_bx, self.a_bx, self.ny, dt, self.dx, self.bfield_start, self.bfield_end, 
-                           self.fields.ey, self.fields.ez, self.fields.by, self.fields.bz, self.psi_by_x, self.psi_bz_x)
+        if isinstance(self.fields, Fields3D):
+            update_psi_x_and_b_3d(self.kappa_bx, self.sigma_bx, self.a_bx,
+                                self.ny, self.nz, dt, self.dx,
+                                self.bfield_start, self.bfield_end,
+                                self.fields.ey, self.fields.ez,
+                                self.fields.by, self.fields.bz,
+                                self.psi_by_x, self.psi_bz_x)
+        else:
+            update_psi_x_and_b_2d(self.kappa_bx, self.sigma_bx, self.a_bx, self.ny, dt, self.dx, self.bfield_start, self.bfield_end, 
+                               self.fields.ey, self.fields.ez, self.fields.by, self.fields.bz, self.psi_by_x, self.psi_bz_x)
 
 class PMLY(PML):
     def __init__(self, fields: Fields, thickness: int = 6, kappa_max: float = 20, a_max: float = 0.15, sigma_max: float = 0.7) -> None:
@@ -207,6 +223,80 @@ class PMLYmin(PMLY):
         self.bfield_end = self.thickness
 
 class PMLYmax(PMLY):
+    def init_parameters(self):
+        # runs from nearly 0.0 (actually 0.0 at cpml_thickness+1) to 1.0
+        pos = 1.0 - np.arange(self.thickness, dtype=float)[::-1] / self.thickness
+        cpml_slice = np.s_[self.ny-self.thickness : self.ny]
+        self.init_coefficents(pos, cpml_slice, self.kappa_ey, self.sigma_ey, self.a_ey)
+
+        # runs from nearly 0.0 to nearly 1.0 on the half intervals
+        # 0.0 at iy_glob=cpml_thickness+1/2 and 1.0 at iy_glob=1-1/2
+        pos = 1.0 - (np.arange(self.thickness, dtype=float) + 0.5)[::-1] / self.thickness
+        cpml_slice = np.s_[self.ny-self.thickness-1 : self.ny-1]
+        self.init_coefficents(pos, cpml_slice, self.kappa_by, self.sigma_by, self.a_by)
+
+        # pml range
+        self.efield_start = self.ny - self.thickness
+        self.efield_end = self.ny
+        self.bfield_start = self.ny - self.thickness - 1
+        self.bfield_end = self.ny - 1
+
+class PMLZ(PML):
+    def __init__(self, fields: Fields, thickness: int = 6, kappa_max: float = 20, 
+                a_max: float = 0.15, sigma_max: float = 0.7) -> None:
+        super().__init__(fields, thickness, kappa_max, a_max, sigma_max)
+        self.psi_ex_z = np.zeros(self.dimensions)
+        self.psi_ey_z = np.zeros(self.dimensions)
+        self.psi_bx_z = np.zeros(self.dimensions)
+        self.psi_by_z = np.zeros(self.dimensions)
+
+    def advance_e_currents(self, dt):
+        if isinstance(self.fields, Fields3D):
+            update_psi_z_and_e_3d(self.kappa_ez, self.sigma_ez, self.a_ez, 
+                                self.nx, self.ny, dt, self.dz,
+                                self.efield_start, self.efield_end,
+                                self.fields.bx, self.fields.by,
+                                self.fields.ex, self.fields.ey,
+                                self.psi_ex_z, self.psi_ey_z)
+
+    def advance_b_currents(self, dt: float) -> None:
+        if isinstance(self.fields, Fields3D):
+            update_psi_z_and_b_3d(self.kappa_bz, self.sigma_bz, self.a_bz,
+                                self.nx, self.ny, dt, self.dz,
+                                self.bfield_start, self.bfield_end,
+                                self.fields.ex, self.fields.ey,
+                                self.fields.bx, self.fields.by,
+                                self.psi_bx_z, self.psi_by_z)
+
+class PMLZmin(PMLZ):
+    def init_parameters(self):
+        pos = 1.0 - np.arange(self.thickness, dtype=float) / self.thickness
+        cpml_slice = np.s_[:self.thickness]
+        self.init_coefficents(pos, cpml_slice, self.kappa_ez, self.sigma_ez, self.a_ez)
+
+        pos = 1.0 - (np.arange(self.thickness, dtype=float) + 0.5) / self.thickness
+        cpml_slice = np.s_[:self.thickness]
+        self.init_coefficents(pos, cpml_slice, self.kappa_bz, self.sigma_bz, self.a_bz)
+
+        self.efield_start = 0
+        self.efield_end = self.thickness
+        self.bfield_start = 0
+        self.bfield_end = self.thickness
+
+class PMLZmax(PMLZ):
+    def init_parameters(self):
+        pos = 1.0 - np.arange(self.thickness, dtype=float)[::-1] / self.thickness
+        cpml_slice = np.s_[self.nz-self.thickness : self.nz]
+        self.init_coefficents(pos, cpml_slice, self.kappa_ez, self.sigma_ez, self.a_ez)
+
+        pos = 1.0 - (np.arange(self.thickness, dtype=float) + 0.5)[::-1] / self.thickness
+        cpml_slice = np.s_[self.nz-self.thickness-1 : self.nz-1]
+        self.init_coefficents(pos, cpml_slice, self.kappa_bz, self.sigma_bz, self.a_bz)
+
+        self.efield_start = self.nz - self.thickness
+        self.efield_end = self.nz
+        self.bfield_start = self.nz - self.thickness - 1
+        self.bfield_end = self.nz - 1
     def init_parameters(self):
         # runs from nearly 0.0 (actually 0.0 at cpml_thickness+1) to 1.0
         pos = 1.0 - np.arange(self.thickness, dtype=float)[::-1] / self.thickness
@@ -387,3 +477,43 @@ def update_psi_y_and_b_2d(kappa, sigma, a, nx, dt, dy, start, stop, ex, ez, bx, 
 
             bx[ix, ipos] -= fac * psi_bx_y[ix, ipos]
             bz[ix, ipos] += fac * psi_bz_y[ix, ipos]
+
+@njit
+def update_psi_x_and_e_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
+    fac = dt * c**2
+    for iz in range(nz):
+        for iy in range(ny):
+            for ipos in range(start, stop):
+                kappa_ = kappa[ipos, iy]
+                sigma_ = sigma[ipos, iy]
+                acoeff = a[ipos, iy]
+                bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+                ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+
+                psi_ey_x[ipos, iy, iz] = bcoeff * psi_ey_x[ipos, iy, iz] \
+                    + ccoeff_d * (bz[ipos, iy, iz] - bz[ipos-1, iy, iz])
+                psi_ez_x[ipos, iy, iz] = bcoeff * psi_ez_x[ipos, iy, iz] \
+                    + ccoeff_d * (by[ipos, iy, iz] - by[ipos-1, iy, iz])
+
+                ey[ipos, iy, iz] -= fac * psi_ey_x[ipos, iy, iz]
+                ez[ipos, iy, iz] += fac * psi_ez_x[ipos, iy, iz]
+
+@njit
+def update_psi_x_and_b_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, ey, ez, by, bz, psi_by_x, psi_bz_x):
+    fac = dt
+    for iz in range(nz):
+        for iy in range(ny):
+            for ipos in range(start, stop):
+                kappa_ = kappa[ipos, iy]
+                sigma_ = sigma[ipos, iy]
+                acoeff = a[ipos, iy]
+                bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+                ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+
+                psi_by_x[ipos, iy, iz] = bcoeff * psi_by_x[ipos, iy, iz] \
+                    + ccoeff_d * (ez[ipos+1, iy, iz] - ez[ipos, iy, iz])
+                psi_bz_x[ipos, iy, iz] = bcoeff * psi_bz_x[ipos, iy, iz] \
+                    + ccoeff_d * (ey[ipos+1, iy, iz] - ey[ipos, iy, iz])
+
+                by[ipos, iy, iz] += fac * psi_by_x[ipos, iy, iz]
+                bz[ipos, iy, iz] -= fac * psi_bz_x[ipos, iy, iz]
