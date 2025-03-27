@@ -165,7 +165,33 @@ class PMLY(PML):
         update_psi_y_and_b_2d(self.kappa_by, self.sigma_by, self.a_by, self.nx, dt, self.dy, self.bfield_start, self.bfield_end, 
                            self.fields.ex, self.fields.ez, self.fields.bx, self.fields.bz, self.psi_bx_y, self.psi_bz_y)
 
+class PMLZ(PML):
+    def __init__(self, fields: Fields, thickness: int = 6, kappa_max: float = 20, 
+                a_max: float = 0.15, sigma_max: float = 0.7) -> None:
+        super().__init__(fields, thickness, kappa_max, a_max, sigma_max)
+        self.psi_ex_z = np.zeros(self.dimensions)
+        self.psi_ey_z = np.zeros(self.dimensions)
+        self.psi_bx_z = np.zeros(self.dimensions)
+        self.psi_by_z = np.zeros(self.dimensions)
 
+    def advance_e_currents(self, dt):
+        if isinstance(self.fields, Fields3D):
+            update_psi_z_and_e_3d(self.kappa_ez, self.sigma_ez, self.a_ez, 
+                                self.nx, self.ny, dt, self.dz,
+                                self.efield_start, self.efield_end,
+                                self.fields.bx, self.fields.by,
+                                self.fields.ex, self.fields.ey,
+                                self.psi_ex_z, self.psi_ey_z)
+
+    def advance_b_currents(self, dt: float) -> None:
+        if isinstance(self.fields, Fields3D):
+            update_psi_z_and_b_3d(self.kappa_bz, self.sigma_bz, self.a_bz,
+                                self.nx, self.ny, dt, self.dz,
+                                self.bfield_start, self.bfield_end,
+                                self.fields.ex, self.fields.ey,
+                                self.fields.bx, self.fields.by,
+                                self.psi_bx_z, self.psi_by_z)
+                                
 class PMLXmin(PMLX):
     def init_parameters(self):
         # runs from 1.0 to nearly 0.0 (actually 0.0 at cpml_thickness+1)
@@ -241,33 +267,6 @@ class PMLYmax(PMLY):
         self.bfield_start = self.ny - self.thickness - 1
         self.bfield_end = self.ny - 1
 
-class PMLZ(PML):
-    def __init__(self, fields: Fields, thickness: int = 6, kappa_max: float = 20, 
-                a_max: float = 0.15, sigma_max: float = 0.7) -> None:
-        super().__init__(fields, thickness, kappa_max, a_max, sigma_max)
-        self.psi_ex_z = np.zeros(self.dimensions)
-        self.psi_ey_z = np.zeros(self.dimensions)
-        self.psi_bx_z = np.zeros(self.dimensions)
-        self.psi_by_z = np.zeros(self.dimensions)
-
-    def advance_e_currents(self, dt):
-        if isinstance(self.fields, Fields3D):
-            update_psi_z_and_e_3d(self.kappa_ez, self.sigma_ez, self.a_ez, 
-                                self.nx, self.ny, dt, self.dz,
-                                self.efield_start, self.efield_end,
-                                self.fields.bx, self.fields.by,
-                                self.fields.ex, self.fields.ey,
-                                self.psi_ex_z, self.psi_ey_z)
-
-    def advance_b_currents(self, dt: float) -> None:
-        if isinstance(self.fields, Fields3D):
-            update_psi_z_and_b_3d(self.kappa_bz, self.sigma_bz, self.a_bz,
-                                self.nx, self.ny, dt, self.dz,
-                                self.bfield_start, self.bfield_end,
-                                self.fields.ex, self.fields.ey,
-                                self.fields.bx, self.fields.by,
-                                self.psi_bx_z, self.psi_by_z)
-
 class PMLZmin(PMLZ):
     def init_parameters(self):
         pos = 1.0 - np.arange(self.thickness, dtype=float) / self.thickness
@@ -285,19 +284,6 @@ class PMLZmin(PMLZ):
 
 class PMLZmax(PMLZ):
     def init_parameters(self):
-        pos = 1.0 - np.arange(self.thickness, dtype=float)[::-1] / self.thickness
-        cpml_slice = np.s_[self.nz-self.thickness : self.nz]
-        self.init_coefficents(pos, cpml_slice, self.kappa_ez, self.sigma_ez, self.a_ez)
-
-        pos = 1.0 - (np.arange(self.thickness, dtype=float) + 0.5)[::-1] / self.thickness
-        cpml_slice = np.s_[self.nz-self.thickness-1 : self.nz-1]
-        self.init_coefficents(pos, cpml_slice, self.kappa_bz, self.sigma_bz, self.a_bz)
-
-        self.efield_start = self.nz - self.thickness
-        self.efield_end = self.nz
-        self.bfield_start = self.nz - self.thickness - 1
-        self.bfield_end = self.nz - 1
-    def init_parameters(self):
         # runs from nearly 0.0 (actually 0.0 at cpml_thickness+1) to 1.0
         pos = 1.0 - np.arange(self.thickness, dtype=float)[::-1] / self.thickness
         cpml_slice = np.s_[self.ny-self.thickness : self.ny]
@@ -310,10 +296,10 @@ class PMLZmax(PMLZ):
         self.init_coefficents(pos, cpml_slice, self.kappa_by, self.sigma_by, self.a_by)
 
         # pml range
-        self.efield_start = self.ny - self.thickness
-        self.efield_end = self.ny
-        self.bfield_start = self.ny - self.thickness - 1
-        self.bfield_end = self.ny - 1
+        self.efield_start = self.nz - self.thickness
+        self.efield_end = self.nz
+        self.bfield_start = self.nz - self.thickness - 1
+        self.bfield_end = self.nz - 1
 
 @njit
 def update_efield_cpml_2d(
@@ -402,16 +388,16 @@ def update_bfield_cpml_patches_2d(
 
         update_bfield_cpml_2d(ex, ey, ez, bx, by, bz, kappa_bx, kappa_by, dx, dy, dt, nx, ny, n_guard)
 
-@njit
+@njit(cache=True)
 def update_psi_x_and_e_2d(kappa, sigma, a, ny, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
     fac = dt * c**2
-    for iy in range(ny):
-        for ipos in range(start, stop):
-            kappa_ = kappa[ipos]
-            sigma_ = sigma[ipos]
-            acoeff = a[ipos]
-            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
-            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+    for ipos in range(start, stop):
+        kappa_ = kappa[ipos]
+        sigma_ = sigma[ipos]
+        acoeff = a[ipos]
+        bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+        ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+        for iy in range(ny):
 
             psi_ey_x[ipos, iy] = bcoeff * psi_ey_x[ipos, iy] \
                 + ccoeff_d * (bz[ipos, iy] - bz[ipos-1, iy])
@@ -421,16 +407,16 @@ def update_psi_x_and_e_2d(kappa, sigma, a, ny, dt, dx, start, stop, by, bz, ey, 
             ey[ipos, iy] -= fac * psi_ey_x[ipos, iy]
             ez[ipos, iy] += fac * psi_ez_x[ipos, iy]
 
-@njit
+@njit(cache=True)
 def update_psi_x_and_b_2d(kappa, sigma, a, ny, dt, dx, start, stop, ey, ez, by, bz, psi_by_x, psi_bz_x):
     fac = dt
-    for iy in range(ny):
-        for ipos in range(start, stop):
-            kappa_ = kappa[ipos]
-            sigma_ = sigma[ipos]
-            acoeff = a[ipos]
-            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
-            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+    for ipos in range(start, stop):
+        kappa_ = kappa[ipos]
+        sigma_ = sigma[ipos]
+        acoeff = a[ipos]
+        bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+        ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+        for iy in range(ny):
 
             psi_by_x[ipos, iy] = bcoeff * psi_by_x[ipos, iy] \
                 + ccoeff_d * (ez[ipos+1, iy] - ez[ipos, iy])
@@ -440,7 +426,7 @@ def update_psi_x_and_b_2d(kappa, sigma, a, ny, dt, dx, start, stop, ey, ez, by, 
             by[ipos, iy] += fac * psi_by_x[ipos, iy]
             bz[ipos, iy] -= fac * psi_bz_x[ipos, iy]
 
-@njit
+@njit(cache=True)
 def update_psi_y_and_e_2d(kappa, sigma, a, nx, dt, dy, start, stop, bx, bz, ex, ez, psi_ex_y, psi_ez_y):
     fac = dt * c**2
     for ix in range(nx):
@@ -459,7 +445,7 @@ def update_psi_y_and_e_2d(kappa, sigma, a, nx, dt, dy, start, stop, bx, bz, ex, 
             ex[ix, ipos] += fac * psi_ex_y[ix, ipos]
             ez[ix, ipos] -= fac * psi_ez_y[ix, ipos]
 
-@njit
+@njit(cache=True)
 def update_psi_y_and_b_2d(kappa, sigma, a, nx, dt, dy, start, stop, ex, ez, bx, bz, psi_bx_y, psi_bz_y):
     fac = dt
     for ix in range(nx):
@@ -481,14 +467,14 @@ def update_psi_y_and_b_2d(kappa, sigma, a, nx, dt, dy, start, stop, ex, ez, bx, 
 @njit
 def update_psi_x_and_e_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
     fac = dt * c**2
-    for iz in range(nz):
+    for ipos in range(start, stop):
+        kappa_ = kappa[ipos]
+        sigma_ = sigma[ipos]
+        acoeff = a[ipos]
+        bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+        ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
         for iy in range(ny):
-            for ipos in range(start, stop):
-                kappa_ = kappa[ipos, iy]
-                sigma_ = sigma[ipos, iy]
-                acoeff = a[ipos, iy]
-                bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
-                ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+            for iz in range(nz):
 
                 psi_ey_x[ipos, iy, iz] = bcoeff * psi_ey_x[ipos, iy, iz] \
                     + ccoeff_d * (bz[ipos, iy, iz] - bz[ipos-1, iy, iz])
@@ -501,14 +487,14 @@ def update_psi_x_and_e_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, by, bz, 
 @njit
 def update_psi_x_and_b_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, ey, ez, by, bz, psi_by_x, psi_bz_x):
     fac = dt
-    for iz in range(nz):
+    for ipos in range(start, stop):
+        kappa_ = kappa[ipos]
+        sigma_ = sigma[ipos]
+        acoeff = a[ipos]
+        bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+        ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
         for iy in range(ny):
-            for ipos in range(start, stop):
-                kappa_ = kappa[ipos, iy]
-                sigma_ = sigma[ipos, iy]
-                acoeff = a[ipos, iy]
-                bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
-                ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
+            for iz in range(nz):
 
                 psi_by_x[ipos, iy, iz] = bcoeff * psi_by_x[ipos, iy, iz] \
                     + ccoeff_d * (ez[ipos+1, iy, iz] - ez[ipos, iy, iz])
@@ -521,8 +507,8 @@ def update_psi_x_and_b_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, ey, ez, 
 @njit
 def update_psi_z_and_e_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, bx, by, ex, ey, psi_ex_z, psi_ey_z):
     fac = dt * c**2
-    for iy in range(ny):
-        for ix in range(nx):
+    for ix in range(nx):
+        for iy in range(ny):
             for ipos in range(start, stop):
                 kappa_ = kappa[ipos]
                 sigma_ = sigma[ipos]
@@ -541,8 +527,8 @@ def update_psi_z_and_e_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, bx, by, 
 @njit
 def update_psi_z_and_b_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, ex, ey, bx, by, psi_bx_z, psi_by_z):
     fac = dt
-    for iy in range(ny):
-        for ix in range(nx):
+    for ix in range(nx):
+        for iy in range(ny):
             for ipos in range(start, stop):
                 kappa_ = kappa[ipos]
                 sigma_ = sigma[ipos]
