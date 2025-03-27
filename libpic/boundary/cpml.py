@@ -484,10 +484,10 @@ def update_psi_y_and_b_2d(kappa, sigma, a, nx, dt, dy, start, stop, ex, ez, bx, 
             bx[ix, ipos] -= fac * psi_bx_y[ix, ipos]
             bz[ix, ipos] += fac * psi_bz_y[ix, ipos]
 
-@njit
+@njit(parallel=True, cache=True)
 def update_psi_x_and_e_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
     fac = dt * c**2
-    for ipos in range(start, stop):
+    for ipos in prange(start, stop):
         kappa_ = kappa[ipos]
         sigma_ = sigma[ipos]
         acoeff = a[ipos]
@@ -504,10 +504,10 @@ def update_psi_x_and_e_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, by, bz, 
                 ey[ipos, iy, iz] -= fac * psi_ey_x[ipos, iy, iz]
                 ez[ipos, iy, iz] += fac * psi_ez_x[ipos, iy, iz]
 
-@njit
+@njit(parallel=True, cache=True)
 def update_psi_x_and_b_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, ey, ez, by, bz, psi_by_x, psi_bz_x):
     fac = dt
-    for ipos in range(start, stop):
+    for ipos in prange(start, stop):
         kappa_ = kappa[ipos]
         sigma_ = sigma[ipos]
         acoeff = a[ipos]
@@ -524,10 +524,48 @@ def update_psi_x_and_b_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, ey, ez, 
                 by[ipos, iy, iz] += fac * psi_by_x[ipos, iy, iz]
                 bz[ipos, iy, iz] -= fac * psi_bz_x[ipos, iy, iz]
 
-@njit
+@njit(parallel=True, cache=True)
+def update_psi_y_and_e_3d(kappa, sigma, a, nx, nz, dt, dy, start, stop, bx, bz, ex, ez, psi_ex_y, psi_ez_y):
+    fac = dt * c**2
+    for ix in prange(nx):
+        for ipos in range(start, stop):
+            kappa_ = kappa[ipos]
+            sigma_ = sigma[ipos]
+            acoeff = a[ipos]
+            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dy
+            for iz in range(nz):
+                psi_ex_y[ix, ipos, iz] = bcoeff * psi_ex_y[ix, ipos, iz] \
+                    + ccoeff_d * (bz[ix, ipos, iz] - bz[ix, ipos-1, iz])
+                psi_ez_y[ix, ipos, iz] = bcoeff * psi_ez_y[ix, ipos, iz] \
+                    + ccoeff_d * (bx[ix, ipos, iz] - bx[ix, ipos-1, iz])
+
+                ex[ix, ipos, iz] += fac * psi_ex_y[ix, ipos, iz]
+                ez[ix, ipos, iz] -= fac * psi_ez_y[ix, ipos, iz]
+
+@njit(parallel=True, cache=True)
+def update_psi_y_and_b_3d(kappa, sigma, a, nx, nz, dt, dy, start, stop, ex, ez, bx, bz, psi_bx_y, psi_bz_y):
+    fac = dt
+    for ix in prange(nx):
+        for ipos in range(start, stop):
+            kappa_ = kappa[ipos]
+            sigma_ = sigma[ipos]
+            acoeff = a[ipos]
+            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
+            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dy
+            for iz in range(nz):
+                psi_bx_y[ix, ipos, iz] = bcoeff * psi_bx_y[ix, ipos, iz] \
+                    + ccoeff_d * (ez[ix, ipos+1, iz] - ez[ix, ipos, iz])
+                psi_bz_y[ix, ipos, iz] = bcoeff * psi_bz_y[ix, ipos, iz] \
+                    + ccoeff_d * (ex[ix, ipos+1, iz] - ex[ix, ipos, iz])
+
+                bx[ix, ipos, iz] -= fac * psi_bx_y[ix, ipos, iz]
+                bz[ix, ipos, iz] += fac * psi_bz_y[ix, ipos, iz]
+
+@njit(parallel=True, cache=True)
 def update_psi_z_and_e_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, bx, by, ex, ey, psi_ex_z, psi_ey_z):
     fac = dt * c**2
-    for ix in range(nx):
+    for ix in prange(nx):
         for iy in range(ny):
             for ipos in range(start, stop):
                 kappa_ = kappa[ipos]
@@ -544,10 +582,10 @@ def update_psi_z_and_e_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, bx, by, 
                 ex[ix, iy, ipos] += fac * psi_ex_z[ix, iy, ipos]
                 ey[ix, iy, ipos] -= fac * psi_ey_z[ix, iy, ipos]
 
-@njit
+@njit(parallel=True, cache=True)
 def update_psi_z_and_b_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, ex, ey, bx, by, psi_bx_z, psi_by_z):
     fac = dt
-    for ix in range(nx):
+    for ix in prange(nx):
         for iy in range(ny):
             for ipos in range(start, stop):
                 kappa_ = kappa[ipos]
@@ -564,40 +602,3 @@ def update_psi_z_and_b_3d(kappa, sigma, a, nx, ny, dt, dz, start, stop, ex, ey, 
                 bx[ix, iy, ipos] += fac * psi_bx_z[ix, iy, ipos]
                 by[ix, iy, ipos] -= fac * psi_by_z[ix, iy, ipos]
 
-@njit
-def update_psi_y_and_e_3d(kappa, sigma, a, nx, nz, dt, dy, start, stop, bx, bz, ex, ez, psi_ex_y, psi_ez_y):
-    fac = dt * c**2
-    for ix in range(nx):
-        for ipos in range(start, stop):
-            kappa_ = kappa[ipos]
-            sigma_ = sigma[ipos]
-            acoeff = a[ipos]
-            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
-            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dy
-            for iz in range(nz):
-                psi_ex_y[ix, ipos, iz] = bcoeff * psi_ex_y[ix, ipos, iz] \
-                    + ccoeff_d * (bz[ix, ipos, iz] - bz[ix, ipos-1, iz])
-                psi_ez_y[ix, ipos, iz] = bcoeff * psi_ez_y[ix, ipos, iz] \
-                    + ccoeff_d * (bx[ix, ipos, iz] - bx[ix, ipos-1, iz])
-
-                ex[ix, ipos, iz] += fac * psi_ex_y[ix, ipos, iz]
-                ez[ix, ipos, iz] -= fac * psi_ez_y[ix, ipos, iz]
-
-@njit
-def update_psi_y_and_b_3d(kappa, sigma, a, nx, nz, dt, dy, start, stop, ex, ez, bx, bz, psi_bx_y, psi_bz_y):
-    fac = dt
-    for ix in range(nx):
-        for ipos in range(start, stop):
-            kappa_ = kappa[ipos]
-            sigma_ = sigma[ipos]
-            acoeff = a[ipos]
-            bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
-            ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dy
-            for iz in range(nz):
-                psi_bx_y[ix, ipos, iz] = bcoeff * psi_bx_y[ix, ipos, iz] \
-                    + ccoeff_d * (ez[ix, ipos+1, iz] - ez[ix, ipos, iz])
-                psi_bz_y[ix, ipos, iz] = bcoeff * psi_bz_y[ix, ipos, iz] \
-                    + ccoeff_d * (ex[ix, ipos+1, iz] - ex[ix, ipos, iz])
-
-                bx[ix, ipos, iz] -= fac * psi_bx_y[ix, ipos, iz]
-                bz[ix, ipos, iz] += fac * psi_bz_y[ix, ipos, iz]
