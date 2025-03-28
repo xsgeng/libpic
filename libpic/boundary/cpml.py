@@ -332,10 +332,10 @@ def update_efield_cpml_2d(
 ):
     bfactor = dt * c**2
     jfactor = dt / epsilon_0
-    for j in range(ny):
-        bfactor_y = bfactor / kappa_ey[j]
-        for i in range(nx):
-            bfactor_x = bfactor / kappa_ex[i]
+    for i in range(nx):
+        bfactor_x = bfactor / kappa_ex[i]
+        for j in range(ny):
+            bfactor_y = bfactor / kappa_ey[j]
             ex[i, j] += bfactor_y * ( (bz[i, j] - bz[i, j-1]) / dy) - jfactor * jx[i, j]
             ey[i, j] += bfactor_x * (-(bz[i, j] - bz[i-1, j]) / dx) - jfactor * jy[i, j]
             ez[i, j] += bfactor_x * ( (by[i, j] - by[i-1, j]) / dx) \
@@ -350,10 +350,10 @@ def update_bfield_cpml_2d(
     dx, dy, dt, 
     nx, ny, n_guard
 ):
-    for j in range(ny):
-        efactor_y = dt / kappa_by[j]
-        for i in range(nx):
-            efactor_x = dt / kappa_bx[i]
+    for i in range(nx):
+        efactor_x = dt / kappa_bx[i]
+        for j in range(ny):
+            efactor_y = dt / kappa_by[j]
             bx[i, j] -= efactor_y * ( (ez[i, j+1] - ez[i, j]) / dy)
             by[i, j] -= efactor_x * (-(ez[i+1, j] - ez[i, j]) / dx)
             bz[i, j] -= efactor_x * ( (ey[i+1, j] - ey[i, j]) / dx) \
