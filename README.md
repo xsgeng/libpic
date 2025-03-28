@@ -3,7 +3,7 @@
 ## Introduction
 `libpic` is a high-performance Particle-In-Cell (PIC) simulation framework implemented in Python. The core functionalities of `libpic` include electromagnetic field solvers, particle pushers, interpolators, and current depositors.
 
-`libpic` serves as the backend for `λPIC` (not yet released). Performance optimizations are achieved through the use of Numba JIT and Cython.
+`libpic` serves as the backend for `λPIC` (will be released soon). Performance optimizations are achieved through the use of Numba JIT and Cython.
 
 **This project is under construction.**
 
@@ -28,9 +28,11 @@
     - [x] unified pusher
   - [x] Interpolator
   - [x] sorter
+  - [ ] PML
 - [ ] Remove dependence on numba.typed.List
 - [ ] MPI
 - [ ] 3D
+  - [ ] QED
 - [ ] GPU acceleration
 - [ ] Documentation
 
