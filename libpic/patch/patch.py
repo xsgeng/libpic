@@ -294,7 +294,10 @@ class Patch3D(Patch):
 
 
     def add_pml_boundary(self, pml: PML) -> None:
-        raise NotImplementedError
+        assert (self.nx >= pml.thickness) and (self.ny >= pml.thickness)
+        assert len(self.pml_boundary) < 3, "cannot assign more than 3 PML boundaries to one patch, \
+                                             try increasing number of patches."
+        self.pml_boundary.append(pml)
 
 class Patches:
     """ 
