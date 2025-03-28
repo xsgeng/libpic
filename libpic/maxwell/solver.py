@@ -194,22 +194,108 @@ class MaxwellSolver3D(MaxwellSolver):
         self.ny: int = patches.ny
         self.nz: int = patches.nz
 
-    def update_efield(self, dt: float) -> None:
-        update_efield_patches_3d(
-            self.ex_list, self.ey_list, self.ez_list,
-            self.bx_list, self.by_list, self.bz_list,
-            self.jx_list, self.jy_list, self.jz_list,
-            self.npatches,
-            self.dx, self.dy, self.dz, dt,
-            self.nx, self.ny, self.nz, self.n_guard,
-        )
+    def generate_kappa_lists(self) -> None:
+        kappa_ex_list = []
+        kappa_ey_list = []
+        kappa_ez_list = []
+        kappa_bx_list = []
+        kappa_by_list = []
+        kappa_bz_list = []
 
+        for p in self.patches_pml_boundary:
+            # Get field dimensions from patch
+            nx = p.fields.nx
+            ny = p.fields.ny
+            nz = p.fields.nz
+
+            # Initialize kappa values to None
+            kappa_ex = kappa_ey = kappa_ez = None
+            kappa_bx = kappa_by = kappa_bz = None
+
+            # Populate kappa values from PML boundaries
+            for pml in p.pml_boundary:
+                if isinstance(pml, PMLX):
+                    kappa_ex = pml.kappa_ex
+                    kappa_bx = pml.kappa_bx
+                elif isinstance(pml, PMLY):
+                    kappa_ey = pml.kappa_ey
+                    kappa_by = pml.kappa_by
+                elif isinstance(pml, PMLZ):
+                    kappa_ez = pml.kappa_ez
+                    kappa_bz = pml.kappa_bz
+
+            # Set default 1.0 arrays for directions without PML
+            kappa_ex = kappa_ex if kappa_ex is not None else np.ones(nx)
+            kappa_ey = kappa_ey if kappa_ey is not None else np.ones(ny)
+            kappa_ez = kappa_ez if kappa_ez is not None else np.ones(nz)
+            kappa_bx = kappa_bx if kappa_bx is not None else np.ones(nx)
+            kappa_by = kappa_by if kappa_by is not None else np.ones(ny)
+            kappa_bz = kappa_bz if kappa_bz is not None else np.ones(nz)
+
+            kappa_ex_list.append(kappa_ex)
+            kappa_ey_list.append(kappa_ey)
+            kappa_ez_list.append(kappa_ez)
+            kappa_bx_list.append(kappa_bx)
+            kappa_by_list.append(kappa_by)
+            kappa_bz_list.append(kappa_bz)
+
+        self.kappa_ex_list = typed.List(kappa_ex_list)
+        self.kappa_ey_list = typed.List(kappa_ey_list)
+        self.kappa_ez_list = typed.List(kappa_ez_list)
+        self.kappa_bx_list = typed.List(kappa_bx_list)
+        self.kappa_by_list = typed.List(kappa_by_list)
+        self.kappa_bz_list = typed.List(kappa_bz_list)
+
+    def update_efield(self, dt: float) -> None:
+        # Regular field update for non-PML patches
+        if self.patches_non_boundary:
+            update_efield_patches_3d(
+                self.ex_list, self.ey_list, self.ez_list,
+                self.bx_list, self.by_list, self.bz_list,
+                self.jx_list, self.jy_list, self.jz_list,
+                len(self.patches_non_boundary),
+                self.dx, self.dy, self.dz, dt,
+                self.nx, self.ny, self.nz, self.n_guard,
+            )
         
+        # CPML update for PML-boundary patches
+        if self.patches_pml_boundary:
+            update_efield_cpml_patches_3d(
+                self.ex_pml_list, self.ey_pml_list, self.ez_pml_list,
+                self.bx_pml_list, self.by_pml_list, self.bz_pml_list,
+                self.jx_pml_list, self.jy_pml_list, self.jz_pml_list,
+                self.kappa_ex_list, self.kappa_ey_list, self.kappa_ez_list,
+                len(self.patches_pml_boundary),
+                self.dx, self.dy, self.dz, dt,
+                self.nx, self.ny, self.nz, self.n_guard,
+            )
+            # Advance PML auxiliary currents
+            for p in self.patches_pml_boundary:
+                for pml in p.pml_boundary:
+                    pml.advance_e_currents(dt)
+
     def update_bfield(self, dt: float) -> None:
-        update_bfield_patches_3d(
-            self.ex_list, self.ey_list, self.ez_list,
-            self.bx_list, self.by_list, self.bz_list,
-            self.npatches,
-            self.dx, self.dy, self.dz, dt,
-            self.nx, self.ny, self.nz, self.n_guard,
-        )
+        # Regular field update for non-PML patches
+        if self.patches_non_boundary:
+            update_bfield_patches_3d(
+                self.ex_list, self.ey_list, self.ez_list,
+                self.bx_list, self.by_list, self.bz_list,
+                len(self.patches_non_boundary),
+                self.dx, self.dy, self.dz, dt,
+                self.nx, self.ny, self.nz, self.n_guard,
+            )
+        
+        # CPML update for PML-boundary patches
+        if self.patches_pml_boundary:
+            update_bfield_cpml_patches_3d(
+                self.ex_pml_list, self.ey_pml_list, self.ez_pml_list,
+                self.bx_pml_list, self.by_pml_list, self.bz_pml_list,
+                self.kappa_bx_list, self.kappa_by_list, self.kappa_bz_list,
+                len(self.patches_pml_boundary),
+                self.dx, self.dy, self.dz, dt,
+                self.nx, self.ny, self.nz, self.n_guard,
+            )
+            # Advance PML auxiliary currents
+            for p in self.patches_pml_boundary:
+                for pml in p.pml_boundary:
+                    pml.advance_b_currents(dt)
