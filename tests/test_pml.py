@@ -173,43 +173,38 @@ class TestPatchesPML(unittest.TestCase):
                     ipatch_y=j, 
                     x0=i*Lx/npatch_x, 
                     y0=j*Ly/npatch_y,
-                    fields=f,
+                    nx=nx_per_patch, 
+                    ny=ny_per_patch,
+                    dx=dx, dy=dy
                 )
-
-                if i > 0:
-                    p.set_neighbor_index(xmin=(i - 1) + j * npatch_x)
-                if i < npatch_x - 1:
-                    p.set_neighbor_index(xmax=(i + 1) + j * npatch_x)
-                if j > 0:
-                    p.set_neighbor_index(ymin=i + (j - 1) * npatch_x)
-                if j < npatch_y - 1:
-                    p.set_neighbor_index(ymax=i + (j + 1) * npatch_x)
+                p.set_fields(f)
 
                 if i == 0:
                     p.add_pml_boundary(PMLXmin(f))
                 if i == npatch_x - 1:
                     p.add_pml_boundary(PMLXmax(f))
+                if j == 0:
+                    p.add_pml_boundary(PMLYmin(f))
+                if j == npatch_y - 1:
+                    p.add_pml_boundary(PMLYmax(f))
 
                 patches.append(p)
+        patches.init_rect_neighbor_index_2d(npatch_x, npatch_y)
         self.patches = patches
+        self.npatch_x = npatch_x
+        self.npatch_y = npatch_y
     
     def test_patches_pml(self):
         patches = self.patches
 
-        self.assertEqual(len(patches[0].pml_boundary), 1)
+        self.assertEqual(len(patches[0].pml_boundary), 2)
 
         solver = MaxwellSolver2D(patches)
         solver.generate_field_lists()
-        self.assertEqual(len(solver.ex_list), 24)
+        self.assertEqual(len(solver.ex_list), (self.npatch_x-2) * (self.npatch_y-2))
 
         solver.generate_kappa_lists()
-        self.assertEqual(len(solver.kappa_ex_list), 8)
+        self.assertEqual(len(solver.kappa_ex_list), 2*self.npatch_x + 2*(self.npatch_y - 2))
 
         solver.update_efield(self.dt)
-        for p in patches:
-            for pml in p.pml_boundary:
-                pml.advance_e_currents(self.dt)
         solver.update_bfield(self.dt)
-        for p in patches:
-            for pml in p.pml_boundary:
-                pml.advance_b_currents(self.dt)
