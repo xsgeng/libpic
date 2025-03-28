@@ -408,6 +408,103 @@ def update_bfield_cpml_patches_2d(
 
         update_bfield_cpml_2d(ex, ey, ez, bx, by, bz, kappa_bx, kappa_by, dx, dy, dt, nx, ny, n_guard)
 
+@njit
+def update_efield_cpml_3d(
+    ex, ey, ez, 
+    bx, by, bz, 
+    jx, jy, jz, 
+    kappa_ex, kappa_ey, kappa_ez,
+    dx, dy, dz, dt, 
+    nx, ny, nz, n_guard
+):
+    bfactor = dt * c**2
+    jfactor = dt / epsilon_0
+    for i in range(nx):
+        bfactor_x = bfactor / kappa_ex[i]
+        for j in range(ny):
+            bfactor_y = bfactor / kappa_ey[j]
+            for k in range(nz):
+                bfactor_z = bfactor / kappa_ez[k]
+                ex[i,j,k] += (bfactor_y*(bz[i,j,k] - bz[i,j-1,k])/dy 
+                            - bfactor_z*(by[i,j,k] - by[i,j,k-1])/dz) - jfactor*jx[i,j,k]
+                ey[i,j,k] += (bfactor_z*(bx[i,j,k] - bx[i,j,k-1])/dz 
+                            - bfactor_x*(bz[i,j,k] - bz[i-1,j,k])/dx) - jfactor*jy[i,j,k]
+                ez[i,j,k] += (bfactor_x*(by[i,j,k] - by[i-1,j,k])/dx 
+                            - bfactor_y*(bx[i,j,k] - bx[i,j-1,k])/dy) - jfactor*jz[i,j,k]
+
+@njit
+def update_bfield_cpml_3d(
+    ex, ey, ez, 
+    bx, by, bz, 
+    kappa_bx, kappa_by, kappa_bz,
+    dx, dy, dz, dt, 
+    nx, ny, nz, n_guard
+):
+    for i in range(nx):
+        efactor_x = dt / kappa_bx[i]
+        for j in range(ny):
+            efactor_y = dt / kappa_by[j]
+            for k in range(nz):
+                efactor_z = dt / kappa_bz[k]
+                bx[i,j,k] -= (efactor_y*(ez[i,j+1,k] - ez[i,j,k])/dy 
+                            - efactor_z*(ey[i,j,k+1] - ey[i,j,k])/dz)
+                by[i,j,k] -= (efactor_z*(ex[i,j,k+1] - ex[i,j,k])/dz 
+                            - efactor_x*(ez[i+1,j,k] - ez[i,j,k])/dx)
+                bz[i,j,k] -= (efactor_x*(ey[i+1,j,k] - ey[i,j,k])/dx 
+                            - efactor_y*(ex[i,j+1,k] - ex[i,j,k])/dy)
+
+@njit(cache=True, parallel=True)
+def update_efield_cpml_patches_3d(
+    ex_list, ey_list, ez_list,
+    bx_list, by_list, bz_list,
+    jx_list, jy_list, jz_list,
+    kappa_ex_list, kappa_ey_list, kappa_ez_list,
+    npatches,
+    dx, dy, dz, dt,
+    nx, ny, nz, n_guard
+):
+    for ipatch in prange(npatches):
+        ex = ex_list[ipatch]
+        ey = ey_list[ipatch]
+        ez = ez_list[ipatch]
+        bx = bx_list[ipatch]
+        by = by_list[ipatch]
+        bz = bz_list[ipatch]
+        jx = jx_list[ipatch]
+        jy = jy_list[ipatch]
+        jz = jz_list[ipatch]
+        kappa_ex = kappa_ex_list[ipatch]
+        kappa_ey = kappa_ey_list[ipatch]
+        kappa_ez = kappa_ez_list[ipatch]
+
+        update_efield_cpml_3d(ex, ey, ez, bx, by, bz, jx, jy, jz, 
+                            kappa_ex, kappa_ey, kappa_ez, 
+                            dx, dy, dz, dt, nx, ny, nz, n_guard)
+
+@njit(cache=True, parallel=True)
+def update_bfield_cpml_patches_3d(
+    ex_list, ey_list, ez_list,
+    bx_list, by_list, bz_list,
+    kappa_bx_list, kappa_by_list, kappa_bz_list,
+    npatches,
+    dx, dy, dz, dt,
+    nx, ny, nz, n_guard
+):
+    for ipatch in prange(npatches):
+        ex = ex_list[ipatch]
+        ey = ey_list[ipatch]
+        ez = ez_list[ipatch]
+        bx = bx_list[ipatch]
+        by = by_list[ipatch]
+        bz = bz_list[ipatch]
+        kappa_bx = kappa_bx_list[ipatch]
+        kappa_by = kappa_by_list[ipatch]
+        kappa_bz = kappa_bz_list[ipatch]
+
+        update_bfield_cpml_3d(ex, ey, ez, bx, by, bz, 
+                            kappa_bx, kappa_by, kappa_bz,
+                            dx, dy, dz, dt, nx, ny, nz, n_guard)
+
 @njit(cache=True)
 def update_psi_x_and_e_2d(kappa, sigma, a, ny, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
     fac = dt * c**2
