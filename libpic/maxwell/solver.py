@@ -97,7 +97,7 @@ class MaxwellSolver:
         """
         raise NotImplementedError
 
-class MaxwellSolver2d(MaxwellSolver):
+class MaxwellSolver2D(MaxwellSolver):
     def __init__(self, patches: Patches) -> None:
         super().__init__(patches)
         self.dy: float = patches.dy
