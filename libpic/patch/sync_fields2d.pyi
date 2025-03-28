@@ -31,7 +31,8 @@ def sync_currents_2d(
 def sync_guard_fields_2d(
     fields_list: List[Fields],
     patches_list: List[Patch],
-    npatches: int, nx: int, ny: int, ng: int
+    attrs: list[str],
+    npatches: int, nx: int, ny: int, ng: int, nsync: int
 ):
     """
     Synchronize guard cells between patches for E and B fields.

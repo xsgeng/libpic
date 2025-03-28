@@ -5,7 +5,7 @@ from time import perf_counter_ns
 import numpy as np
 from scipy.constants import c, e
 
-from libpic.maxwell.solver import MaxwellSolver2d
+from libpic.maxwell.solver import MaxwellSolver2D
 
 
 class TestCurrentDeposition(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestCurrentDeposition(unittest.TestCase):
         patches = Patches()
         patches.append(patch)
 
-        solver = MaxwellSolver2d(patches)
+        solver = MaxwellSolver2D(patches)
 
         solver.update_efield(dt)
         solver.update_bfield(dt)
