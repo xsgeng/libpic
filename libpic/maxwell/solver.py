@@ -186,7 +186,7 @@ class MaxwellSolver2D(MaxwellSolver):
                     pml.advance_b_currents(dt)
 
 
-class MaxwellSolver3d(MaxwellSolver):
+class MaxwellSolver3D(MaxwellSolver):
     def __init__(self, patches: Patches) -> None:
         super().__init__(patches)
         self.dy: float = patches.dy
