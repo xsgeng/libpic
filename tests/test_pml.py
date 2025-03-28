@@ -9,7 +9,7 @@ from libpic.boundary.cpml import PMLXmin, PMLXmax, PMLX, PMLY
 from libpic.maxwell.solver import MaxwellSolver2d
 
 
-class TestPML(unittest.TestCase):
+class TestPML2D(unittest.TestCase):
     def setUp(self) -> None:
         from libpic.fields import Fields2D
         from libpic.patch import Patch2D, Patches
@@ -51,6 +51,41 @@ class TestPML(unittest.TestCase):
         toc = perf_counter_ns()
         self.assertLess(toc - tic, 2e6)
 
+class TestPML3D(unittest.TestCase):
+    def setUp(self) -> None:
+        from libpic.fields import Fields3D
+        from libpic.patch import Patch3D, Patches
+
+        nx = 100
+        ny = 100
+        nz = 100
+        x0 = 0.0
+        y0 = 0.0
+        z0 = 0.0
+        dx = 1.0e-6
+        dy = 1.0e-6
+        dz = 1.0e-6
+        self.dt = dx / c / 2
+
+        self.field = Fields3D(nx, ny, nz, dx, dy, dz, x0, y0, z0, n_guard=3)
+
+    def test_xmin(self):
+        pml = PMLXmin(self.field)
+        self.assertEqual(pml.thickness, 6)
+
+        pml.advance_e_currents(self.dt)
+        pml.advance_b_currents(self.dt)
+
+    def test_xmax(self):
+        pml = PMLXmax(self.field)
+        self.assertIsInstance(pml, PMLX)
+
+        pml.advance_e_currents(self.dt)
+        pml.advance_b_currents(self.dt)
+
+    def test_ymin(self):
+        pml = PMLYmin(self.field)
+
 class TestPatchesPML(unittest.TestCase):
     def setUp(self) -> None:
         from libpic.fields import Fields2D
@@ -75,7 +110,7 @@ class TestPatchesPML(unittest.TestCase):
         Ly = ny*dy
 
         n_guard = 3
-        patches = Patches()
+        patches = Patches(dimension=2)
         for j in range(npatch_y):
             for i in range(npatch_x):
                 index = i + j * npatch_x
