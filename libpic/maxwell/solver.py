@@ -80,7 +80,6 @@ class MaxwellSolver:
         self.kappa_bz_list = typed.List()
 
         for p in self.patches_pml_boundary:
-            # Initialize kappa values to None
             kappa_ex = p.pml_boundary[0].kappa_ex
             kappa_ey = p.pml_boundary[0].kappa_ey
             kappa_ez = p.pml_boundary[0].kappa_ez

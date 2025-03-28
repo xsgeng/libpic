@@ -584,13 +584,13 @@ def update_psi_y_and_b_2d(kappa, sigma, a, nx, dt, dy, start, stop, ex, ez, bx, 
 @njit(parallel=True, cache=True)
 def update_psi_x_and_e_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, by, bz, ey, ez, psi_ey_x, psi_ez_x):
     fac = dt * c**2
-    for ipos in prange(start, stop):
+    for ipos in range(start, stop):
         kappa_ = kappa[ipos]
         sigma_ = sigma[ipos]
         acoeff = a[ipos]
         bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
         ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
-        for iy in range(ny):
+        for iy in prange(ny):
             for iz in range(nz):
 
                 psi_ey_x[ipos, iy, iz] = bcoeff * psi_ey_x[ipos, iy, iz] \
@@ -604,13 +604,13 @@ def update_psi_x_and_e_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, by, bz, 
 @njit(parallel=True, cache=True)
 def update_psi_x_and_b_3d(kappa, sigma, a, ny, nz, dt, dx, start, stop, ey, ez, by, bz, psi_by_x, psi_bz_x):
     fac = dt
-    for ipos in prange(start, stop):
+    for ipos in range(start, stop):
         kappa_ = kappa[ipos]
         sigma_ = sigma[ipos]
         acoeff = a[ipos]
         bcoeff = np.exp(-(sigma_/kappa_ + acoeff) * dt)
         ccoeff_d = (bcoeff - 1) * sigma_ / kappa_ / (sigma_ + kappa_*acoeff) / dx
-        for iy in range(ny):
+        for iy in prange(ny):
             for iz in range(nz):
 
                 psi_by_x[ipos, iy, iz] = bcoeff * psi_by_x[ipos, iy, iz] \
