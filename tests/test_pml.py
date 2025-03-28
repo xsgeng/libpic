@@ -54,37 +54,144 @@ class TestPML2D(unittest.TestCase):
 class TestPML3D(unittest.TestCase):
     def setUp(self) -> None:
         from libpic.fields import Fields3D
-        from libpic.patch import Patch3D, Patches
 
-        nx = 100
-        ny = 100
-        nz = 100
-        x0 = 0.0
-        y0 = 0.0
-        z0 = 0.0
-        dx = 1.0e-6
-        dy = 1.0e-6
-        dz = 1.0e-6
+        # Use different dimensions to catch slicing errors
+        self.nx, self.ny, self.nz = 100, 90, 80  
+        dx = dy = dz = 1e-6
         self.dt = dx / c / 2
 
-        self.field = Fields3D(nx, ny, nz, dx, dy, dz, x0, y0, z0, n_guard=3)
+        self.field = Fields3D(self.nx, self.ny, self.nz, dx, dy, dz, 
+                             0, 0, 0, n_guard=3)
+        
+        # Initialize fields with non-zero values to test PML effects
+        self.field.bx[:, :, :] = 1.0
+        self.field.by[:, :, :] = 1.0
+        self.field.bz[:, :, :] = 1.0
+
+    def _common_pml_checks(self, pml):
+        """Common assertions for all PML tests"""
+        self.assertEqual(pml.thickness, 6)
+        
+        # Check field dimensions match
+        self.assertEqual(pml.psi_ex_z.shape, (self.nx, self.ny, self.nz))
+        
+        # Check parameters are initialized
+        self.assertFalse(np.allclose(pml.sigma_ex, 0))
+        self.assertFalse(np.allclose(pml.kappa_ex, 1.0))
 
     def test_xmin(self):
         pml = PMLXmin(self.field)
-        self.assertEqual(pml.thickness, 6)
-
+        self._common_pml_checks(pml)
+        
+        # Check PML region parameters
+        self.assertTrue(np.all(pml.sigma_ex[:6] > 0))
+        self.assertTrue(np.all(pml.kappa_ex[:6] > 1))
+        
+        # Check field updates
+        ey_before = self.field.ey.copy()
         pml.advance_e_currents(self.dt)
-        pml.advance_b_currents(self.dt)
+        self.assertFalse(np.allclose(ey_before, self.field.ey))
 
     def test_xmax(self):
         pml = PMLXmax(self.field)
-        self.assertIsInstance(pml, PMLX)
-
-        pml.advance_e_currents(self.dt)
-        pml.advance_b_currents(self.dt)
+        self._common_pml_checks(pml)
+        self.assertTrue(np.all(pml.sigma_ex[-6:] > 0))
+        
+        # Verify multiple advances
+        for _ in range(10):
+            pml.advance_b_currents(self.dt)
+        self.assertFalse(np.all(pml.psi_by_x == 0))
 
     def test_ymin(self):
         pml = PMLYmin(self.field)
+        self._common_pml_checks(pml)
+        self.assertTrue(np.all(pml.sigma_ey[:6] > 0))
+        
+        # Test both current advances
+        pml.advance_e_currents(self.dt)
+        pml.advance_b_currents(self.dt)
+        self.assertFalse(np.all(pml.psi_bx_y == 0))
+
+    def test_ymax(self):
+        pml = PMLYmax(self.field)
+        self._common_pml_checks(pml)
+        self.assertTrue(np.all(pml.sigma_ey[-6:] > 0))
+
+    def test_zmin(self):
+        pml = PMLZmin(self.field)
+        self._common_pml_checks(pml)
+        self.assertTrue(np.all(pml.sigma_ez[:6] > 0))
+        
+        # Verify psi array updates
+        pml.advance_e_currents(self.dt)
+        self.assertFalse(np.all(pml.psi_ex_z == 0))
+
+    def test_zmax(self):
+        pml = PMLZmax(self.field)
+        self._common_pml_checks(pml)
+        self.assertTrue(np.all(pml.sigma_ez[-6:] > 0))
+        
+        # Verify field modifications in PML region
+        ez_before = self.field.ez.copy()
+        pml.advance_e_currents(self.dt)
+        self.assertFalse(np.allclose(ez_before[:, :, -6:], 
+                                   self.field.ez[:, :, -6:]))
+
+class TestPatchesPML3D(unittest.TestCase):
+    def setUp(self) -> None:
+        from libpic.fields import Fields3D
+        from libpic.patch import Patch3D, Patches
+
+        dx = dy = dz = 1e-8
+        self.dt = dx / c / 2
+        nx, ny, nz = 64, 64, 64
+        npatch_x, npatch_y, npatch_z = 2, 2, 2
+
+        self.patches = Patches(dimension=3)
+        for k in range(npatch_z):
+            for j in range(npatch_y):
+                for i in range(npatch_x):
+                    f = Fields3D(nx//npatch_x, ny//npatch_y, nz//npatch_z,
+                                dx, dy, dz, 0, 0, 0, n_guard=3)
+                    p = Patch3D(
+                        rank=0, index=0,  # Simplified for test
+                        ipatch_x=i, ipatch_y=j, ipatch_z=k,
+                        x0=0, y0=0, z0=0,  # Simplified coordinates
+                        fields=f
+                    )
+                    
+                    # Add PMLs to boundary patches
+                    if i == 0:
+                        p.add_pml_boundary(PMLXmin(f))
+                    if i == npatch_x-1:
+                        p.add_pml_boundary(PMLXmax(f))
+                    if k == 0:
+                        p.add_pml_boundary(PMLZmin(f))
+                        
+                    self.patches.append(p)
+
+    def test_pml_integration(self):
+        from libpic.maxwell.solver import MaxwellSolver3d
+        
+        solver = MaxwellSolver3d(self.patches)
+        solver.generate_field_lists()
+        solver.generate_kappa_lists()
+        
+        # Run full update cycle
+        solver.update_efield(self.dt)
+        for p in self.patches:
+            for pml in p.pml_boundary:
+                pml.advance_e_currents(self.dt)
+                
+        solver.update_bfield(self.dt)
+        for p in self.patches:
+            for pml in p.pml_boundary:
+                pml.advance_b_currents(self.dt)
+        
+        # Verify no crashes and field updates
+        self.assertEqual(len(solver.ex_list), 8)
+        self.assertFalse(np.all(solver.ex_list[0] == 0))
+
 
 class TestPatchesPML(unittest.TestCase):
     def setUp(self) -> None:
