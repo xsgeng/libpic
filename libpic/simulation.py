@@ -6,7 +6,7 @@ from tqdm.auto import trange
 from .current.deposition import CurrentDeposition2D
 from .fields import Fields2D
 from .interpolation.field_interpolation import FieldInterpolation2D
-from .maxwell.solver import MaxwellSolver2d
+from .maxwell.solver import MaxwellSolver2D
 from .patch.patch import Patch2D, Patches
 from .pusher.pusher import BorisPusher, PhotonPusher, PusherBase
 from .sort.particle_sort import ParticleSort2D
@@ -43,7 +43,7 @@ class Simulation:
 
         self.create_patches()
         
-        self.maxwell = MaxwellSolver2d(self.patches)
+        self.maxwell = MaxwellSolver2D(self.patches)
         
 
     def create_patches(self):

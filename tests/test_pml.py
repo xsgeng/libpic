@@ -6,7 +6,7 @@ import numpy as np
 from scipy.constants import c, e
 
 from libpic.boundary.cpml import PMLXmin, PMLXmax, PMLX, PMLY, PMLYmin, PMLYmax, PMLZ, PMLZmin, PMLZmax
-from libpic.maxwell.solver import MaxwellSolver2d
+from libpic.maxwell.solver import MaxwellSolver2D
 
 
 class TestPML2D(unittest.TestCase):
@@ -198,7 +198,7 @@ class TestPatchesPML(unittest.TestCase):
 
         self.assertEqual(len(patches[0].pml_boundary), 1)
 
-        solver = MaxwellSolver2d(patches)
+        solver = MaxwellSolver2D(patches)
         solver.generate_field_lists()
         self.assertEqual(len(solver.ex_list), 24)
 
