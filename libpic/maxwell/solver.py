@@ -3,8 +3,10 @@ import numpy as np
 from numba import typed
 from scipy.constants import c, e, epsilon_0, mu_0
 
-from ..boundary.cpml import (PMLX, update_bfield_cpml_patches_2d,
-                                  update_efield_cpml_patches_2d)
+from ..boundary.cpml import (PMLX, PMLY, PMLZ, update_bfield_cpml_patches_2d,
+                             update_efield_cpml_patches_2d,
+                             update_bfield_cpml_patches_3d,
+                             update_efield_cpml_patches_3d)
 from ..patch import Patches
 
 from .cpu import (update_bfield_patches_2d, update_bfield_patches_3d,
