@@ -5,7 +5,7 @@ from time import perf_counter_ns
 import numpy as np
 from scipy.constants import c, e
 
-from libpic.boundary.cpml import PMLXmin, PMLXmax, PMLX, PMLY
+from libpic.boundary.cpml import PMLXmin, PMLXmax, PMLX, PMLY, PMLYmin, PMLYmax, PMLZ, PMLZmin, PMLZmax
 from libpic.maxwell.solver import MaxwellSolver2d
 
 
