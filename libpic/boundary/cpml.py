@@ -307,13 +307,13 @@ class PMLZmax(PMLZ):
         # runs from nearly 0.0 (actually 0.0 at cpml_thickness+1) to 1.0
         pos = 1.0 - np.arange(self.thickness, dtype=float)[::-1] / self.thickness
         cpml_slice = np.s_[self.nz-self.thickness : self.nz]
-        self.init_coefficents(pos, cpml_slice, self.kappa_ey, self.sigma_ey, self.a_ey)
+        self.init_coefficents(pos, cpml_slice, self.kappa_ez, self.sigma_ez, self.a_ez)
 
         # runs from nearly 0.0 to nearly 1.0 on the half intervals
-        # 0.0 at iy_glob=cpml_thickness+1/2 and 1.0 at iy_glob=1-1/2
+        # 0.0 at iz_glob=cpml_thickness+1/2 and 1.0 at iz_glob=1-1/2
         pos = 1.0 - (np.arange(self.thickness, dtype=float) + 0.5)[::-1] / self.thickness
         cpml_slice = np.s_[self.nz-self.thickness-1 : self.nz-1]
-        self.init_coefficents(pos, cpml_slice, self.kappa_by, self.sigma_by, self.a_by)
+        self.init_coefficents(pos, cpml_slice, self.kappa_bz, self.sigma_bz, self.a_bz)
 
         # pml range
         self.efield_start = self.nz - self.thickness
