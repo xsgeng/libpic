@@ -72,10 +72,40 @@ class MaxwellSolver:
             self.generate_kappa_lists()
 
     def generate_kappa_lists(self) -> None:
-        """
-        Generate list of kappa arrays of patches having PML boundary.
-        """
-        raise NotImplementedError
+        self.kappa_ex_list = typed.List()
+        self.kappa_ey_list = typed.List()
+        self.kappa_ez_list = typed.List()
+        self.kappa_bx_list = typed.List()
+        self.kappa_by_list = typed.List()
+        self.kappa_bz_list = typed.List()
+
+        for p in self.patches_pml_boundary:
+            # Initialize kappa values to None
+            kappa_ex = p.pml_boundary[0].kappa_ex
+            kappa_ey = p.pml_boundary[0].kappa_ey
+            kappa_ez = p.pml_boundary[0].kappa_ez
+            kappa_bx = p.pml_boundary[0].kappa_bx
+            kappa_by = p.pml_boundary[0].kappa_by
+            kappa_bz = p.pml_boundary[0].kappa_bz
+
+            # Populate kappa values from PML boundaries
+            for pml in p.pml_boundary:
+                if isinstance(pml, PMLX):
+                    kappa_ex = pml.kappa_ex
+                    kappa_bx = pml.kappa_bx
+                elif isinstance(pml, PMLY):
+                    kappa_ey = pml.kappa_ey
+                    kappa_by = pml.kappa_by
+                elif isinstance(pml, PMLZ):
+                    kappa_ez = pml.kappa_ez
+                    kappa_bz = pml.kappa_bz
+
+            self.kappa_ex_list.append(kappa_ex)
+            self.kappa_ey_list.append(kappa_ey)
+            self.kappa_ez_list.append(kappa_ez)
+            self.kappa_bx_list.append(kappa_bx)
+            self.kappa_by_list.append(kappa_by)
+            self.kappa_bz_list.append(kappa_bz)
 
     def update_efield(self, dt: float) -> None:
         """
@@ -104,39 +134,6 @@ class MaxwellSolver2D(MaxwellSolver):
         super().__init__(patches)
         self.dy: float = patches.dy
         self.ny: int = patches.ny
-
-    def generate_kappa_lists(self) -> None:
-        kappa_ex_list = []
-        kappa_ey_list = []
-        kappa_bx_list = []
-        kappa_by_list = []
-        for p in self.patches_pml_boundary:
-            n_pml = len(p.pml_boundary)
-            if n_pml == 1:
-                kappa_ex = p.pml_boundary[0].kappa_ex
-                kappa_ey = p.pml_boundary[0].kappa_ey
-                kappa_bx = p.pml_boundary[0].kappa_bx
-                kappa_by = p.pml_boundary[0].kappa_by
-            elif n_pml == 2:
-                if isinstance(p.pml_boundary[0], PMLX):
-                    kappa_ex = p.pml_boundary[0].kappa_ex
-                    kappa_bx = p.pml_boundary[0].kappa_bx
-                    kappa_ey = p.pml_boundary[1].kappa_ey
-                    kappa_by = p.pml_boundary[1].kappa_by
-                else:
-                    kappa_ex = p.pml_boundary[1].kappa_ex
-                    kappa_bx = p.pml_boundary[1].kappa_bx
-                    kappa_ey = p.pml_boundary[0].kappa_ey
-                    kappa_by = p.pml_boundary[0].kappa_by
-            kappa_ex_list.append(kappa_ex)
-            kappa_ey_list.append(kappa_ey)
-            kappa_bx_list.append(kappa_bx)
-            kappa_by_list.append(kappa_by)
-
-        self.kappa_ex_list = typed.List(kappa_ex_list)
-        self.kappa_ey_list = typed.List(kappa_ey_list)
-        self.kappa_bx_list = typed.List(kappa_bx_list)
-        self.kappa_by_list = typed.List(kappa_by_list)
 
     def update_efield(self, dt: float) -> None:
         if self.patches_non_boundary:
@@ -195,58 +192,6 @@ class MaxwellSolver3D(MaxwellSolver):
         self.dz: float = patches.dz
         self.ny: int = patches.ny
         self.nz: int = patches.nz
-
-    def generate_kappa_lists(self) -> None:
-        kappa_ex_list = []
-        kappa_ey_list = []
-        kappa_ez_list = []
-        kappa_bx_list = []
-        kappa_by_list = []
-        kappa_bz_list = []
-
-        for p in self.patches_pml_boundary:
-            # Get field dimensions from patch
-            nx = p.fields.nx
-            ny = p.fields.ny
-            nz = p.fields.nz
-
-            # Initialize kappa values to None
-            kappa_ex = kappa_ey = kappa_ez = None
-            kappa_bx = kappa_by = kappa_bz = None
-
-            # Populate kappa values from PML boundaries
-            for pml in p.pml_boundary:
-                if isinstance(pml, PMLX):
-                    kappa_ex = pml.kappa_ex
-                    kappa_bx = pml.kappa_bx
-                elif isinstance(pml, PMLY):
-                    kappa_ey = pml.kappa_ey
-                    kappa_by = pml.kappa_by
-                elif isinstance(pml, PMLZ):
-                    kappa_ez = pml.kappa_ez
-                    kappa_bz = pml.kappa_bz
-
-            # Set default 1.0 arrays for directions without PML
-            kappa_ex = kappa_ex if kappa_ex is not None else np.ones(nx)
-            kappa_ey = kappa_ey if kappa_ey is not None else np.ones(ny)
-            kappa_ez = kappa_ez if kappa_ez is not None else np.ones(nz)
-            kappa_bx = kappa_bx if kappa_bx is not None else np.ones(nx)
-            kappa_by = kappa_by if kappa_by is not None else np.ones(ny)
-            kappa_bz = kappa_bz if kappa_bz is not None else np.ones(nz)
-
-            kappa_ex_list.append(kappa_ex)
-            kappa_ey_list.append(kappa_ey)
-            kappa_ez_list.append(kappa_ez)
-            kappa_bx_list.append(kappa_bx)
-            kappa_by_list.append(kappa_by)
-            kappa_bz_list.append(kappa_bz)
-
-        self.kappa_ex_list = typed.List(kappa_ex_list)
-        self.kappa_ey_list = typed.List(kappa_ey_list)
-        self.kappa_ez_list = typed.List(kappa_ez_list)
-        self.kappa_bx_list = typed.List(kappa_bx_list)
-        self.kappa_by_list = typed.List(kappa_by_list)
-        self.kappa_bz_list = typed.List(kappa_bz_list)
 
     def update_efield(self, dt: float) -> None:
         # Regular field update for non-PML patches
