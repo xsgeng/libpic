@@ -1,13 +1,31 @@
 # print("Using optical depth method.")
-from numba import boolean, float64, int64, njit, prange, void
-from numpy import log, random
+import os
 from math import isnan
 
-from .optical_depth_tables import (_log_chi_range,
-                                   integ_pair_prob_rate_from_table,
-                                   integ_photon_prob_rate_from_table,
-                                   pair_delta_from_chi_delta_table,
-                                   photon_delta_from_chi_delta_table)
+from numba import boolean, float64, int64, njit, prange, void
+from numpy import log, random
+
+if os.environ.get("USE_OPTICAL_DEPTH_TABLES_SIGMOID") == "1":
+    from .optical_depth_tables_sigmoid import (
+        _integral_photon_prob_along_delta,
+        _log_chi_range,
+        _photon_prob_rate_total_table,
+        integ_pair_prob_rate_from_table,
+        integ_photon_prob_rate_from_table,
+        pair_delta_from_chi_delta_table,
+        photon_delta_from_chi_delta_table,
+    )
+else:
+    from .optical_depth_tables import (
+        _integral_photon_prob_along_delta,
+        _log_chi_range,
+        _photon_prob_rate_total_table,
+        integ_pair_prob_rate_from_table,
+        integ_photon_prob_rate_from_table,
+        pair_delta_from_chi_delta_table,
+        photon_delta_from_chi_delta_table,
+    )
+
 
 _chi_min = 10.0**_log_chi_range[0]
 @njit( void(float64[:], float64[:], float64[:], float64, int64, boolean[:], boolean[:], float64[:], float64[:, :], float64[:]),

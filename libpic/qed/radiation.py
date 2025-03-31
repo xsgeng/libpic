@@ -174,7 +174,7 @@ class NonlinearComptonLCFA(RadiationBase):
                     break # if one species is extended, all species are updated
 
     def event(self, dt: float) -> None:
-        from .optical_depth_tables import _integral_photon_prob_along_delta, _photon_prob_rate_total_table
+        from .optical_depth import _integral_photon_prob_along_delta, _photon_prob_rate_total_table
         radiation_event_patches(
             self.tau_list, self.chi_list, self.inv_gamma_list,
             self.is_dead_list,

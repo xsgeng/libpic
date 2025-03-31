@@ -213,7 +213,7 @@ class NonlinearPairProductionLCFA(PairProductionBase):
                     break # if one species is extended, all species are updated
 
     def event(self, dt: float) -> None:
-        from .optical_depth_tables import (
+        from .optical_depth import (
             _integral_pair_prob_along_delta,
             _pair_prob_rate_total_table,
         )
