@@ -5,7 +5,7 @@ from math import isnan
 from numba import boolean, float64, int64, njit, prange, void
 from numpy import log, random
 
-if os.environ.get("USE_OPTICAL_DEPTH_TABLES_SIGMOID") == "1":
+if os.environ.get("LIBPIC_USE_SIGMOID_SAMPLING") == "1":
     from .optical_depth_tables_sigmoid import (
         _integral_photon_prob_along_delta,
         _log_chi_range,
