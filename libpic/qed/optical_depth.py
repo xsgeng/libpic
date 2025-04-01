@@ -15,6 +15,7 @@ if os.environ.get("LIBPIC_USE_SIGMOID_SAMPLING") == "1":
         pair_delta_from_chi_delta_table,
         photon_delta_from_chi_delta_table,
     )
+    print("Using sigmoid sampling.")
 else:
     from .optical_depth_tables import (
         _integral_photon_prob_along_delta,
