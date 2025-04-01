@@ -1,2 +1,1 @@
 include libpic/qed/*.h5
-include libpic/utils/clist.pxd

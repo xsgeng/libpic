@@ -108,20 +108,22 @@ class QEDBuildCommand(build_ext):
 
     def _generate_qed_tables(self):
         """使用独立进程生成表数据"""
-        gen_script = os.path.join(
-            os.path.dirname(__file__),
-            "libpic/qed/optical_depth_tables_sigmoid.py"
-        )
 
-        # 在独立Python进程中执行生成
-        cmd = [
-            sys.executable,
-            gen_script,
-        ]
+        for table in ["optical_depth_tables_sigmoid", "optical_depth_tables"]:
+            gen_script = os.path.join(
+                os.path.dirname(__file__),
+                f"libpic/qed/{table}.py"
+            )
+      
+            # 在独立Python进程中执行生成
+            cmd = [
+                sys.executable,
+                gen_script,
+            ]
 
-        print("\n🚀 Generating QED tables via subprocess:")
-        print(" ".join(cmd))
-        subprocess.check_call(cmd)
+            print(f"\n🚀 Generating {table}:")
+            print(" ".join(cmd))
+            subprocess.check_call(cmd)
 
 setup(
     name="libpic",
