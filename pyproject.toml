@@ -32,6 +32,8 @@ Homepage = "https://github.com/xsgeng/libpic"
 [build-system]
 requires = [
     "setuptools",
-    "cython",
     "numpy",
+    "h5py",
+    "numba",
+    "scipy"
 ]

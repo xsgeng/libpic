@@ -1,6 +1,10 @@
-from setuptools import Extension, setup
-# from Cython.Build import cythonize
+import os
+import subprocess
+import sys
+
 import numpy as np
+from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext
 
 include_dirs = [np.get_include()]
 extra_compile_args = ['-Xpreprocessor', '-fopenmp', '-O3', '-march=native', '-ftree-vectorize']
@@ -92,7 +96,37 @@ extensions = [
         extra_link_args=extra_link_args,
     ),
 ]
+
+class QEDBuildCommand(build_ext):
+    """集成HDF5表生成的官方推荐实现"""
+    def run(self):
+        # 标准构建流程
+        super().run()
+
+        # 确保在构建环境可用后才生成
+        self._generate_qed_tables()
+
+    def _generate_qed_tables(self):
+        """使用独立进程生成表数据"""
+        gen_script = os.path.join(
+            os.path.dirname(__file__),
+            "libpic/qed/optical_depth_tables_sigmoid.py"
+        )
+
+        # 在独立Python进程中执行生成
+        cmd = [
+            sys.executable,
+            gen_script,
+        ]
+
+        print("\n🚀 Generating QED tables via subprocess:")
+        print(" ".join(cmd))
+        subprocess.check_call(cmd)
+
 setup(
     name="libpic",
     ext_modules=extensions,
+    cmdclass={
+        'build_ext': QEDBuildCommand
+    },
 )
