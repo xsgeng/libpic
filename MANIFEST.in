@@ -1,2 +1,2 @@
-include libpic/qed/optical_depth_tables.h5
+include libpic/qed/*.h5
 include libpic/utils/clist.pxd
