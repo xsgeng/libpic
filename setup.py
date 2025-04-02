@@ -110,6 +110,8 @@ class QEDBuildCommand(build_ext):
         """使用独立进程生成表数据"""
 
         for table in ["optical_depth_tables_sigmoid", "optical_depth_tables"]:
+            if os.path.exists(f"libpic/qed/{table}.h5"):
+                continue
             gen_script = os.path.join(
                 os.path.dirname(__file__),
                 f"libpic/qed/{table}.py"
