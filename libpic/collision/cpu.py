@@ -113,31 +113,31 @@ def pairing(
                 
             yield ipair, ip_start1 + ip1, shuffled_idx[ip2], w_corr
 
-def debye_length_cell(
-    ux, uy, uz, inv_gamma, w, dead,
-    m, q, lnLambda,
-    ip_start, ip_end,
-    dx, dy, dz, dt,
-    debye_length
-):
-    nbuf = ip_end - ip_start
-    npart = nbuf - dead[ip_start:ip_end].sum()
-    if npart == 0:
-        return
+# def debye_length_cell(
+#     ux, uy, uz, inv_gamma, w, dead,
+#     m, q, lnLambda,
+#     ip_start, ip_end,
+#     dx, dy, dz, dt,
+#     debye_length
+# ):
+#     nbuf = ip_end - ip_start
+#     npart = nbuf - dead[ip_start:ip_end].sum()
+#     if npart == 0:
+#         return
 
-    density = 0.0
-    kT = 0.0 # in mc2
-    mean_charge = 0.0
-    for ip in range(ip_start, ip_end):
-        if dead[ip]: 
-            continue
-        px = ux[ip] * m * c
-        py = uy[ip] * m * c
-        pz = uz[ip] * m * c
-        p2 = px**2 + py**2 + pz**2
-        kT += p2 * inv_gamma[ip]
-        density += w[ip] / (dx*dy*dz)
-        mean_charge += w[ip] * q
+#     density = 0.0
+#     kT = 0.0 # in mc2
+#     mean_charge = 0.0
+#     for ip in range(ip_start, ip_end):
+#         if dead[ip]: 
+#             continue
+#         px = ux[ip] * m * c
+#         py = uy[ip] * m * c
+#         pz = uz[ip] * m * c
+#         p2 = px**2 + py**2 + pz**2
+#         kT += p2 * inv_gamma[ip]
+#         density += w[ip] / (dx*dy*dz)
+#         mean_charge += w[ip] * q
 
 @njit(cache=True)
 def self_collision_cell(
