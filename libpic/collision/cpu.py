@@ -113,11 +113,11 @@ def pairing(
                 
             yield ipair, ip_start1 + ip1, shuffled_idx[ip2], w_corr
 
-def debye_length_cell_2d(
+def debye_length_cell(
     ux, uy, uz, inv_gamma, w, dead,
     m, q, lnLambda,
     ip_start, ip_end,
-    dx, dy, dt,
+    dx, dy, dz, dt,
     debye_length
 ):
     nbuf = ip_end - ip_start
@@ -136,19 +136,34 @@ def debye_length_cell_2d(
         pz = uz[ip] * m * c
         p2 = px**2 + py**2 + pz**2
         kT += p2 * inv_gamma[ip]
-        density += w[ip]
+        density += w[ip] / (dx*dy*dz)
         mean_charge += w[ip] * q
 
-    density /= dx*dy
-
 @njit(cache=True)
-def self_collision_cell_2d(
+def self_collision_cell(
     ux, uy, uz, inv_gamma, w, dead,
     m, q, lnLambda,
     ip_start, ip_end,
-    dx, dy, dt,
+    dx, dy, dz, dt,
     random_gen
 ):
+    """
+    Self collision
+    
+    Args:
+        ux,uy,uz (np.ndarray): particle velocity
+        inv_gamma (np.ndarray): 1 / gamma
+        w (np.ndarray): particle weight
+        dead (np.ndarray): dead particle flag
+        m (float): particle mass
+        q (float): particle charge
+        lnLambda (float): Coulomb logarithm
+        ip_start (int): start index of particle buffer
+        ip_end (int): end index of particle buffer
+        dx,dy,dz (float): cell size, set `dz = 1` for 2D
+        dt (float): time step
+        random_gen (np.random.Generator): random number generator
+    """
     nbuf = ip_end - ip_start
     npart = nbuf - dead[ip_start:ip_end].sum()
     if npart < 2: 
@@ -199,7 +214,7 @@ def self_collision_cell_2d(
         gamma2_com = (1 - (vx_com*v2x + vy_com*v2y + vz_com*v2z) / c**2) * gamma_com*gamma2
 
         
-        s = w_max/dx/dy *dt * (lnLambda * (q*q)**2) / (4*pi*epsilon_0**2*c**4 * m*gamma1 * m*gamma2) \
+        s = w_max/(dx*dy*dz) *dt * (lnLambda * (q*q)**2) / (4*pi*epsilon_0**2*c**4 * m*gamma1 * m*gamma2) \
                 *(gamma_com * p1_com)/(m*gamma1 + m*gamma2) * (m*gamma1_com*m*gamma2_com/p1_com**2 * c**2 + 1)**2
         s *= dt_corr
 
@@ -249,14 +264,31 @@ def self_collision_cell_2d(
             inv_gamma[ip2] = 1/sqrt(ux[ip2]**2 + uy[ip2]**2 + uz[ip2]**2 + 1)
 
 @njit(cache=True)
-def inter_collision_cell_2d(
+def inter_collision_cell(
     ux1, uy1, uz1, inv_gamma1, w1, dead1, ip_start1, ip_end1,
     ux2, uy2, uz2, inv_gamma2, w2, dead2, ip_start2, ip_end2,
     m1, q1, m2, q2,
     lnLambda,
-    dx, dy, dt,
+    dx, dy, dz, dt,
     random_gen
 ):
+    """
+    Inter collision
+    
+    Args:
+        ux1,uy1,uz1 (np.ndarray): momentum of species 1
+        inv_gamma1 (np.ndarray): 1 / gamma of species 1
+        w1 (np.ndarray): weight of species 1
+        dead1 (np.ndarray): dead particle flag of species 1
+        ip_start1 (int): start index of particle buffer of species 1
+        ip_end1 (int): end index of particle buffer of species 1
+        m1 (float): mass of species 1
+        q1 (float): charge of species 1
+        lnLambda (float): Coulomb logarithm
+        dx,dy,dz (float): cell size, set `dz = 1` for 2D
+        dt (float): time step
+        random_gen (np.random.Generator): random number generator
+    """
     nbuf1 = ip_end1 - ip_start1
     npart1 = nbuf1 - dead1[ip_start1:ip_end1].sum()
 
@@ -319,7 +351,7 @@ def inter_collision_cell_2d(
         gamma1_com = (1 - (vx_com*v1x + vy_com*v1y + vz_com*v1z) / c**2) * gamma_com*gamma1
         gamma2_com = (1 - (vx_com*v2x + vy_com*v2y + vz_com*v2z) / c**2) * gamma_com*gamma2
 
-        s = w_max/dx/dy *dt * (lnLambda * (q1*q2)**2) / (4*pi*epsilon_0**2*c**4 * m1*gamma1 * m2*gamma2) \
+        s = w_max/(dx*dy*dz) *dt * (lnLambda * (q1*q2)**2) / (4*pi*epsilon_0**2*c**4 * m1*gamma1 * m2*gamma2) \
                 *(gamma_com * p1_com)/(m1*gamma1 + m2*gamma2) * (m1*gamma1_com*m2*gamma2_com/p1_com**2 * c**2 + 1)**2
         s *= dt_corr
 
@@ -368,9 +400,9 @@ def inter_collision_cell_2d(
             inv_gamma2[ip2] = 1/sqrt(ux2[ip2]**2 + uy2[ip2]**2 + uz2[ip2]**2 + 1)
 
 @njit(parallel=True, cache=True)
-def self_collision_parallel_2d(
+def self_collision_parallel(
     cell_bound_min, cell_bound_max, 
-    nx, ny, dx, dy, dt,
+    nx, ny, dx, dy, dz, dt,
     ux, uy, uz, inv_gamma, w, dead,
     m, q, lnLambda,
     random_gen
@@ -380,18 +412,18 @@ def self_collision_parallel_2d(
         iy = icell % ny
         ip_start = cell_bound_min[ix,iy]
         ip_end = cell_bound_max[ix,iy]
-        self_collision_cell_2d(
+        self_collision_cell(
             ux, uy, uz, inv_gamma, w, dead,
             m, q, lnLambda,
             ip_start, ip_end,
-            dx, dy, dt,
+            dx, dy, dz, dt,
             random_gen
         )
 
 @njit(cache=True)
-def self_collision_2d(
+def self_collision(
     cell_bound_min, cell_bound_max, 
-    nx, ny, dx, dy, dt,
+    nx, ny, dx, dy, dz, dt,
     ux, uy, uz, inv_gamma, w, dead,
     m, q, lnLambda,
     random_gen
@@ -400,20 +432,20 @@ def self_collision_2d(
         for iy in range(ny):
             ip_start = cell_bound_min[ix,iy]
             ip_end = cell_bound_max[ix,iy]
-            self_collision_cell_2d(
+            self_collision_cell(
                 ux, uy, uz, inv_gamma, w, dead,
                 m, q, lnLambda,
                 ip_start, ip_end,
-                dx, dy, dt,
+                dx, dy, dz, dt,
                 random_gen
             )
 
 
 @njit(parallel=True, cache=True)
-def inter_collision_parallel_2d(
+def inter_collision_parallel(
     cell_bound_min1, cell_bound_max1, 
     cell_bound_min2, cell_bound_max2, 
-    nx, ny, dx, dy, dt,
+    nx, ny, dx, dy, dz, dt,
     ux1, uy1, uz1, inv_gamma1, w1, dead1,
     ux2, uy2, uz2, inv_gamma2, w2, dead2,
     m1, q1, m2, q2,
@@ -430,20 +462,20 @@ def inter_collision_parallel_2d(
         ip_start2 = cell_bound_min2[ix,iy]
         ip_end2 = cell_bound_max2[ix,iy]
 
-        inter_collision_cell_2d(
+        inter_collision_cell(
             ux1, uy1, uz1, inv_gamma1, w1, dead1, ip_start1, ip_end1,
             ux2, uy2, uz2, inv_gamma2, w2, dead2, ip_start2, ip_end2,
             m1, q1, m2, q2,
             lnLambda,
-            dx, dy, dt,
+            dx, dy, dz, dt,
             random_gen
         )
 
 @njit(cache=True)
-def inter_collision_2d(
+def inter_collision(
     cell_bound_min1, cell_bound_max1, 
     cell_bound_min2, cell_bound_max2, 
-    nx, ny, dx, dy, dt,
+    nx, ny, dx, dy, dz, dt,
     ux1, uy1, uz1, inv_gamma1, w1, dead1,
     ux2, uy2, uz2, inv_gamma2, w2, dead2,
     m1, q1, m2, q2,
@@ -458,11 +490,11 @@ def inter_collision_2d(
             ip_start2 = cell_bound_min2[ix,iy]
             ip_end2 = cell_bound_max2[ix,iy]
 
-            inter_collision_cell_2d(
+            inter_collision_cell(
                 ux1, uy1, uz1, inv_gamma1, w1, dead1, ip_start1, ip_end1,
                 ux2, uy2, uz2, inv_gamma2, w2, dead2, ip_start2, ip_end2,
                 m1, q1, m2, q2,
                 lnLambda,
-                dx, dy, dt,
+                dx, dy, dz, dt,
                 random_gen
             )
