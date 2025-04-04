@@ -4,7 +4,8 @@ from numba import typed
 from ..patch import Patches
 from ..species import Electron, Photon, Positron, Species
 from .cpu import (
-    create_pair_patches,
+    create_pair_patches_2d,
+    create_pair_patches_3d,
     get_particle_extension_size_patches,
     pairproduction_event_patches,
     remove_photon_patches,
@@ -249,13 +250,22 @@ class NonlinearPairProductionLCFA(PairProductionBase):
                 self.patches.update_particle_lists(ipatch)
                 self.update_particle_lists(ipatch)
         # fillin pairs
-        create_pair_patches(
-            self.x_list, self.y_list, self.ux_list, self.uy_list, self.uz_list, self.w_list, self.is_dead_list,
-            self.x_ele_list, self.y_ele_list, self.ux_ele_list, self.uy_ele_list, self.uz_ele_list, self.inv_gamma_ele_list, self.w_ele_list, self.is_dead_ele_list, 
-            self.x_pos_list, self.y_pos_list, self.ux_pos_list, self.uy_pos_list, self.uz_pos_list, self.inv_gamma_pos_list, self.w_pos_list, self.is_dead_pos_list, 
-            self.delta_list, self.event_list,
-            self.npatches,
-        )
+        if self.dimension == 2:
+            create_pair_patches_2d(
+                self.x_list, self.y_list, self.ux_list, self.uy_list, self.uz_list, self.w_list, self.is_dead_list,
+                self.x_ele_list, self.y_ele_list, self.ux_ele_list, self.uy_ele_list, self.uz_ele_list, self.inv_gamma_ele_list, self.w_ele_list, self.is_dead_ele_list, 
+                self.x_pos_list, self.y_pos_list, self.ux_pos_list, self.uy_pos_list, self.uz_pos_list, self.inv_gamma_pos_list, self.w_pos_list, self.is_dead_pos_list, 
+                self.delta_list, self.event_list,
+                self.npatches,
+            )
+        if self.dimension == 3:
+            create_pair_patches_3d(
+                self.x_list, self.y_list, self.z_list, self.ux_list, self.uy_list, self.uz_list, self.w_list, self.is_dead_list,
+                self.x_ele_list, self.y_ele_list, self.z_ele_list, self.ux_ele_list, self.uy_ele_list, self.uz_ele_list, self.inv_gamma_ele_list, self.w_ele_list, self.is_dead_ele_list, 
+                self.x_pos_list, self.y_pos_list, self.z_pos_list, self.ux_pos_list, self.uy_pos_list, self.uz_pos_list, self.inv_gamma_pos_list, self.w_pos_list, self.is_dead_pos_list, 
+                self.delta_list, self.event_list,
+                self.npatches
+            )
 
     def reaction(self) -> None:
         remove_photon_patches(self.event_list, self.is_dead_list, self.npatches)

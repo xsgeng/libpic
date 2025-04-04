@@ -3,8 +3,10 @@ from numba import boolean, float64, int64, njit, prange, void
 
 from .inline import (
     calculate_chi_inline,
-    create_pair_inline,
-    create_photon_inline,
+    create_pair_inline_2d,
+    create_pair_inline_3d,
+    create_photon_inline_2d,
+    create_photon_inline_3d,
     find_event_index_inline,
 )
 from .optical_depth import update_tau_e, update_tau_gamma
@@ -107,11 +109,11 @@ def pairproduction_event_patches(
             integral_pair_prob_along_delta, pair_prob_rate_total_table
         )
         
-create_photon = njit(create_photon_inline)
+create_photon_2d = njit(create_photon_inline_2d)
 find_event_index = njit(find_event_index_inline)
 
 @njit(parallel=True, cache=True)
-def create_photon_patches(
+def create_photon_patches_2d(
     x_ele_list, y_ele_list, ux_ele_list, uy_ele_list, uz_ele_list, w_ele_list, is_dead_ele_list,
     x_pho_list, y_pho_list, ux_pho_list, uy_pho_list, uz_pho_list, inv_gamma_pho_list, w_pho_list, is_dead_pho_list, 
     delta_list, event_list,
@@ -140,16 +142,16 @@ def create_photon_patches(
 
         event_index = find_event_index(event, is_dead_ele)
 
-        create_photon(
+        create_photon_2d(
             x_ele, y_ele, ux_ele, uy_ele, uz_ele, w_ele, 
             x_pho, y_pho, ux_pho, uy_pho, uz_pho, inv_gamma_pho, w_pho, is_dead_pho, 
             event_index, delta,
         )
 
-create_pair = njit(create_pair_inline)
+create_pair_2d = njit(create_pair_inline_2d)
 
 @njit(parallel=True, cache=True)
-def create_pair_patches(
+def create_pair_patches_2d(
     x_pho_list, y_pho_list, ux_pho_list, uy_pho_list, uz_pho_list, w_pho_list, is_dead_pho_list,
     x_ele_list, y_ele_list, ux_ele_list, uy_ele_list, uz_ele_list, inv_gamma_ele_list, w_ele_list, is_dead_ele_list,
     x_pos_list, y_pos_list, ux_pos_list, uy_pos_list, uz_pos_list, inv_gamma_pos_list, w_pos_list, is_dead_pos_list,
@@ -187,11 +189,103 @@ def create_pair_patches(
         event = event_list[ipatch]
         event_index = find_event_index(event, is_dead_pho)
 
-        create_pair(
+        create_pair_2d(
             event_index, 
             x_pho, y_pho, ux_pho, uy_pho, uz_pho, w_pho, delta,
             x_ele, y_ele, ux_ele, uy_ele, uz_ele, inv_gamma_ele, w_ele, is_dead_ele, 
             x_pos, y_pos, ux_pos, uy_pos, uz_pos, inv_gamma_pos, w_pos, is_dead_pos, 
+        )
+
+create_photon_3d = njit(create_photon_inline_3d)
+find_event_index = njit(find_event_index_inline)
+
+@njit(parallel=True, cache=True)
+def create_photon_patches_3d(
+    x_ele_list, y_ele_list, z_ele_list, ux_ele_list, uy_ele_list, uz_ele_list, w_ele_list, is_dead_ele_list,
+    x_pho_list, y_pho_list, z_pho_list, ux_pho_list, uy_pho_list, uz_pho_list, inv_gamma_pho_list, w_pho_list, is_dead_pho_list, 
+    delta_list, event_list,
+    npatches,
+):
+    for ipatch in prange(npatches):
+        x_ele = x_ele_list[ipatch]
+        y_ele = y_ele_list[ipatch]
+        z_ele = z_ele_list[ipatch]
+        ux_ele = ux_ele_list[ipatch]
+        uy_ele = uy_ele_list[ipatch]
+        uz_ele = uz_ele_list[ipatch]
+        w_ele = w_ele_list[ipatch]
+        is_dead_ele = is_dead_ele_list[ipatch]
+
+        x_pho = x_pho_list[ipatch]
+        y_pho = y_pho_list[ipatch]
+        z_pho = z_pho_list[ipatch]
+        ux_pho = ux_pho_list[ipatch]
+        uy_pho = uy_pho_list[ipatch]
+        uz_pho = uz_pho_list[ipatch]
+        w_pho = w_pho_list[ipatch]
+        inv_gamma_pho = inv_gamma_pho_list[ipatch]
+        is_dead_pho = is_dead_pho_list[ipatch]
+
+        delta = delta_list[ipatch]
+        event = event_list[ipatch]
+
+        event_index = find_event_index(event, is_dead_ele)
+
+        create_photon_3d(
+            x_ele, y_ele, z_ele, ux_ele, uy_ele, uz_ele, w_ele, 
+            x_pho, y_pho, z_pho, ux_pho, uy_pho, uz_pho, inv_gamma_pho, w_pho, is_dead_pho, 
+            event_index, delta,
+        )
+
+create_pair_3d = njit(create_pair_inline_3d)
+
+@njit(parallel=True, cache=True)
+def create_pair_patches_3d(
+    x_pho_list, y_pho_list, z_pho_list, ux_pho_list, uy_pho_list, uz_pho_list, w_pho_list, is_dead_pho_list,
+    x_ele_list, y_ele_list, z_ele_list, ux_ele_list, uy_ele_list, uz_ele_list, inv_gamma_ele_list, w_ele_list, is_dead_ele_list,
+    x_pos_list, y_pos_list, z_pos_list, ux_pos_list, uy_pos_list, uz_pos_list, inv_gamma_pos_list, w_pos_list, is_dead_pos_list,
+    delta_list, event_list,
+    npatches,
+):
+    for ipatch in prange(npatches):
+        x_pho = x_pho_list[ipatch]
+        y_pho = y_pho_list[ipatch]
+        z_pho = z_pho_list[ipatch]
+        ux_pho = ux_pho_list[ipatch]
+        uy_pho = uy_pho_list[ipatch]
+        uz_pho = uz_pho_list[ipatch]
+        w_pho = w_pho_list[ipatch]
+        is_dead_pho = is_dead_pho_list[ipatch]
+
+        x_ele = x_ele_list[ipatch]
+        y_ele = y_ele_list[ipatch]
+        z_ele = z_ele_list[ipatch]
+        ux_ele = ux_ele_list[ipatch]
+        uy_ele = uy_ele_list[ipatch]
+        uz_ele = uz_ele_list[ipatch]
+        inv_gamma_ele = inv_gamma_ele_list[ipatch]
+        w_ele = w_ele_list[ipatch]
+        is_dead_ele = is_dead_ele_list[ipatch]
+
+        x_pos = x_pos_list[ipatch]
+        y_pos = y_pos_list[ipatch]
+        z_pos = z_pos_list[ipatch]
+        ux_pos = ux_pos_list[ipatch]
+        uy_pos = uy_pos_list[ipatch]
+        uz_pos = uz_pos_list[ipatch]
+        inv_gamma_pos = inv_gamma_pos_list[ipatch]
+        w_pos = w_pos_list[ipatch]
+        is_dead_pos = is_dead_pos_list[ipatch]
+
+        delta = delta_list[ipatch]
+        event = event_list[ipatch]
+        event_index = find_event_index(event, is_dead_pho)
+
+        create_pair_3d(
+            event_index, 
+            x_pho, y_pho, z_pho, ux_pho, uy_pho, uz_pho, w_pho, delta,
+            x_ele, y_ele, z_ele, ux_ele, uy_ele, uz_ele, inv_gamma_ele, w_ele, is_dead_ele, 
+            x_pos, y_pos, z_pos, ux_pos, uy_pos, uz_pos, inv_gamma_pos, w_pos, is_dead_pos, 
         )
 
 @njit(parallel=True, cache=True)
