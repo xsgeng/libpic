@@ -3,9 +3,14 @@ from numba import typed
 
 from ..patch import Patches
 from ..species import Electron, Photon, Species
-from .cpu import (create_photon_patches, get_particle_extension_size_patches,
-                  photon_recoil_patches, radiation_event_patches,
-                  update_chi_patches)
+from .cpu import (
+    create_photon_patches_2d,
+    create_photon_patches_3d,
+    get_particle_extension_size_patches,
+    photon_recoil_patches,
+    radiation_event_patches,
+    update_chi_patches,
+)
 
 
 class RadiationBase:
@@ -174,7 +179,10 @@ class NonlinearComptonLCFA(RadiationBase):
                     break # if one species is extended, all species are updated
 
     def event(self, dt: float) -> None:
-        from .optical_depth import _integral_photon_prob_along_delta, _photon_prob_rate_total_table
+        from .optical_depth import (
+            _integral_photon_prob_along_delta,
+            _photon_prob_rate_total_table,
+        )
         radiation_event_patches(
             self.tau_list, self.chi_list, self.inv_gamma_list,
             self.is_dead_list,
@@ -197,12 +205,20 @@ class NonlinearComptonLCFA(RadiationBase):
                 self.patches.update_particle_lists(ipatch)
                 self.update_particle_lists(ipatch)
         # fillin photons
-        create_photon_patches(
-            self.x_list, self.y_list, self.ux_list, self.uy_list, self.uz_list, self.w_list, self.is_dead_list,
-            self.x_pho_list, self.y_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list, self.inv_gamma_pho_list, self.w_pho_list, self.is_dead_pho_list, 
-            self.delta_list, self.event_list,
-            self.npatches,
-        )
+        if self.dimension == 2:
+            create_photon_patches_2d(
+                self.x_list, self.y_list, self.ux_list, self.uy_list, self.uz_list, self.w_list, self.is_dead_list,
+                self.x_pho_list, self.y_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list, self.inv_gamma_pho_list, self.w_pho_list, self.is_dead_pho_list, 
+                self.delta_list, self.event_list,
+                self.npatches,
+            )
+        if self.dimension == 3:
+            create_photon_patches_3d(
+                self.x_list, self.y_list, self.z_list, self.ux_list, self.uy_list, self.uz_list, self.w_list, self.is_dead_list,
+                self.x_pho_list, self.y_pho_list, self.z_pho_list, self.ux_pho_list, self.uy_pho_list, self.uz_pho_list, self.inv_gamma_pho_list, self.w_pho_list, self.is_dead_pho_list, 
+                self.delta_list, self.event_list,
+                self.npatches
+            )
 
     def reaction(self) -> None:
         photon_recoil_patches(
