@@ -4,7 +4,7 @@ from typing import Callable, Literal
 
 from numba import njit
 from numba.extending import is_jitted
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, computed_field, Field
 from scipy.constants import e, m_e, m_p
 
 from .particles import (ParticlesBase, QEDParticles, SpinParticles,
@@ -24,6 +24,8 @@ class Species(BaseModel):
     polarization: tuple[float, float, float] = None
 
     pusher: Literal["boris", "photon", "boris+tbmt"] = "boris"
+
+    ispec: int = None
 
     @computed_field
     @cached_property
@@ -58,7 +60,6 @@ class Species(BaseModel):
         Then particles are created within the patch.
         """
         return ParticlesBase(ipatch, rank)
-
 
 class Electron(Species):
     name: str = 'electron'
