@@ -125,8 +125,28 @@ class Patch:
     def add_particles(self, particles: ParticlesBase) -> None:
         self.particles.append(particles)
 
-    def set_fields(self, fields: Fields) -> None:
+    def set_fields(self, fields: Fields, **kwargs: dict[str, Fields]) -> None:
+        """
+        Attach the fields to the patch.
+
+        Parameters
+        ----------
+        fields : Fields
+            Fields of the patch
+        kwargs : dict[str, Fields]
+            Additional fields to be attached to the patch.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> patch.set_fields(fields, efield=efield, bfield=bfield)
+        """
         self.fields = fields
+        for fieldname, field in kwargs.items():
+            setattr(self, fieldname, field)
 
     def add_pml_boundary(self, pml: PML) -> None:
         raise NotImplementedError
