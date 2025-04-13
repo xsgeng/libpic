@@ -583,7 +583,9 @@ class Patches:
         return self[0].fields.n_guard
 
 
-    def add_species(self, species : Species):
+    def add_species(self, species : Species, aux_attrs: list[str]=None) -> None:
+        if aux_attrs is None:
+            aux_attrs = []
 
         print(f"Initializing Species {species.name}...", end=" ")
         tic = perf_counter_ns()
@@ -627,6 +629,7 @@ class Patches:
 
         for ipatch in range(self.npatches):
             particles : ParticlesBase = species.create_particles(ipatch=ipatch)
+            particles.attrs += aux_attrs
             particles.initialize(num_macro_particles[ipatch])
             self[ipatch].add_particles(particles)
 
