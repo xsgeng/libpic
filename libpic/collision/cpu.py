@@ -1,4 +1,5 @@
 from numba import njit, prange
+from numba.types import int64, float64, Tuple
 from math import sqrt
 from scipy.constants import c, pi, epsilon_0
 import numpy as np
@@ -94,7 +95,9 @@ def pairing(
                 w_corr = 1. / ( npart1 // npart2 + 1 )
             else:
                 w_corr = 1. / ( npart1 // npart2 )
-            yield ipair, shuffled_idx[ip1], ip_start2 + ip2, w_corr
+            #yield int64(ipair), int64(shuffled_idx[ip1]), int64(ip_start2 + ip2), float64(w_corr)
+            #yield ipair, shuffled_idx[ip1], ip_start2 + ip2, w_corr
+            yield  (ipair, shuffled_idx[ip1], ip_start2 + ip2, w_corr)
     else:
         for ipair in range(npairs):
             for ip2 in range(ip2+1, nbuf2):
@@ -111,7 +114,9 @@ def pairing(
             else:
                 w_corr = 1. / ( npart2 // npart1 )
                 
-            yield ipair, ip_start1 + ip1, shuffled_idx[ip2], w_corr
+            yield int64(ipair), int64(ip_start1 + ip1), int64(shuffled_idx[ip2]), float64(w_corr)
+            #yield ipair, ip_start1 + ip1, shuffled_idx[ip2], w_corr
+            #yield (ipair, ip_start1 + ip1, shuffled_idx[ip2], w_corr)
 
 def debye_length_cell_2d(
     ux, uy, uz, inv_gamma, w, dead,
