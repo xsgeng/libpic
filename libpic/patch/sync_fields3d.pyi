@@ -34,17 +34,20 @@ def sync_currents_3d(
 def sync_guard_fields_3d(
     fields_list: List[Fields],
     patches_list: List[Patch3D],
-    npatches: int, nx: int, ny: int, nz: int, ng: int
+    attrs: list[str],
+    npatches: int, nx: int, ny: int, nz: int, ng: int, nsync: int
 ):
     """
-    Synchronize guard cells between patches for E and B fields in 3D.
+    Synchronize guard cells between patches for custom field attributes in 3D.
     
     Parameters
     ----------
     fields_list : List[Fields]
-        List of fields of all patches containing E and B fields
+        List of fields of all patches
     patches_list : List[Patch3D]
         List of patches
+    attrs : list[str]
+        List of field attributes to synchronize
     npatches : int
         Number of patches
     nx : int
@@ -55,6 +58,8 @@ def sync_guard_fields_3d(
         Number of cells in z direction (excluding guards)
     ng : int
         Number of guard cells
+    nsync : int
+        Number of guard cells to synchronize (must be <= ng)
     """
     pass
 
