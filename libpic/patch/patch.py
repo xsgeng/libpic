@@ -485,7 +485,8 @@ class Patches:
             sync_guard_fields_3d(
                 [p.fields for p in self.patches],
                 self.patches,
-                self.npatches, self.nx, self.ny, self.nz, self.n_guard,
+                attrs,
+                self.npatches, self.nx, self.ny, self.nz, self.n_guard, nsync
             )
         
 
